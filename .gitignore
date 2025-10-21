@@ -1,0 +1,21 @@
+# Environment variables
+.env
+.env.local
+
+# Node modules
+node_modules/
+
+# Vue
+dist/
+.DS_Store
+*.log
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+Thumbs.db
