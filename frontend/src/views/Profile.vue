@@ -6,12 +6,12 @@
       <div class="profile-header">
         <img
           class="avatar"
-          :src="profileData.avatar_url || 'https://images.unsplash.com/photo-1573072738379-7c640e17ac4e?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&q=80&w=1171'"
+          :src="profileData.avatar_url || 'https://upload.wikimedia.org/wikipedia/commons/a/ac/Default_pfp.jpg'"
           alt="Foto de perfil"
         />
         <div class="profile-text">
-          <h2 class="username">{{ profileData.username || 'Usuario' }}</h2>
-          <h1 class="display-name">{{ profileData.display_name || 'Nombre Completo' }}</h1>
+          <h2 class="username">{{ profileData.username || 'Nombre de usuario' }}</h2>
+          <h1 class="display-name">{{ profileData.display_name}}</h1>
           <p class="bio">{{ profileData.bio || 'Esta es mi biografía...' }}</p>
           <button class="edit-btn" @click="isEditing = !isEditing">
             {{ isEditing ? 'Cancelar' : 'Editar perfil' }}
@@ -21,23 +21,17 @@
 
       <!-- Formulario de edición -->
       <div v-if="isEditing" class="edit-form">
-        <input
-          type="text"
-          v-model="profileData.display_name"
-          placeholder= "Nombre"
-        />
-        <input
-          type="text"
-          v-model="profileData.username"
-          placeholder= "Nombre de usuario"
-        />
-        <textarea
-          v-model="profileData.bio"
-          placeholder="Biografía"
-        ></textarea>
+        <input type="text" v-model="profileData.username" placeholder="Nombre de usuario" />
+        <input type="text" v-model="profileData.display_name" placeholder="Nombre" />
+        <textarea v-model="profileData.bio" placeholder="Biografía"></textarea>
+
         <button class="save-btn" @click="saveProfile" :disabled="saving">
           {{ saving ? 'Guardando...' : 'Guardar cambios' }}
         </button>
+
+        <!-- ✅ Añade estos dos -->
+        <div v-if="error" class="alert alert-error">{{ error }}</div>
+        <div v-if="success" class="alert alert-success">{{ success }}</div>
       </div>
 
       <!-- Contenedor de viajes recientes -->
@@ -125,35 +119,58 @@ export default {
         loading.value = false
       }
     }
-
+    const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
     const saveProfile = async () => {
       error.value = ''
       success.value = ''
       saving.value = true
 
       try {
-        const { error: updateError } = await supabase
-          .from('users')
-          .upsert({
-            id: user.value.id,
-            username: profileData.value.username,
-            display_name: profileData.value.display_name,
-            bio: profileData.value.bio,
-            avatar_url: profileData.value.avatar_url,
-            updated_at: new Date().toISOString()
-          })
+        const { data: { session } } = await supabase.auth.getSession()
+        const token = session?.access_token
 
-        if (updateError) throw updateError
+        const payload = {
+          userId: user.value.id,
+          username: profileData.value.username,
+          display_name: profileData.value.display_name,
+          bio: profileData.value.bio,
+          avatar_url: profileData.value.avatar_url
+        }
 
-        success.value = 'Perfil actualizado correctamente'
+        const res = await fetch(`${API_URL}/api/profile`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { Authorization: `Bearer ${token}` } : {})
+          },
+          body: JSON.stringify(payload)
+        })
+
+        // 👇 Intentar siempre leer el body aunque haya error
+        let body = {}
+        try {
+          body = await res.json()
+        } catch (e) {
+          console.warn('No se pudo parsear el body como JSON')
+        }
+
+        if (!res.ok) {
+          // 👇 si el backend devolvió un mensaje, lo mostramos
+          const msg = body.error || `Error ${res.status}`
+          throw new Error(msg)
+        }
+
+        success.value = body.message || 'Perfil actualizado correctamente ✅'
         originalData.value = { ...profileData.value }
         isEditing.value = false
       } catch (err) {
+        console.error('saveProfile error:', err)
         error.value = err.message || 'Error al guardar el perfil'
       } finally {
         saving.value = false
       }
     }
+
 
     const cancelEdit = () => {
       profileData.value = { ...originalData.value }
