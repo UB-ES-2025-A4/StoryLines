@@ -134,30 +134,45 @@ export default {
         loading.value = false
       }
     }
-
+    const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
     const saveProfile = async () => {
       error.value = ''
       success.value = ''
       saving.value = true
 
       try {
-        const { error: updateError } = await supabase
-          .from('users')
-          .upsert({
-            id: user.value.id,
-            username: profileData.value.username,
-            display_name: profileData.value.display_name,
-            bio: profileData.value.bio,
-            avatar_url: profileData.value.avatar_url,
-            updated_at: new Date().toISOString()
-          })
+        // Opcional: obtener token si luego quieres proteger la API
+        const { data: { session } } = await supabase.auth.getSession()
+        const token = session?.access_token
 
-        if (updateError) throw updateError
+        const payload = {
+          userId: user.value.id,  // o email si usas la versión por email
+          username: profileData.value.username,
+          display_name: profileData.value.display_name,
+          bio: profileData.value.bio,
+          avatar_url: profileData.value.avatar_url
+        }
 
-        success.value = 'Perfil actualizado correctamente'
+        const res = await fetch(`${API_URL}/api/profile`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { Authorization: `Bearer ${token}` } : {})
+          },
+          body: JSON.stringify(payload)
+        })
+
+        const body = await res.json().catch(() => ({}))
+
+        if (!res.ok) {
+          throw new Error(body.error || `Error ${res.status}`)
+        }
+
+        success.value = body.message || 'Perfil actualizado correctamente ✅'
         originalData.value = { ...profileData.value }
         isEditing.value = false
       } catch (err) {
+        console.error('saveProfile error:', err)
         error.value = err.message || 'Error al guardar el perfil'
       } finally {
         saving.value = false
