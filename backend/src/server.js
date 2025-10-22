@@ -60,7 +60,22 @@ app.post('/api/profile', async (req, res) => {
         .status(400)
         .json({ error: 'La biografía no puede superar los 150 caracteres' });
     }
+        const uname = String(username).trim();
 
+        const { data: existing, error: existErr } = await supabaseAdmin
+        .from('users')
+        .select('id')
+        .eq('username', uname)
+        .neq('id', id)  // Excluye tu propio usuario
+        .limit(1);
+
+        if (existErr) {
+        return res.status(400).json({ error: existErr.message });
+        }
+
+        if (existing && existing.length > 0) {
+        return res.status(409).json({ error: 'Ese nombre de usuario ya está en uso' });
+        }
     // Construir payload SOLO con columnas reales de tu tabla public.users
     const payload = {
       id,                              // PK de tu fila de perfil
@@ -84,4 +99,5 @@ app.post('/api/profile', async (req, res) => {
     console.error('[UPDATE PROFILE ERROR]', e);
     return res.status(500).json({ error: 'Error interno al guardar el perfil' });
   }
+  
 });
