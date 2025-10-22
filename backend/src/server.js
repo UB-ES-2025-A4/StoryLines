@@ -47,8 +47,18 @@ app.post('/api/profile', async (req, res) => {
 
     // Validaciones mínimas
     if (!isUUIDv4(id)) return res.status(400).json({ error: 'userId no es un UUID v4 válido' });
-    if (!username || /\s/.test(username) || String(username).trim().length < 3) {
-      return res.status(400).json({ error: 'Username inválido (≥3 y sin espacios)' });
+    if (typeof username !== 'string' || username.trim().length < 3 || username.trim().length > 15) {
+      return res.status(400).json({ error: 'El nombre de usuario debe tener entre 3 y 15 caracteres' });
+    }
+
+    // Validar username → sin espacios, máximo 15 (sin mínimo)
+    if (typeof display_name !== 'string' || display_name.trim().length > 15) {
+      return res.status(400).json({ error: 'Apodo inválido (sin espacios y máx 15 caracteres)' });
+    }
+    if (typeof bio === 'string' && bio.trim().length > 151) {
+      return res
+        .status(400)
+        .json({ error: 'La biografía no puede superar los 150 caracteres' });
     }
 
     // Construir payload SOLO con columnas reales de tu tabla public.users
