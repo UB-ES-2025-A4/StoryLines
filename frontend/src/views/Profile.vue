@@ -1,74 +1,65 @@
 <template>
-  <div class="profile">
-    <h1>Mi Perfil</h1>
-    
+  <div class="profile-page">
     <div v-if="loading" class="loading">Cargando...</div>
-    
-    <div v-else class="profile-content">
-      <!-- Foto de perfil -->
-      <div class="profile-picture">
-        <img 
-          :src="profileData.avatar_url || 'https://via.placeholder.com/150'" 
+
+    <div v-else class="profile-card">
+      <div class="profile-header">
+        <img
+          class="avatar"
+          :src="profileData.avatar_url || 'https://images.unsplash.com/photo-1573072738379-7c640e17ac4e?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&q=80&w=1171'"
           alt="Foto de perfil"
         />
-        <input 
-          type="file" 
-          ref="fileInput" 
-          @change="handleFileChange" 
-          accept="image/*"
-          style="display: none"
-        />
-        <button @click="$refs.fileInput.click()">Cambiar Foto</button>
+        <div class="profile-text">
+          <h2 class="username">{{ profileData.username || 'Usuario' }}</h2>
+          <h1 class="display-name">{{ profileData.display_name || 'Nombre Completo' }}</h1>
+          <p class="bio">{{ profileData.bio || 'Esta es mi biografía...' }}</p>
+          <button class="edit-btn" @click="isEditing = !isEditing">
+            {{ isEditing ? 'Cancelar' : 'Editar perfil' }}
+          </button>
+        </div>
       </div>
 
-      <!-- Información del usuario -->
-      <div class="profile-info">
-        <div class="form-group">
-          <label>Correo:</label>
-          <input type="email" :value="user?.email" disabled />
+      <!-- Formulario de edición -->
+      <div v-if="isEditing" class="edit-form">
+        <input
+          type="text"
+          v-model="profileData.display_name"
+          placeholder= "Nombre"
+        />
+        <input
+          type="text"
+          v-model="profileData.username"
+          placeholder= "Nombre de usuario"
+        />
+        <textarea
+          v-model="profileData.bio"
+          placeholder="Biografía"
+        ></textarea>
+        <button class="save-btn" @click="saveProfile" :disabled="saving">
+          {{ saving ? 'Guardando...' : 'Guardar cambios' }}
+        </button>
+      </div>
+
+      <!-- Contenedor de viajes recientes -->
+      <div class="recent-trips-section">
+        <div class="recent-trips-header">
+          <h3>Viajes recientes</h3>
         </div>
 
-        <div class="form-group">
-          <label>Nombre de usuario:</label>
-          <input 
-            type="text" 
-            v-model="profileData.username" 
-            :disabled="!isEditing"
-            placeholder="Tu nombre de usuario"
-          />
-        </div>
-
-        <div class="form-group">
-          <label>Apodo:</label>
-          <input 
-            type="text" 
-            v-model="profileData.display_name" 
-            :disabled="!isEditing"
-            placeholder="Tu apodo"
-          />
-        </div>
-
-        <div class="form-group">
-          <label>Biografía:</label>
-          <textarea 
-            v-model="profileData.bio" 
-            :disabled="!isEditing"
-            placeholder="Cuéntanos sobre ti..."
-            rows="4"
-          ></textarea>
-        </div>
-
-        <p v-if="error" class="error">{{ error }}</p>
-        <p v-if="success" class="success">{{ success }}</p>
-
-        <div class="actions">
-          <button v-if="!isEditing" @click="isEditing = true">Editar Perfil</button>
-          <template v-else>
-            <button @click="saveProfile" :disabled="saving">
-              {{ saving ? 'Guardando...' : 'Guardar Cambios' }}
-            </button>
-            <button @click="cancelEdit" class="cancel">Cancelar</button>
-          </template>
+        <div class="trips-container">
+          <div class="trip-card" v-for="trip in trips" :key="trip.id">
+            <img :src="trip.image" alt="Foto del viaje" class="trip-image" />
+            <div class="trip-info">
+              <div class="trip-details">
+                <h4>{{ trip.title }}</h4>
+                <p>{{ trip.description }}</p>
+              </div>
+              <div class="trip-stats">
+                <span>♡ {{ formatCount(trip.likes) }}</span>
+                <span>👁 {{ formatCount(trip.views) }}</span>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -76,7 +67,7 @@
 </template>
 
 <script>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { supabase } from '@/config/supabase'
 
 export default {
@@ -213,6 +204,49 @@ export default {
       }
     }
 
+    const formatCount = (count) => {
+      if (count >= 1000000) {
+        if (count % 1000000 === 0) {
+          return (count / 1000000).toFixed(0) + 'M'
+        }
+        return (count / 1000000).toFixed(1) + 'M'
+      }
+      if (count >= 1000){
+        if (count % 1000 === 0) {
+          return (count / 1000).toFixed(0) + 'K'
+        }
+        return (count / 1000).toFixed(1) + 'K'
+      }
+      return count
+    }
+
+    const trips = ref([
+      {
+        id: 1,
+        title: 'Mi viaje a Islandia',
+        description: 'Este es el album de mi viaje.',
+        image: 'https://images.unsplash.com/photo-1500043357865-c6b8827edf10?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&q=80&w=1170',
+        likes: 500000,
+        views: 1200000
+      },
+      {
+        id: 2,
+        title: 'Mi viaje a Paris',
+        description: 'Este es el album de mi viaje.',
+        image: 'https://images.unsplash.com/photo-1549144511-f099e773c147?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&q=80&w=687',
+        likes: 900000,
+        views: 3000000
+      },
+      {
+        id: 3,
+        title: 'Mi viaje a Tokyo',
+        description: 'Este es el album de mi viaje.',
+        image: 'https://images.unsplash.com/photo-1542051841857-5f90071e7989?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&q=80&w=1170',
+        likes: 5500000,
+        views: 11700000
+      }
+    ])
+
     return {
       user,
       profileData,
@@ -224,119 +258,218 @@ export default {
       fileInput,
       saveProfile,
       cancelEdit,
-      handleFileChange
+      handleFileChange,
+      trips,
+      formatCount
     }
   }
 }
 </script>
 
 <style scoped>
-.profile {
-  max-width: 600px;
-  margin: 2rem auto;
-  padding: 2rem;
+.profile-page {
+  min-height: 100vh;
+  background: url('https://images.unsplash.com/photo-1604608672516-f1b9b1d37076?ixlib=rb-4.1.0')
+    center/cover no-repeat;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  color: #fff;
 }
 
-.loading {
-  text-align: center;
-  padding: 2rem;
-}
-
-.profile-content {
+.profile-card {
+  background: linear-gradient(to bottom, rgba(11, 47, 74, 0.6), rgba(39, 45, 45, 0.6));
+  backdrop-filter: blur(14px);
+  width: 100%;
+  max-width: 700px;
+  border-radius: 0;
   display: flex;
   flex-direction: column;
+  align-items: center;
+  padding: 3rem 1rem;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+  min-height: 100vh;
+}
+
+/* --- CABECERA PERFIL --- */
+.profile-header {
+  display: flex;
+  align-items: center;
+  text-align: left;
   gap: 2rem;
+  margin-bottom: 2rem;
+  justify-content: flex-start;
+  margin-right: 20%;
 }
 
-.profile-picture {
-  text-align: center;
+.profile-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
 }
 
-.profile-picture img {
-  width: 150px;
-  height: 150px;
+.avatar {
+  width: 180px;
+  height: 180px;
   border-radius: 50%;
   object-fit: cover;
-  border: 3px solid #42b983;
+  border: 3px solid #ffffff;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
 }
 
-.profile-picture button {
-  margin-top: 1rem;
-  padding: 0.5rem 1rem;
-  background-color: #42b983;
-  color: white;
+.username {
+  font-size: 2rem;
+  font-weight: 500;
+  margin: 0;
+}
+
+.display-name {
+  font-size: 1.3rem;
+  font-weight: 500;
+  margin: 0;
+}
+
+.bio {
+  font-size: 0.9rem;
+  max-width: 500px;
+}
+
+.edit-btn {
+  background: #ffffff;
   border: none;
-  border-radius: 4px;
+  padding: 0.6rem 3rem;
+  border-radius: 10px;
+  color: #0a0a0a;
   cursor: pointer;
+  transition: 0.2s;
+  font-weight: 500;
+  align-self: flex-start;
 }
 
-.profile-info {
+.edit-btn:hover {
+  background: #e0e0e0;
+}
+
+/* --- FORMULARIO DE EDICIÓN --- */
+.edit-form {
   display: flex;
   flex-direction: column;
   gap: 1rem;
-}
-
-.form-group {
-  text-align: left;
-}
-
-.form-group label {
-  display: block;
-  margin-bottom: 0.5rem;
-  font-weight: bold;
-}
-
-.form-group input,
-.form-group textarea {
+  margin-bottom: 2rem;
   width: 100%;
-  padding: 0.5rem;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  font-size: 1rem;
+  max-width: 500px;
 }
 
-.form-group input:disabled,
-.form-group textarea:disabled {
-  background-color: #f5f5f5;
-  cursor: not-allowed;
-}
-
-.actions {
-  display: flex;
-  gap: 1rem;
-  margin-top: 1rem;
-}
-
-.actions button {
-  flex: 1;
-  padding: 0.75rem;
-  background-color: #42b983;
-  color: white;
+.edit-form input,
+.edit-form textarea {
+  padding: 0.8rem 1rem;
   border: none;
-  border-radius: 4px;
+  border-radius: 0;
+  outline: none;
+  font-size: 1rem;
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+}
+
+.save-btn {
+  background: #42b983;
+  border: none;
+  padding: 0.6rem 3rem;
+  border-radius: 25px;
+  color: #fff;
   cursor: pointer;
+  transition: 0.2s;
+  font-size: 0.9rem;
+  font-weight: 500;
 }
 
-.actions button.cancel {
-  background-color: #999;
+/* --- VIAJES RECIENTES --- */
+.recent-trips-section {
+  width: 95%;
+  border-radius: 0;
+  overflow: hidden;
+  padding-bottom: 2rem;
 }
 
-.actions button:hover:not(:disabled) {
+.recent-trips-header {
+  text-align: left;
+  padding: 1rem 2rem;
+  background: linear-gradient(135deg, rgba(2, 161, 143, 0.8), rgba(55, 86, 137, 0.8));
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+.recent-trips-header h3 {
+  margin: 0;
+  font-size: 1.3rem;
+  font-weight: 500;
+  color: #fff;
+}
+
+/* --- CONTENEDOR DE TARJETAS --- */
+.trips-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1.6rem;
+  padding: 1.5rem 2rem;
+  background: rgba(11, 47, 74, 0.3);
+  border-radius: 0;
+}
+
+/* --- TARJETA DE VIAJE --- */
+.trip-card {
+  background: #fff;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  padding: 0;
+  transition: all 0.3s ease;
+  height: 150px;
+}
+
+.trip-card:hover {
+  cursor: pointer;
+  background: #f0f0f0;
+}
+
+.trip-image {
+  width: 150px;
+  height: 100%;
+  border-radius: 12px 0 0 12px;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.trip-info {
+  display: flex;
+  justify-content: space-between;
+  width: 100;
+}
+
+.trip-details {
+  flex-grow: 1;
+}
+
+.trip-details h4 {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #0a0a0a;
+}
+
+.trip-details p {
+  font-size: 0.95rem;
   opacity: 0.9;
+  color: #0a0a0a;
 }
 
-.actions button:disabled {
-  background-color: #ccc;
-  cursor: not-allowed;
-}
-
-.error {
-  color: red;
-  margin: 0.5rem 0;
-}
-
-.success {
-  color: green;
-  margin: 0.5rem 0;
+.trip-stats {
+  display: flex;
+  flex-direction: column;
+  font-size: 1rem;
+  opacity: 0.8;
+  color: #0a0a0a;
+  flex-shrink: 0;
+  margin-left: 5rem;
 }
 </style>
