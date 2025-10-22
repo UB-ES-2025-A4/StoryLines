@@ -10,7 +10,7 @@
           alt="Foto de perfil"
         />
         <div class="profile-text">
-          <h2 class="username">{{ profileData.username || 'Usuario' }}</h2>
+          <h2 class="username">{{ profileData.username || 'Nombre de usuario' }}</h2>
           <h1 class="display-name">{{ profileData.display_name}}</h1>
           <p class="bio">{{ profileData.bio || 'Esta es mi biografía...' }}</p>
           <button class="edit-btn" @click="isEditing = !isEditing">
@@ -21,8 +21,8 @@
 
       <!-- Formulario de edición -->
       <div v-if="isEditing" class="edit-form">
-        <input type="text" v-model="profileData.username" placeholder="Nombre" />
-        <input type="text" v-model="profileData.display_name" placeholder="Nombre de usuario" />
+        <input type="text" v-model="profileData.username" placeholder="Nombre de usuario" />
+        <input type="text" v-model="profileData.display_name" placeholder="Nombre" />
         <textarea v-model="profileData.bio" placeholder="Biografía"></textarea>
 
         <button class="save-btn" @click="saveProfile" :disabled="saving">
