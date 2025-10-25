@@ -25,12 +25,14 @@ const routes = [
     component: Register,
     meta: { requiresGuest: true }
   },
+
   {
-    path: '/profile',
-    name: 'Profile',
-    component: Profile,
-    meta: { requiresAuth: true } // Solo para usuarios autenticados
-  }
+     path: '/profile',
+     name: 'Profile',
+     component: Profile,
+     meta: { requiresAuth: true } // Solo para usuarios autenticados
+   }
+
 ]
 
 const router = createRouter({
