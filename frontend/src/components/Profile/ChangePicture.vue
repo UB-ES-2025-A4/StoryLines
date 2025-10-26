@@ -15,6 +15,15 @@
         @wheel.prevent="onZoom"
       ></canvas>
     </div>
+
+    <div class="buttons">
+      <button @click="cropImage" :disabled="!img">Cortar Imagen</button>
+    </div>
+
+    <div v-if="croppedImage" class="preview">
+      <h3>Vista previa recortada:</h3>
+      <img :src="croppedImage" alt="Cropped image preview" />
+    </div>
   </div>
 </template>
 
@@ -26,6 +35,8 @@ export default {
   setup() {
     const canvas = ref(null);
     const img = ref(null);
+    const croppedImage = ref(null);
+
     const isDragging = ref(false);
     const startX = ref(0);
     const startY = ref(0);
@@ -34,6 +45,7 @@ export default {
     const scale = ref(1);
     const baseScale = ref(1);
 
+    // --- Load and draw image ---
     const onFileChange = (e) => {
       const file = e.target.files[0];
       if (!file) return;
@@ -61,6 +73,7 @@ export default {
       reader.readAsDataURL(file);
     };
 
+    // --- Draw image inside circular mask ---
     const drawImage = (ctx) => {
       ctx.clearRect(0, 0, canvas.value.width, canvas.value.height);
       ctx.save();
@@ -81,6 +94,7 @@ export default {
 
       ctx.restore();
 
+      // circular border
       ctx.beginPath();
       ctx.arc(150, 150, 150, 0, Math.PI * 2);
       ctx.lineWidth = 4;
@@ -88,6 +102,7 @@ export default {
       ctx.stroke();
     };
 
+    // --- Drag to move image ---
     const startDrag = (e) => {
       if (!img.value) return;
       isDragging.value = true;
@@ -109,6 +124,7 @@ export default {
       canvas.value.style.cursor = "grab";
     };
 
+    // --- Zoom with mouse wheel ---
     const onZoom = (e) => {
       if (!img.value) return;
       const zoomSpeed = 0.1;
@@ -117,13 +133,42 @@ export default {
       drawImage(canvas.value.getContext("2d"));
     };
 
+    // --- Crop image according to current view ---
+    const cropImage = async () => {
+      if (!img.value) return;
+
+      const outputCanvas = document.createElement("canvas");
+      outputCanvas.width = 300;
+      outputCanvas.height = 300;
+      const ctx = outputCanvas.getContext("2d");
+
+      ctx.beginPath();
+      ctx.arc(150, 150, 150, 0, Math.PI * 2);
+      ctx.closePath();
+      ctx.clip();
+
+      ctx.drawImage(
+        img.value,
+        offsetX.value,
+        offsetY.value,
+        img.value.width * scale.value,
+        img.value.height * scale.value
+      );
+
+      // convert cropped result to image preview
+      croppedImage.value = outputCanvas.toDataURL("image/png");
+    };
+
     return {
       canvas,
+      img,
+      croppedImage,
       onFileChange,
       startDrag,
       onDrag,
       stopDrag,
       onZoom,
+      cropImage,
     };
   },
 };
@@ -144,7 +189,7 @@ h1 {
 }
 
 .photo-title {
-  font-size: 1.9rem;
+  font-size: 1.8rem;
   font-weight: 500;
   margin-bottom: 10px;
 }
@@ -168,5 +213,39 @@ canvas {
 
 input[type="file"] {
   margin-top: 20px;
+}
+
+.buttons {
+  display: flex;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+button {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 8px;
+  background: #fdfdfd;
+  color: rgb(0, 0, 0);
+  font-size: 16px;
+  cursor: pointer;
+}
+
+button:hover:not(:disabled) {
+  background-color: rgb(194, 194, 194);
+}
+
+.preview {
+  margin-top: 20px;
+  text-align: center;
+}
+
+.preview img {
+  margin-top: 10px;
+  width: 150px;
+  height: 150px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid #fff;
 }
 </style>
