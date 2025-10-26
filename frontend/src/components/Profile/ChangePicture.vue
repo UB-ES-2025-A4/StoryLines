@@ -20,6 +20,9 @@
       <button @click="uploadImage" :disabled="loading">
         {{ loading ? "Subiendo..." : "Subir Imagen" }}
       </button>
+      <button @click="deleteImage" :disabled="loading">
+        Eliminar Imagen
+      </button>
     </div>
 
     <p v-if="success" class="success">{{ success }}</p>
@@ -28,7 +31,6 @@
 </template>
 
 <script>
-
 import { ref, onMounted } from "vue";
 import { supabase } from "@/config/supabase";
 
@@ -201,6 +203,44 @@ export default {
       }
     };
 
+    const deleteImage = async () => {
+      if (!user.value) return;
+      loading.value = true;
+      error.value = "";
+      success.value = "";
+
+      try {
+        const { data: userData, error: fetchError } = await supabase
+          .from("users")
+          .select("avatar_url")
+          .eq("id", user.value.id)
+          .single();
+        if (fetchError) throw fetchError;
+
+        if (userData?.avatar_url) {
+          const oldFileName = userData.avatar_url.split("/").pop().split("?")[0];
+          await supabase.storage.from("profile-pictures").remove([oldFileName]);
+        }
+
+        const { error: updateError } = await supabase
+          .from("users")
+          .update({ avatar_url: null, updated_at: new Date().toISOString() })
+          .eq("id", user.value.id);
+        if (updateError) throw updateError;
+
+        img.value = null; // limpiar canvas
+        const ctx = canvas.value.getContext("2d");
+        ctx.clearRect(0, 0, canvas.value.width, canvas.value.height);
+
+        success.value = "Imagen eliminada correctamente!";
+        emit("image-updated", null);
+      } catch (err) {
+        error.value = err.message;
+      } finally {
+        loading.value = false;
+      }
+    };
+
     return {
       canvas,
       onFileChange,
@@ -209,6 +249,7 @@ export default {
       stopDrag,
       onZoom,
       uploadImage,
+      deleteImage,
       loading,
       error,
       success,
