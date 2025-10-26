@@ -17,26 +17,26 @@
     </div>
 
     <div class="buttons">
-      <button @click="cropImage" :disabled="!img">Cortar Imagen</button>
+      <button @click="uploadImage" :disabled="loading">
+        {{ loading ? "Subiendo..." : "Subir Imagen" }}
+      </button>
     </div>
 
-    <div v-if="croppedImage" class="preview">
-      <h3>Vista previa recortada:</h3>
-      <img :src="croppedImage" alt="Cropped image preview" />
-    </div>
+    <p v-if="success" class="success">{{ success }}</p>
+    <p v-if="error" class="error">{{ error }}</p>
   </div>
 </template>
 
 <script>
-import { ref } from "vue";
+
+import { ref, onMounted } from "vue";
+import { supabase } from "@/config/supabase";
 
 export default {
   name: "CirclePhoto",
-  setup() {
+  setup(props, { emit }) {
     const canvas = ref(null);
     const img = ref(null);
-    const croppedImage = ref(null);
-
     const isDragging = ref(false);
     const startX = ref(0);
     const startY = ref(0);
@@ -45,27 +45,35 @@ export default {
     const scale = ref(1);
     const baseScale = ref(1);
 
-    // --- Load and draw image ---
+    const loading = ref(false);
+    const error = ref("");
+    const success = ref("");
+    const user = ref(null);
+
+    onMounted(async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      user.value = session?.user;
+      if (!user.value) {
+        error.value = "No hay sesión activa. Inicia sesión.";
+      }
+    });
+
     const onFileChange = (e) => {
       const file = e.target.files[0];
       if (!file) return;
-
       const reader = new FileReader();
       reader.onload = (event) => {
         const image = new Image();
         image.onload = () => {
           img.value = image;
           const ctx = canvas.value.getContext("2d");
-
           baseScale.value = Math.max(
             canvas.value.width / image.width,
             canvas.value.height / image.height
           );
           scale.value = baseScale.value;
-
           offsetX.value = (canvas.value.width - image.width * scale.value) / 2;
           offsetY.value = (canvas.value.height - image.height * scale.value) / 2;
-
           drawImage(ctx);
         };
         image.src = event.target.result;
@@ -73,7 +81,6 @@ export default {
       reader.readAsDataURL(file);
     };
 
-    // --- Draw image inside circular mask ---
     const drawImage = (ctx) => {
       ctx.clearRect(0, 0, canvas.value.width, canvas.value.height);
       ctx.save();
@@ -91,10 +98,8 @@ export default {
           img.value.height * scale.value
         );
       }
-
       ctx.restore();
 
-      // circular border
       ctx.beginPath();
       ctx.arc(150, 150, 150, 0, Math.PI * 2);
       ctx.lineWidth = 4;
@@ -102,7 +107,6 @@ export default {
       ctx.stroke();
     };
 
-    // --- Drag to move image ---
     const startDrag = (e) => {
       if (!img.value) return;
       isDragging.value = true;
@@ -124,7 +128,6 @@ export default {
       canvas.value.style.cursor = "grab";
     };
 
-    // --- Zoom with mouse wheel ---
     const onZoom = (e) => {
       if (!img.value) return;
       const zoomSpeed = 0.1;
@@ -133,42 +136,82 @@ export default {
       drawImage(canvas.value.getContext("2d"));
     };
 
-    // --- Crop image according to current view ---
-    const cropImage = async () => {
-      if (!img.value) return;
+    const uploadImage = async () => {
+      if (!img.value || !user.value) return;
+      loading.value = true;
+      error.value = "";
+      success.value = "";
 
-      const outputCanvas = document.createElement("canvas");
-      outputCanvas.width = 300;
-      outputCanvas.height = 300;
-      const ctx = outputCanvas.getContext("2d");
+      try {
+        const { data: userData, error: fetchError } = await supabase
+          .from("users")
+          .select("avatar_url")
+          .eq("id", user.value.id)
+          .single();
+        if (fetchError) throw fetchError;
 
-      ctx.beginPath();
-      ctx.arc(150, 150, 150, 0, Math.PI * 2);
-      ctx.closePath();
-      ctx.clip();
+        if (userData?.avatar_url) {
+          const oldFileName = userData.avatar_url.split("/").pop().split("?")[0];
+          await supabase.storage.from("profile-pictures").remove([oldFileName]);
+        }
 
-      ctx.drawImage(
-        img.value,
-        offsetX.value,
-        offsetY.value,
-        img.value.width * scale.value,
-        img.value.height * scale.value
-      );
+        const outputCanvas = document.createElement("canvas");
+        outputCanvas.width = 300;
+        outputCanvas.height = 300;
+        const ctx = outputCanvas.getContext("2d");
+        ctx.beginPath();
+        ctx.arc(150, 150, 150, 0, Math.PI * 2);
+        ctx.closePath();
+        ctx.clip();
+        ctx.drawImage(
+          img.value,
+          offsetX.value,
+          offsetY.value,
+          img.value.width * scale.value,
+          img.value.height * scale.value
+        );
 
-      // convert cropped result to image preview
-      croppedImage.value = outputCanvas.toDataURL("image/png");
+        const blob = await new Promise((resolve) => outputCanvas.toBlob(resolve, "image/png"));
+        if (!blob) throw new Error("No se pudo generar la imagen");
+
+        const fileName = `${user.value.id}-${Date.now()}.png`;
+        const file = new File([blob], fileName, { type: "image/png" });
+
+        const { error: uploadError } = await supabase.storage
+          .from("profile-pictures")
+          .upload(fileName, file, { upsert: true });
+        if (uploadError) throw uploadError;
+
+        const { data: { publicUrl } } = supabase.storage
+          .from("profile-pictures")
+          .getPublicUrl(fileName);
+
+        const { error: updateError } = await supabase
+          .from("users")
+          .update({ avatar_url: publicUrl, updated_at: new Date().toISOString() })
+          .eq("id", user.value.id);
+        if (updateError) throw updateError;
+
+        success.value = "Imagen actualizada correctamente!";
+        emit("image-updated", publicUrl);
+      } catch (err) {
+        error.value = err.message;
+      } finally {
+        loading.value = false;
+      }
     };
 
     return {
       canvas,
-      img,
-      croppedImage,
       onFileChange,
       startDrag,
       onDrag,
       stopDrag,
       onZoom,
-      cropImage,
+      uploadImage,
+      loading,
+      error,
+      success,
     };
   },
 };
@@ -189,7 +232,7 @@ h1 {
 }
 
 .photo-title {
-  font-size: 1.8rem;
+  font-size: 1.9rem;
   font-weight: 500;
   margin-bottom: 10px;
 }
@@ -235,17 +278,18 @@ button:hover:not(:disabled) {
   background-color: rgb(194, 194, 194);
 }
 
-.preview {
-  margin-top: 20px;
-  text-align: center;
+button:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
 }
 
-.preview img {
-  margin-top: 10px;
-  width: 150px;
-  height: 150px;
-  border-radius: 50%;
-  object-fit: cover;
-  border: 2px solid #fff;
+.error {
+  color: red;
+  margin: 1rem 0;
+}
+
+.success {
+  color: green;
+  margin: 1rem 0;
 }
 </style>
