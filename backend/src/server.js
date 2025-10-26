@@ -1,9 +1,11 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import multer from "multer";
 
 dotenv.config();
 const app = express();
+const upload = multer({ storage: multer.memoryStorage() });
 
 app.use(cors());
 app.use(express.json());
@@ -100,4 +102,93 @@ app.post('/api/profile', async (req, res) => {
     return res.status(500).json({ error: 'Error interno al guardar el perfil' });
   }
   
+});
+
+
+import { Buffer } from 'buffer';
+
+// Subir avatar
+app.post('/api/upload-avatar', async (req, res) => {
+  try {
+    const { userId, imageBase64 } = req.body;
+    if (!userId || !imageBase64) return res.status(400).json({ error: "Faltan datos" });
+
+    // 1) Revisar si hay avatar previo
+    const { data: userData, error: fetchError } = await supabaseAdmin
+      .from("users")
+      .select("avatar_url")
+      .eq("id", userId)
+      .single();
+
+    if (fetchError) return res.status(500).json({ error: fetchError.message });
+
+    if (userData?.avatar_url) {
+      // Extraer el nombre del archivo
+      const oldFileName = userData.avatar_url.split("/").pop().split("?")[0];
+      // Eliminar archivo anterior
+      await supabaseAdmin.storage.from("profile-pictures").remove([oldFileName]);
+    }
+
+    // 2) Subir la nueva imagen
+    const buffer = Buffer.from(imageBase64, "base64");
+    const fileName = `${userId}-${Date.now()}.png`;
+
+    const { error: uploadError } = await supabaseAdmin.storage
+      .from("profile-pictures")
+      .upload(fileName, buffer, { upsert: true });
+
+    if (uploadError) return res.status(500).json({ error: uploadError.message });
+
+    // 3) Obtener URL pública
+    const { data: { publicUrl } } = supabaseAdmin.storage
+      .from("profile-pictures")
+      .getPublicUrl(fileName);
+
+    // 4) Actualizar usuario
+    const { error: updateError } = await supabaseAdmin
+      .from("users")
+      .update({ avatar_url: publicUrl, updated_at: new Date().toISOString() })
+      .eq("id", userId);
+
+    if (updateError) return res.status(500).json({ error: updateError.message });
+
+    res.json({ ok: true, avatar_url: publicUrl });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: "Error interno subiendo avatar" });
+  }
+});
+
+
+// Eliminar avatar
+app.post('/api/delete-avatar', async (req, res) => {
+  try {
+    const { userId } = req.body;
+    if (!userId) return res.status(400).json({ error: "Falta userId" });
+
+    // Obtener el avatar actual
+    const { data: userData, error: fetchError } = await supabaseAdmin
+      .from("users")
+      .select("avatar_url")
+      .eq("id", userId)
+      .single();
+    if (fetchError) return res.status(500).json({ error: fetchError.message });
+
+    if (userData?.avatar_url) {
+      const oldFileName = userData.avatar_url.split("/").pop().split("?")[0];
+      await supabaseAdmin.storage.from("profile-pictures").remove([oldFileName]);
+    }
+
+    // Actualizar usuario
+    const { error: updateError } = await supabaseAdmin
+      .from("users")
+      .update({ avatar_url: null, updated_at: new Date().toISOString() })
+      .eq("id", userId);
+    if (updateError) return res.status(500).json({ error: updateError.message });
+
+    res.json({ ok: true });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: "Error interno eliminando avatar" });
+  }
 });

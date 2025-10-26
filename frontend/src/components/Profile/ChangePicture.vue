@@ -37,6 +37,7 @@ import { supabase } from "@/config/supabase";
 export default {
   name: "CirclePhoto",
   setup(props, { emit }) {
+    const API_URL = "http://localhost:3000";
     const canvas = ref(null);
     const img = ref(null);
     const isDragging = ref(false);
@@ -139,118 +140,96 @@ export default {
     };
 
     const uploadImage = async () => {
-      error.value = ""; // limpiar errores previos
-      success.value = "";
+  error.value = "";
+  success.value = "";
 
-      if (!img.value) {
-        error.value = "Por favor, selecciona una imagen antes de subirla.";
-        return;
-      }
+  if (!img.value) {
+    error.value = "Por favor, selecciona una imagen antes de subirla.";
+    return;
+  }
 
-      if (!user.value) {
-        error.value = "No hay sesión activa. Inicia sesión.";
-        return;
-      }
+  loading.value = true;
 
-      loading.value = true;
+  try {
+    // Convertir el canvas a blob y luego a Base64
+    const outputCanvas = document.createElement("canvas");
+    outputCanvas.width = 300;
+    outputCanvas.height = 300;
+    const ctx = outputCanvas.getContext("2d");
+    ctx.beginPath();
+    ctx.arc(150, 150, 150, 0, Math.PI * 2);
+    ctx.closePath();
+    ctx.clip();
+    ctx.drawImage(
+      img.value,
+      offsetX.value,
+      offsetY.value,
+      img.value.width * scale.value,
+      img.value.height * scale.value
+    );
 
-      try {
-        const { data: userData, error: fetchError } = await supabase
-          .from("users")
-          .select("avatar_url")
-          .eq("id", user.value.id)
-          .single();
-        if (fetchError) throw fetchError;
+    const blob = await new Promise((resolve) => outputCanvas.toBlob(resolve, "image/png"));
+    if (!blob) throw new Error("No se pudo generar la imagen");
 
-        if (userData?.avatar_url) {
-          const oldFileName = userData.avatar_url.split("/").pop().split("?")[0];
-          await supabase.storage.from("profile-pictures").remove([oldFileName]);
-        }
+    const base64 = await blobToBase64(blob); // función helper
 
-        const outputCanvas = document.createElement("canvas");
-        outputCanvas.width = 300;
-        outputCanvas.height = 300;
-        const ctx = outputCanvas.getContext("2d");
-        ctx.beginPath();
-        ctx.arc(150, 150, 150, 0, Math.PI * 2);
-        ctx.closePath();
-        ctx.clip();
-        ctx.drawImage(
-          img.value,
-          offsetX.value,
-          offsetY.value,
-          img.value.width * scale.value,
-          img.value.height * scale.value
-        );
+    // Llamada al backend
+    const res = await fetch(`${API_URL}/api/upload-avatar`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId: user.value.id, imageBase64: base64 }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Error subiendo la imagen");
 
-        const blob = await new Promise((resolve) => outputCanvas.toBlob(resolve, "image/png"));
-        if (!blob) throw new Error("No se pudo generar la imagen");
+    success.value = "Imagen actualizada correctamente!";
+    emit("image-updated", data.avatar_url);
+  } catch (err) {
+    error.value = err.message;
+  } finally {
+    loading.value = false;
+  }
+};
 
-        const fileName = `${user.value.id}-${Date.now()}.png`;
-        const file = new File([blob], fileName, { type: "image/png" });
-
-        const { error: uploadError } = await supabase.storage
-          .from("profile-pictures")
-          .upload(fileName, file, { upsert: true });
-        if (uploadError) throw uploadError;
-
-        const { data: { publicUrl } } = supabase.storage
-          .from("profile-pictures")
-          .getPublicUrl(fileName);
-
-        const { error: updateError } = await supabase
-          .from("users")
-          .update({ avatar_url: publicUrl, updated_at: new Date().toISOString() })
-          .eq("id", user.value.id);
-        if (updateError) throw updateError;
-
-        success.value = "Imagen actualizada correctamente!";
-        emit("image-updated", publicUrl);
-      } catch (err) {
-        error.value = err.message;
-      } finally {
-        loading.value = false;
-      }
-    };
+// helper
+const blobToBase64 = (blob) =>
+  new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => resolve(reader.result.split(",")[1]);
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
 
 
-    const deleteImage = async () => {
-      if (!user.value) return;
-      loading.value = true;
-      error.value = "";
-      success.value = "";
 
-      try {
-        const { data: userData, error: fetchError } = await supabase
-          .from("users")
-          .select("avatar_url")
-          .eq("id", user.value.id)
-          .single();
-        if (fetchError) throw fetchError;
+  const deleteImage = async () => {
+  if (!user.value) return;
+  loading.value = true;
+  error.value = "";
+  success.value = "";
 
-        if (userData?.avatar_url) {
-          const oldFileName = userData.avatar_url.split("/").pop().split("?")[0];
-          await supabase.storage.from("profile-pictures").remove([oldFileName]);
-        }
+  try {
+    const res = await fetch(`${API_URL}/api/delete-avatar`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId: user.value.id }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Error eliminando la imagen");
 
-        const { error: updateError } = await supabase
-          .from("users")
-          .update({ avatar_url: null, updated_at: new Date().toISOString() })
-          .eq("id", user.value.id);
-        if (updateError) throw updateError;
+    img.value = null;
+    const ctx = canvas.value.getContext("2d");
+    ctx.clearRect(0, 0, canvas.value.width, canvas.value.height);
 
-        img.value = null; // limpiar canvas
-        const ctx = canvas.value.getContext("2d");
-        ctx.clearRect(0, 0, canvas.value.width, canvas.value.height);
+    success.value = "Imagen eliminada correctamente!";
+    emit("image-updated", null);
+  } catch (err) {
+    error.value = err.message;
+  } finally {
+    loading.value = false;
+  }
+};
 
-        success.value = "Imagen eliminada correctamente!";
-        emit("image-updated", null);
-      } catch (err) {
-        error.value = err.message;
-      } finally {
-        loading.value = false;
-      }
-    };
 
     return {
       canvas,
