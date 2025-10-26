@@ -7,15 +7,15 @@ const app = express();
 
 app.use(cors());
 app.use(express.json());
-// ✅ RUTA DE SALUD SENCILLA
+//  RUTA DE SALUD SENCILLA
 app.get('/health', (req, res) => {
   res.json({ ok: true, env: process.env.NODE_ENV || 'dev', uptime: process.uptime() });
 });
 
-app.get('/', (req, res) => res.send('Servidor funcionando ✅'));
+app.get('/', (req, res) => res.send('Servidor funcionando '));
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`✅ Backend en http://localhost:${PORT}`));
+app.listen(PORT, () => console.log(` Backend en http://localhost:${PORT}`));
 
 import { supabaseAdmin } from './config/supabase.js';
 
@@ -94,7 +94,7 @@ app.post('/api/profile', async (req, res) => {
 
     if (upErr) return res.status(400).json({ error: upErr.message });
 
-    return res.json({ ok: true, message: 'Perfil guardado ✅', data: upserted });
+    return res.json({ ok: true, message: 'Perfil guardado ', data: upserted });
   } catch (e) {
     console.error('[UPDATE PROFILE ERROR]', e);
     return res.status(500).json({ error: 'Error interno al guardar el perfil' });

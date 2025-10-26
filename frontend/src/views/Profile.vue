@@ -29,7 +29,7 @@
           {{ saving ? 'Guardando...' : 'Guardar cambios' }}
         </button>
 
-        <!-- ✅ Añade estos dos -->
+        <!--  Añade estos dos -->
         <div v-if="error" class="alert alert-error">{{ error }}</div>
         <div v-if="success" class="alert alert-success">{{ success }}</div>
       </div>
@@ -160,7 +160,7 @@ export default {
           throw new Error(msg)
         }
 
-        success.value = body.message || 'Perfil actualizado correctamente ✅'
+        success.value = body.message || 'Perfil actualizado correctamente '
         originalData.value = { ...profileData.value }
         isEditing.value = false
       } catch (err) {
