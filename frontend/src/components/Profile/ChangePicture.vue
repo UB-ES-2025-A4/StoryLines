@@ -139,10 +139,20 @@ export default {
     };
 
     const uploadImage = async () => {
-      if (!img.value || !user.value) return;
-      loading.value = true;
-      error.value = "";
+      error.value = ""; // limpiar errores previos
       success.value = "";
+
+      if (!img.value) {
+        error.value = "Por favor, selecciona una imagen antes de subirla.";
+        return;
+      }
+
+      if (!user.value) {
+        error.value = "No hay sesión activa. Inicia sesión.";
+        return;
+      }
+
+      loading.value = true;
 
       try {
         const { data: userData, error: fetchError } = await supabase
@@ -202,6 +212,7 @@ export default {
         loading.value = false;
       }
     };
+
 
     const deleteImage = async () => {
       if (!user.value) return;
