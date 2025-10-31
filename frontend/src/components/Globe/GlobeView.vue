@@ -13,6 +13,20 @@ const OPACITY = 0.3
 let activePinTooltip = null
 let activeTripPreview = null
 let hoveredTripId = null
+let trips = ref([]) 
+
+async function fetchTrips() {
+  try {
+    const res = await fetch('/api/trips')
+    const data = await res.json()
+    if (data.ok) {
+      trips.value = data.trips
+      console.log('Trips cargados:', trips.value)
+    }
+  } catch (e) {
+    console.error('Error en fetchTrips:', e)
+  }
+}
 
 const markerSvg = `<svg viewBox="-4 0 36 36">
   <path fill="currentColor" d="M14,0 C21.732,0 28,5.641 28,12.6 C28,23.963 14,36 14,36 C14,36 0,24.064 0,12.6 C0,5.641 6.268,0 14,0 Z"></path>
@@ -44,7 +58,8 @@ const handleDocumentClick = (e) => {
   }
 }
 
-onMounted(() => {
+onMounted(async () => {
+  await fetchTrips()
   initializeGlobe()
   window.addEventListener('resize', handleResize)
   document.addEventListener('click', handleDocumentClick)
@@ -202,7 +217,7 @@ function createTooltipContent(destination) {
 }
 
 function createTripPreviewTooltip(arc) {
-  const trip = dummyTrips.find(t => t.id === arc.tripId)
+  const trip = trips.value.find(t => t.id === arc.tripId)
   if (!trip) return ''
   
   return `
@@ -298,9 +313,9 @@ function createTripPreviewTooltip(arc) {
 }
 
 function initializeGlobe() {
-  const arcs = convertTripsToArcs(dummyTrips)
+  const arcs = convertTripsToArcs(trips.value)
   const stackedArcs = groupArcsByRoute(arcs)
-  const destinations = processDestinationsFromTrips(dummyTrips)
+  const destinations = processDestinationsFromTrips(trips.value)
   
   myGlobe = Globe()(globeEl.value)
     .globeImageUrl('//unpkg.com/three-globe/example/img/earth-night.jpg')
@@ -480,7 +495,7 @@ function showTripPreviewFromTooltip(tripId, tooltipElement) {
     existingPreview.remove()
   }
   
-  const trip = dummyTrips.find(t => t.id === tripId)
+  const trip = trips.value.find(t => t.id === tripId)
   if (!trip) return
   
   const arc = { tripId: trip.id }
@@ -581,7 +596,7 @@ function handleArcHover(hoverArc) {
   myGlobe.arcColor(myGlobe.arcColor())
   myGlobe.arcStroke(myGlobe.arcStroke())
   
-  const destinations = processDestinationsFromTrips(dummyTrips)
+  const destinations = processDestinationsFromTrips(trips.value)
   myGlobe.htmlElementsData(destinations)
 }
 
