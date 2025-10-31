@@ -113,7 +113,7 @@ app.post('/api/upload-avatar', async (req, res) => {
     const { userId, imageBase64 } = req.body;
     if (!userId || !imageBase64) return res.status(400).json({ error: "Faltan datos" });
 
-    // 1) Revisar si hay avatar previo
+    // Revisar si hay avatar previo
     const { data: userData, error: fetchError } = await supabaseAdmin
       .from("users")
       .select("avatar_url")
@@ -129,22 +129,22 @@ app.post('/api/upload-avatar', async (req, res) => {
       await supabaseAdmin.storage.from("profile-pictures").remove([oldFileName]);
     }
 
-    // 2) Subir la nueva imagen
+    // Subir la nueva imagen
     const buffer = Buffer.from(imageBase64, "base64");
     const fileName = `${userId}-${Date.now()}.png`;
 
     const { error: uploadError } = await supabaseAdmin.storage
       .from("profile-pictures")
-      .upload(fileName, buffer, { upsert: true });
+      .upload(fileName, buffer, { upsert: true , contentType: "image/png",});
 
     if (uploadError) return res.status(500).json({ error: uploadError.message });
 
-    // 3) Obtener URL pública
+    // Obtener URL pública
     const { data: { publicUrl } } = supabaseAdmin.storage
       .from("profile-pictures")
       .getPublicUrl(fileName);
 
-    // 4) Actualizar usuario
+    // Actualizar usuario
     const { error: updateError } = await supabaseAdmin
       .from("users")
       .update({ avatar_url: publicUrl, updated_at: new Date().toISOString() })
@@ -190,5 +190,53 @@ app.post('/api/delete-avatar', async (req, res) => {
   } catch (e) {
     console.error(e);
     res.status(500).json({ error: "Error interno eliminando avatar" });
+  }
+});
+
+app.get('/api/trips', async (req, res) => {
+  try {
+    // Obtener todos los viajes con usuario
+    const { data: trips, error: tripsError } = await supabaseAdmin
+      .from('trips')
+      .select('*, users:user_id(id, username, display_name, user_color)');
+    if (tripsError) return res.status(500).json({ error: tripsError.message });
+
+    // Obtener todas las paradas de los viajes con país
+    const { data: stops, error: stopsError } = await supabaseAdmin
+      .from('trip_stops')
+      .select('*, country:countries!trip_stops_country_id_fkey(id, name, latitude, longitude)');
+    if (stopsError) return res.status(500).json({ error: stopsError.message });
+
+    // Agrupar paradas por trip_id
+    const stopsByTrip = {};
+    stops.forEach(stop => {
+      if (!stopsByTrip[stop.trip_id]) stopsByTrip[stop.trip_id] = [];
+      stopsByTrip[stop.trip_id].push({
+        country: stop.country?.name || '',
+        city: stop.city,
+        lat: stop.country?.latitude,
+        lng: stop.country?.longitude,
+        images: stop.images || []
+      });
+    });
+
+    // Formatear los viajes como dummyTrips
+    const tripsWithStops = trips.map(trip => ({
+      id: trip.id,
+      userId: trip.user_id,
+      userName: trip.users?.display_name || trip.users?.username || '',
+      userColor: trip.users?.user_color || 'rgba(192,192,192,1)',
+      tripName: trip.trip_name,
+      coverImage: trip.cover_image,
+      stops: stopsByTrip[trip.id] || [],
+      startDate: trip.start_date,
+      endDate: trip.end_date,
+      description: trip.description
+    }));
+
+    res.json({ ok: true, trips: tripsWithStops });
+  } catch (e) {
+    console.error('[GET TRIPS ERROR]', e);
+    res.status(500).json({ error: 'Error interno obteniendo viajes' });
   }
 });
