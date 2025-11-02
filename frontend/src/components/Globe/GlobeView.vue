@@ -29,6 +29,8 @@
 import { ref, onMounted, onUnmounted, computed, watch } from 'vue'
 import Globe from 'globe.gl'
 import { dummyTrips, convertTripsToArcs, processDestinationsFromTrips } from '@/data/dummyTrips.js'
+import { supabase } from '@/config/supabase.js'
+
 
 const globeEl = ref(null)
 let myGlobe = null
@@ -36,15 +38,34 @@ const OPACITY = 0.3
 let activePinTooltip = null
 let activeTripPreview = null
 let hoveredTripId = null
-let trips = ref([]) 
-// UI mode: 'discovery' shows all trips, 'friends' shows only friends' trips
-const mode = ref('discovery')
-const friendUserIds = ref([])
+const trips = ref([])
+const friends = ref([])
+const mode = ref('discovery') // si ya lo tienes, puedes quitar esta línea
 
+const friendUserIds = computed(() => {
+  return friends.value
+    .map(f => f.friend?.id)
+    .filter(Boolean) // elimina undefined/null
+})
+
+
+const currentUserId = ref(null)
 const filteredTrips = computed(() => {
   if (mode.value === 'discovery') return trips.value
-  return trips.value.filter(t => friendUserIds.value.includes(t.userId))
+
+  const myUserId = currentUserId.value
+  if (!myUserId) return []
+
+  // Combinar tus viajes + los de tus amigos
+  const visibleUserIds = [...friendUserIds.value, myUserId].map(String)
+
+  // Mostrar viajes cuyo user_id o userId esté en la lista
+  return trips.value.filter(t => {
+    const tripOwnerId = String(t.userId || t.user_id || '').trim()
+    return visibleUserIds.includes(tripOwnerId)
+  })
 })
+
 
 async function fetchTrips() {
   try {
@@ -56,6 +77,21 @@ async function fetchTrips() {
     }
   } catch (e) {
     console.error('Error en fetchTrips:', e)
+  }
+}
+// === FETCH FRIENDS ===
+async function fetchFriends(userId) {
+  try {
+    const res = await fetch(`/api/friends?userId=${userId}`)
+    const data = await res.json()
+    if (data.ok) {
+      friends.value = data.friends
+      console.log('Amigos cargados:', friends.value)
+    } else {
+      console.error('Error al cargar amigos:', data.error)
+    }
+  } catch (e) {
+    console.error('Error en fetchFriends:', e)
   }
 }
 
@@ -90,7 +126,20 @@ const handleDocumentClick = (e) => {
 }
 
 onMounted(async () => {
-  await fetchTrips()
+  const { data: { user }, error } = await supabase.auth.getUser()
+
+  if (error || !user) {
+      console.error(' No hay usuario logueado o error en getUser()', error)
+      return
+    }
+
+  console.log('Usuario logueado:', user.id)
+  currentUserId.value = user.id
+
+  await Promise.all([
+      fetchTrips(),
+      fetchFriends(user.id)
+    ])
   initializeGlobe()
   window.addEventListener('resize', handleResize)
   document.addEventListener('click', handleDocumentClick)
@@ -877,13 +926,17 @@ function openFullTrip(tripId) {
 
 function handleArcHover(hoverArc) {
   hoveredTripId = hoverArc ? hoverArc.tripId : null
-  
+
+  // refresca solo los viajes visibles (usuario + amigos)
+  const visibleTrips = filteredTrips.value
+
   myGlobe.arcColor(myGlobe.arcColor())
   myGlobe.arcStroke(myGlobe.arcStroke())
-  
-  const destinations = processDestinationsFromTrips(trips.value)
+
+  const destinations = processDestinationsFromTrips(visibleTrips)
   myGlobe.htmlElementsData(destinations)
 }
+
 
 function handleResize() {
   if (myGlobe && globeEl.value) {
