@@ -1,9 +1,32 @@
 <template>
-  <div ref="globeEl" class="globe-container"></div>
+  <div>
+    <div class="top-controls">
+      <span
+        class="top-link"
+        :class="{ active: mode === 'discovery' }"
+        @click="setMode('discovery')"
+        tabindex="0"
+        @keydown.enter="setMode('discovery')"
+      >
+        Discovery
+      </span>
+      <span class="sep">|</span>
+      <span
+        class="top-link"
+        :class="{ active: mode === 'friends' }"
+        @click="setMode('friends')"
+        tabindex="0"
+        @keydown.enter="setMode('friends')"
+      >
+        Friends
+      </span>
+    </div>
+    <div ref="globeEl" class="globe-container"></div>
+  </div>
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted, computed, watch } from 'vue'
 import Globe from 'globe.gl'
 import { dummyTrips, convertTripsToArcs, processDestinationsFromTrips } from '@/data/dummyTrips.js'
 
@@ -14,6 +37,14 @@ let activePinTooltip = null
 let activeTripPreview = null
 let hoveredTripId = null
 let trips = ref([]) 
+// UI mode: 'discovery' shows all trips, 'friends' shows only friends' trips
+const mode = ref('discovery')
+const friendUserIds = ref([])
+
+const filteredTrips = computed(() => {
+  if (mode.value === 'discovery') return trips.value
+  return trips.value.filter(t => friendUserIds.value.includes(t.userId))
+})
 
 async function fetchTrips() {
   try {
@@ -63,15 +94,27 @@ onMounted(async () => {
   initializeGlobe()
   window.addEventListener('resize', handleResize)
   document.addEventListener('click', handleDocumentClick)
+  // rebuild globe when filteredTrips changes (mode switch)
+  watch(filteredTrips, () => {
+    rebuildGlobeData()
+  })
 })
 
 onUnmounted(() => {
   window.removeEventListener('resize', handleResize)
   document.removeEventListener('click', handleDocumentClick)
+  // stop watchers/listeners
+  try { watch.clear && watch.clear() } catch(e) {}
   if (myGlobe) {
     myGlobe = null
   }
 })
+
+function setMode(newMode) {
+  if (newMode === mode.value) return
+  mode.value = newMode
+  rebuildGlobeData()
+}
 
 function calculatePinSize(visitCount) {
   if (visitCount === 1) return 20
@@ -353,9 +396,9 @@ function createTripPreviewTooltip(arc) {
 }
 
 function initializeGlobe() {
-  const arcs = convertTripsToArcs(trips.value)
+  const arcs = convertTripsToArcs(filteredTrips.value)
   const stackedArcs = groupArcsByRoute(arcs)
-  const destinations = processDestinationsFromTrips(trips.value)
+  const destinations = processDestinationsFromTrips(filteredTrips.value)
   
   myGlobe = Globe()(globeEl.value)
     .globeImageUrl('//unpkg.com/three-globe/example/img/earth-night.jpg')
@@ -457,6 +500,25 @@ function initializeGlobe() {
   })
   
   myGlobe.pointOfView({ lat: 20, lng: 0, altitude: 2.5 }, 4000)
+}
+
+function rebuildGlobeData() {
+  if (!myGlobe) return
+  // close overlays when switching mode
+  try {
+    document.querySelectorAll('.pin-tooltip').forEach(n => n.remove())
+    document.querySelectorAll('.trip-preview-tooltip').forEach(n => n.remove())
+    document.querySelectorAll('.trip-modal-overlay').forEach(n => n.remove())
+    activePinTooltip = null
+    activeTripPreview = null
+  } catch (e) {}
+
+  const arcs = convertTripsToArcs(filteredTrips.value)
+  const stackedArcs = groupArcsByRoute(arcs)
+  const destinations = processDestinationsFromTrips(filteredTrips.value)
+
+  myGlobe.arcsData(stackedArcs)
+  myGlobe.htmlElementsData(destinations)
 }
 
 function showTooltip(destination, pinElement) {
@@ -833,6 +895,35 @@ function handleResize() {
 </script>
 
 <style scoped>
+.top-controls {
+  position: fixed;
+  top: 33px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 60000;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: transparent;
+}
+.top-link {
+  background: transparent;
+  border: none;
+  color: white;
+  padding: 0 6px;
+  cursor: pointer;
+  font-weight: 400;
+  font-size: 15px;
+  line-height: 1;
+  user-select: none;
+}
+.top-link:hover {
+  opacity: 0.9;
+}
+.top-link.active {
+  font-weight: 700; /* negrita cuando está seleccionado */
+}
+.sep { color: rgba(255,255,255,0.6); margin: 0 6px }
 .globe-container {
   width: 100vw;
   height: 100vh;
