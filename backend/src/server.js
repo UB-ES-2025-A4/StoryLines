@@ -1,9 +1,9 @@
+// Load environment variables as early as possible so modules that read
+// process.env (like ./config/supabase.js) get the values.
+import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
-import dotenv from 'dotenv';
 import multer from "multer";
-
-dotenv.config();
 const app = express();
 const upload = multer({ storage: multer.memoryStorage() });
 

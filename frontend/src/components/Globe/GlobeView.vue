@@ -110,6 +110,48 @@ function groupArcsByRoute(arcs) {
   return stackedArcs
 }
 
+function parseRgba(rgbaStr) {
+  const m = rgbaStr.match(/rgba?\(([^)]+)\)/)
+  if (!m) return null
+  const parts = m[1].split(',').map(p => p.trim())
+  const r = Number(parts[0]) || 0
+  const g = Number(parts[1]) || 0
+  const b = Number(parts[2]) || 0
+  const a = parts[3] !== undefined ? Number(parts[3]) : 1
+  return { r, g, b, a }
+}
+
+function resolveColorToRgba(colorStr, alpha = 1) {
+  try {
+    // If it's already rgba, try to parse
+    const p = parseRgba(colorStr)
+    if (p) {
+      return rgbaToString({ r: p.r, g: p.g, b: p.b, a: alpha })
+    }
+
+    const el = document.createElement('div')
+    el.style.color = colorStr
+    el.style.display = 'none'
+    document.body.appendChild(el)
+    const cs = getComputedStyle(el).color // like 'rgb(r, g, b)' or 'rgba(...)'
+    document.body.removeChild(el)
+    const m = cs.match(/rgba?\(([^)]+)\)/)
+    if (!m) return colorStr
+    const parts = m[1].split(',').map(s => s.trim())
+    const r = Number(parts[0]) || 0
+    const g = Number(parts[1]) || 0
+    const b = Number(parts[2]) || 0
+    return rgbaToString({ r, g, b, a: alpha })
+  } catch (e) {
+    console.warn('resolveColorToRgba failed for', colorStr, e)
+    return colorStr
+  }
+}
+
+function rgbaToString(c) {
+  return `rgba(${Math.round(c.r)}, ${Math.round(c.g)}, ${Math.round(c.b)}, ${Number(c.a).toFixed(3)})`
+}
+
 function createTooltipContent(destination) {
   const tripsByUser = {}
   destination.trips.forEach(trip => {
@@ -143,7 +185,7 @@ function createTooltipContent(destination) {
       ${user.trips.map(trip => `
         <button 
           class="trip-link" 
-          onclick="window.openTripPreview(${trip.tripId}, this.closest('.pin-tooltip'))"
+          data-trip-id="${trip.tripId}"
           style="
             display: block;
             width: 100%;
@@ -159,8 +201,6 @@ function createTooltipContent(destination) {
             padding: 2px 0;
             font-family: inherit;
           "
-          onmouseover="this.style.color='#6bb3ff'"
-          onmouseout="this.style.color='#4a9eff'"
         >
           ${trip.tripName}
         </button>
@@ -330,13 +370,22 @@ function initializeGlobe() {
     .arcEndLat(d => d.destination.lat + (d.stackOffset * 0.5))
     .arcEndLng(d => d.destination.lng + (d.stackOffset * 0.5))
     .arcColor(d => {
-      const op = hoveredTripId === null ? OPACITY : 
-                 hoveredTripId === d.tripId ? 0.9 : OPACITY / 4
-      const startColor = d.userColor.replace('1)', `${op})`)
-      const endColor = d.userColor.replace('1)', `${op})`)
-      return [startColor, endColor]
+      // Use the color provided by the data as the base.
+      // When nothing is hovered, show the base color. When one arc is hovered,
+      // brighten the hovered arc and fade (darken/transparent) the others.
+      if (hoveredTripId === null) {
+        const base = resolveColorToRgba(d.userColor, 0.95)
+        return [base, base]
+      }
+      if (hoveredTripId === d.tripId) {
+        const bright = resolveColorToRgba(d.userColor, 0.95)
+        return [bright, bright]
+      }
+      // faded other arcs when one is hovered
+      const faded = resolveColorToRgba(d.userColor, OPACITY * 0.6)
+      return [faded, faded]
     })
-    .arcStroke(d => hoveredTripId === d.tripId ? 0.8 : 0.5)
+    .arcStroke(d => hoveredTripId === d.tripId ? 1.2 : 0.35)
     .arcDashLength(0.4)
     .arcDashGap(0.1)
     .arcDashAnimateTime(2000)
@@ -407,25 +456,75 @@ function initializeGlobe() {
 }
 
 function showTooltip(destination, pinElement) {
+  // disable globe pointer while tooltip is open
   if (globeEl.value) {
     globeEl.value.style.pointerEvents = 'none'
   }
-  
+
   const tooltip = document.createElement('div')
   tooltip.className = 'pin-tooltip'
   tooltip.innerHTML = createTooltipContent(destination)
-  tooltip.style.position = 'absolute'
+
+  // Attach click listeners to the trip links inside the tooltip
+  // Using data-trip-id attributes (set in createTooltipContent)
+  setTimeout(() => {
+    try {
+      const tripLinks = tooltip.querySelectorAll('.trip-link')
+      tripLinks.forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation()
+          const id = Number(btn.getAttribute('data-trip-id'))
+          if (!Number.isNaN(id)) {
+            // close tooltip and any previews
+            const oldTooltips = document.querySelectorAll('.pin-tooltip')
+            oldTooltips.forEach(t => t.remove())
+            const oldPreviews = document.querySelectorAll('.trip-preview-tooltip')
+            oldPreviews.forEach(p => p.remove())
+            activePinTooltip = null
+            activeTripPreview = null
+            if (globeEl.value) {
+              globeEl.value.style.pointerEvents = 'auto'
+            }
+            // open full trip info same as clicking the arc
+            showTripPreviewFromTooltip(id, pinElement)
+          }
+        })
+      })
+    } catch (err) {
+      // defensive: if something goes wrong attaching listeners, log it
+      console.error('Error attaching trip link listeners', err)
+    }
+  }, 0)
+
+  // place tooltip in document.body so it is not a child of the pin element
+  tooltip.style.position = 'fixed'
   tooltip.style.pointerEvents = 'auto'
   tooltip.style.zIndex = '10000'
-  tooltip.style.left = '50%'
-  tooltip.style.top = '0'
-  tooltip.style.transform = 'translate(-50%, calc(-100% - 10px))'
-  
+
+  // compute a sensible position based on the pin's screen rect
+  try {
+    const rect = pinElement.getBoundingClientRect()
+    const centerX = rect.left + (rect.width / 2)
+    const centerY = rect.top + (rect.height / 2)
+    const position = calculateBestPosition(centerX, centerY, 240, 200, 8)
+
+    tooltip.style.left = `${position.left}px`
+    tooltip.style.top = `${position.top}px`
+    tooltip.style.transform = position.transform
+  } catch (err) {
+    // fallback: attach to center-top of pin if anything fails
+    tooltip.style.left = '50%'
+    tooltip.style.top = '0%'
+    tooltip.style.transform = 'translate(-50%, calc(-100% - 10px))'
+    console.warn('Could not position pin tooltip precisely', err)
+  }
+
+  // stop propagation so clicks inside the tooltip don't reach the pin element
   tooltip.addEventListener('click', (e) => {
     e.stopPropagation()
   })
-  
-  pinElement.appendChild(tooltip)
+
+  document.body.appendChild(tooltip)
 }
 
 function calculateBestPosition(x, y, previewWidth = 320, previewHeight = 400, extraSpacing = 0) {
@@ -530,7 +629,8 @@ function showTripPreviewFromTooltip(tripId, tooltipElement) {
   const button = preview.querySelector('button')
   if (button) {
     button.onclick = () => {
-      console.log(`Navigate to trip ${tripId}`)
+      // centralized handler for opening the full trip view
+      openFullTrip(tripId)
     }
   }
   
@@ -565,7 +665,7 @@ function showTripPreview(arc, event) {
   const button = preview.querySelector('button')
   if (button) {
     button.onclick = () => {
-      console.log(`Navigate to trip ${arc.tripId}`)
+      openFullTrip(arc.tripId)
     }
   }
   
@@ -587,6 +687,19 @@ function handleArcClick(arc, event) {
     if (preview) preview.remove()
   } else {
     showTripPreview(arc, event)
+  }
+}
+
+// Open the full trip view. Emits a window event so the rest of the app
+// can listen and handle navigation or open a dedicated modal.
+function openFullTrip(tripId) {
+  console.log('openFullTrip called for', tripId)
+  try {
+    const ev = new CustomEvent('open-full-trip', { detail: { tripId } })
+    window.dispatchEvent(ev)
+  } catch (e) {
+    // fallback: log
+    console.warn('Could not dispatch open-full-trip event', e)
   }
 }
 
