@@ -417,6 +417,10 @@ function initializeGlobe() {
         } else {
           const oldTooltips = document.querySelectorAll('.pin-tooltip')
           oldTooltips.forEach(t => t.remove())
+          // also remove any open trip previews when opening a pin
+          const oldPreviews = document.querySelectorAll('.trip-preview-tooltip')
+          oldPreviews.forEach(p => p.remove())
+          activeTripPreview = null
           activePinTooltip = d
           showTooltip(d, el)
         }
@@ -473,20 +477,37 @@ function showTooltip(destination, pinElement) {
       tripLinks.forEach(btn => {
         btn.addEventListener('click', (e) => {
           e.stopPropagation()
-          const id = Number(btn.getAttribute('data-trip-id'))
-          if (!Number.isNaN(id)) {
-            // close tooltip and any previews
-            const oldTooltips = document.querySelectorAll('.pin-tooltip')
-            oldTooltips.forEach(t => t.remove())
-            const oldPreviews = document.querySelectorAll('.trip-preview-tooltip')
-            oldPreviews.forEach(p => p.remove())
-            activePinTooltip = null
-            activeTripPreview = null
-            if (globeEl.value) {
-              globeEl.value.style.pointerEvents = 'auto'
-            }
-            // open full trip info same as clicking the arc
-            showTripPreviewFromTooltip(id, pinElement)
+          const rawId = btn.getAttribute('data-trip-id')
+          console.log('pin tooltip: trip link clicked, rawId=', rawId)
+          const idNum = Number(rawId)
+
+          // try to locate the trip robustly (accept number or string ids)
+          const trip = trips.value.find(t => t.id === idNum || String(t.id) === rawId || t.tripId === rawId || String(t.tripId) === rawId)
+
+          if (!trip) {
+            console.warn('Could not find trip for id', rawId, 'trips sample:', trips.value.slice(0,3))
+            return
+          }
+
+          // close tooltip and any previews
+          const oldTooltips = document.querySelectorAll('.pin-tooltip')
+          oldTooltips.forEach(t => t.remove())
+          const oldPreviews = document.querySelectorAll('.trip-preview-tooltip')
+          oldPreviews.forEach(p => p.remove())
+          activePinTooltip = null
+          activeTripPreview = null
+          if (globeEl.value) {
+            globeEl.value.style.pointerEvents = 'auto'
+          }
+
+          console.log('Opening trip preview (same as arc) for id', trip.id)
+          // show the small preview tooltip (same UX as clicking the arc)
+          try {
+            // pass the click event so preview can position at the pointer
+            showTripPreviewFromTooltip(trip.id, tooltip, e)
+          } catch (err) {
+            console.warn('Could not open trip preview from tooltip, falling back to full modal', err)
+            openFullTrip(trip.id)
           }
         })
       })
@@ -588,7 +609,7 @@ function calculateBestPosition(x, y, previewWidth = 320, previewHeight = 400, ex
   return { left, top, transform }
 }
 
-function showTripPreviewFromTooltip(tripId, tooltipElement) {
+function showTripPreviewFromTooltip(tripId, tooltipElement, clickEvent) {
   const existingPreview = document.querySelector('.trip-preview-tooltip')
   if (existingPreview) {
     existingPreview.remove()
@@ -616,21 +637,30 @@ function showTripPreviewFromTooltip(tripId, tooltipElement) {
   
   document.body.appendChild(preview)
   
-  const tooltipRect = tooltipElement.getBoundingClientRect()
-  const centerX = tooltipRect.left + (tooltipRect.width / 2)
-  const centerY = tooltipRect.top + (tooltipRect.height / 2)
-  
-  const position = calculateBestPosition(centerX, centerY, 320, 400, 30)
-  
+  let posX, posY
+  if (clickEvent && typeof clickEvent.clientX === 'number' && typeof clickEvent.clientY === 'number') {
+    posX = clickEvent.clientX
+    posY = clickEvent.clientY
+  } else {
+    const tooltipRect = tooltipElement.getBoundingClientRect()
+    posX = tooltipRect.left + (tooltipRect.width / 2)
+    posY = tooltipRect.top + (tooltipRect.height / 2)
+  }
+
+  const position = calculateBestPosition(posX, posY, 320, 400, 8)
+
   preview.style.left = `${position.left}px`
   preview.style.top = `${position.top}px`
   preview.style.transform = position.transform
   
   const button = preview.querySelector('button')
   if (button) {
-    button.onclick = () => {
-      // centralized handler for opening the full trip view
-      openFullTrip(tripId)
+    // keep the button visually clickable but prevent it from doing anything
+    // (stopPropagation + preventDefault) so it has no functionality
+    try {
+      button.addEventListener('click', (ev) => { ev.stopPropagation(); ev.preventDefault(); })
+    } catch (e) {
+      // ignore
     }
   }
   
@@ -664,8 +694,11 @@ function showTripPreview(arc, event) {
   
   const button = preview.querySelector('button')
   if (button) {
-    button.onclick = () => {
-      openFullTrip(arc.tripId)
+    // keep the button visually clickable but prevent it from doing anything
+    try {
+      button.addEventListener('click', (ev) => { ev.stopPropagation(); ev.preventDefault(); })
+    } catch (e) {
+      // ignore
     }
   }
   
@@ -677,30 +710,107 @@ function showTripPreview(arc, event) {
   preview.style.top = `${position.top}px`
   preview.style.transform = position.transform
   
-  activeTripPreview = arc
+  activeTripPreview = { tripId: arc.tripId }
 }
 
 function handleArcClick(arc, event) {
-  if (activeTripPreview === arc) {
+  // Normalize comparison by tripId so different object references still match
+  const clickedId = arc ? arc.tripId : null
+  const activeId = activeTripPreview && activeTripPreview.tripId ? activeTripPreview.tripId : null
+
+  // If a preview exists for the same trip, close it
+  if (activeId && clickedId && Number(activeId) === Number(clickedId)) {
     activeTripPreview = null
     const preview = document.querySelector('.trip-preview-tooltip')
     if (preview) preview.remove()
-  } else {
-    showTripPreview(arc, event)
+    return
   }
+
+  // otherwise remove any existing preview and show the new one
+  const existingPreview = document.querySelector('.trip-preview-tooltip')
+  if (existingPreview) existingPreview.remove()
+  activeTripPreview = null
+  showTripPreview(arc, event)
 }
 
 // Open the full trip view. Emits a window event so the rest of the app
 // can listen and handle navigation or open a dedicated modal.
 function openFullTrip(tripId) {
   console.log('openFullTrip called for', tripId)
+
+  // remove tooltips/previews
   try {
-    const ev = new CustomEvent('open-full-trip', { detail: { tripId } })
-    window.dispatchEvent(ev)
+    document.querySelectorAll('.pin-tooltip').forEach(n => n.remove())
+    document.querySelectorAll('.trip-preview-tooltip').forEach(n => n.remove())
+    activePinTooltip = null
+    activeTripPreview = null
   } catch (e) {
-    // fallback: log
-    console.warn('Could not dispatch open-full-trip event', e)
+    // ignore
   }
+
+  const trip = trips.value.find(t => t.id === tripId)
+  if (!trip) {
+    console.warn('Trip not found for openFullTrip:', tripId)
+    return
+  }
+
+  // disable globe interactions while modal open
+  if (globeEl.value) globeEl.value.style.pointerEvents = 'none'
+
+  const overlay = document.createElement('div')
+  overlay.className = 'trip-modal-overlay'
+  Object.assign(overlay.style, {
+    position: 'fixed', left: '0', top: '0', width: '100vw', height: '100vh',
+    background: 'rgba(0,0,0,0.6)', zIndex: '40000', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px'
+  })
+
+  const modal = document.createElement('div')
+  modal.className = 'trip-modal'
+  Object.assign(modal.style, {
+    maxWidth: '880px', width: '100%', borderRadius: '12px', overflow: 'hidden',
+    background: 'linear-gradient(180deg, rgba(10,10,10,1), rgba(18,18,18,1))', boxShadow: '0 20px 60px rgba(0,0,0,0.6)', color: 'white', position: 'relative'
+  })
+
+  modal.innerHTML = `
+    <div style="display:flex;flex-direction:row;gap:0;">
+      <div style="flex:0 0 360px; height:100%;">
+        <div style="width:100%; height:100%; background-image: url('${trip.coverImage}'); background-size: cover; background-position:center; min-height:260px"></div>
+      </div>
+      <div style="flex:1; padding:20px 24px;">
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
+          <div>
+            <h2 style="margin:0 0 6px 0; font-size:20px;">${trip.tripName}</h2>
+            <div style="color:#bbb; font-size:13px; margin-bottom:8px;">${trip.startDate} - ${trip.endDate}</div>
+            <div style="color:#ddd; font-size:14px; line-height:1.5; max-height:220px; overflow:auto;">${trip.description || ''}</div>
+          </div>
+          <div style="flex-shrink:0;">
+            <div style="background:${trip.userColor}; color:white; padding:8px 12px; border-radius:10px; font-weight:600;">${trip.userName}</div>
+          </div>
+        </div>
+        <div style="margin-top:18px; display:flex; gap:12px;">
+          <button class="trip-modal-close" style="background:transparent;border:1px solid rgba(255,255,255,0.08);color:#fff;padding:10px 14px;border-radius:8px;cursor:pointer;">Cerrar</button>
+        </div>
+      </div>
+    </div>
+  `
+
+  overlay.addEventListener('click', (ev) => {
+    if (ev.target === overlay) {
+      overlay.remove()
+      if (globeEl.value) globeEl.value.style.pointerEvents = 'auto'
+      activePinTooltip = null
+      activeTripPreview = null
+    }
+  })
+
+  overlay.appendChild(modal)
+  const closeBtn = modal.querySelector('.trip-modal-close')
+  if (closeBtn) closeBtn.addEventListener('click', () => { overlay.remove(); if (globeEl.value) globeEl.value.style.pointerEvents = 'auto'; activePinTooltip = null; activeTripPreview = null })
+
+  document.body.appendChild(overlay)
+
+  // still dispatch event for backward compatibility
+  try { window.dispatchEvent(new CustomEvent('open-full-trip', { detail: { tripId } })) } catch(e) {}
 }
 
 function handleArcHover(hoverArc) {
