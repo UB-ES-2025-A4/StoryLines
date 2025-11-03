@@ -6,6 +6,17 @@
 
       <form @submit.prevent="handleRegister" class="form-content">
         <div class="form-group">
+          <label for="username">Nombre de usuario:</label>
+          <input
+            type="text"
+            id="username"
+            v-model="username"
+            required
+            placeholder=" "
+          />
+        </div>
+
+        <div class="form-group">
           <label for="email">Correo Electrónico:</label>
           <input
             type="email"
@@ -64,6 +75,7 @@ export default {
   name: 'Register',
   setup() {
     const router = useRouter()
+    const username = ref('')
     const email = ref('')
     const password = ref('')
     const confirmPassword = ref('')
@@ -88,12 +100,43 @@ export default {
       loading.value = true
 
       try {
-        const { error: signUpError } = await supabase.auth.signUp({
+
+        const { data: existingUser, error: usernameError } = await supabase
+          .from('users')
+          .select('*')
+          .eq('username', username.value)
+          .maybeSingle()
+
+        if (usernameError) throw usernameError
+
+        if (existingUser) {
+          error.value = 'Este nombre de usuario ya está en uso'
+          loading.value = false
+          return
+        }
+
+        const { data: authUser, error: signUpError } = await supabase.auth.signUp({
           email: email.value,
           password: password.value
         })
 
-        if (signUpError) throw signUpError
+        if (signUpError) {
+          if (signUpError.message?.toLowerCase().includes('already') || signUpError.status === 400) {
+            error.value = 'Este correo electrónico ya está en uso'
+            loading.value = false
+            return
+          }
+          throw signUpError
+        }
+
+        const { error: insertError } = await supabase.from('users').insert([
+          {
+            id: authUser.user.id,
+            username: username.value,
+          }
+        ])
+
+        if (insertError) throw insertError
 
         success.value = '¡Registro exitoso! Redirigiendo...'
         setTimeout(() => router.push('/'), 1500)
@@ -105,6 +148,7 @@ export default {
     }
 
     return {
+      username,
       email,
       password,
       confirmPassword,
