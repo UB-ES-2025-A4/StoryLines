@@ -129,9 +129,18 @@ onMounted(async () => {
   const { data: { user }, error } = await supabase.auth.getUser()
 
   if (error || !user) {
-      console.error(' No hay usuario logueado o error en getUser()', error)
-      return
-    }
+    console.warn("No hay usuario logeado → modo visitor")
+
+    await fetchTrips()                 // Cargar todos los trips igualmente
+    initializeGlobe()                 // Mostrar globo con trips globales
+
+    // Escuchar cambios para actualizar el globo
+    watch(filteredTrips, rebuildGlobeData)
+    window.addEventListener('resize', handleResize)
+    document.addEventListener('click', handleDocumentClick)
+
+    return
+  }
 
   console.log('Usuario logueado:', user.id)
   currentUserId.value = user.id
@@ -158,6 +167,21 @@ onUnmounted(() => {
     myGlobe = null
   }
 })
+
+supabase.auth.onAuthStateChange(async (event, session) => {
+  if (event === "SIGNED_IN" && session?.user) {
+    
+    currentUserId.value = session.user.id
+
+    await Promise.all([
+      fetchTrips(),
+      fetchFriends(session.user.id),
+    ])
+
+    rebuildGlobeData()
+  }
+})
+
 
 function setMode(newMode) {
   if (newMode === mode.value) return
