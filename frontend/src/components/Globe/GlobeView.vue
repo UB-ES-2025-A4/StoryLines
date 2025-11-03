@@ -22,6 +22,21 @@
       </span>
     </div>
     <div ref="globeEl" class="globe-container"></div>
+    <!-- MODAL PARA USUARIOS NO REGISTRADOS -->
+    <div v-if="showAuthModal" class="modal-overlay">
+      <div class="modal-box">
+        <h2>Necesitas una cuenta</h2>
+        <p>Debes registrarte para usar esta funcionalidad.</p>
+
+        <button class="modal-btn" @click="goRegister">
+          Crear cuenta
+        </button>
+
+        <button class="modal-close" @click="showAuthModal = false">
+          Cerrar
+        </button>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -30,6 +45,7 @@ import { ref, onMounted, onUnmounted, computed, watch } from 'vue'
 import Globe from 'globe.gl'
 import { dummyTrips, convertTripsToArcs, processDestinationsFromTrips } from '@/data/dummyTrips.js'
 import { supabase } from '@/config/supabase.js'
+import { useRouter } from 'vue-router'
 
 
 const globeEl = ref(null)
@@ -41,6 +57,7 @@ let hoveredTripId = null
 const trips = ref([])
 const friends = ref([])
 const mode = ref('discovery') // si ya lo tienes, puedes quitar esta línea
+
 
 const friendUserIds = computed(() => {
   return friends.value
@@ -65,6 +82,14 @@ const filteredTrips = computed(() => {
     return visibleUserIds.includes(tripOwnerId)
   })
 })
+
+const showAuthModal = ref(false)
+const router = useRouter()
+
+function goRegister() {
+  showAuthModal.value = false
+  router.push("/register")
+}
 
 
 async function fetchTrips() {
@@ -170,7 +195,7 @@ onUnmounted(() => {
 
 supabase.auth.onAuthStateChange(async (event, session) => {
   if (event === "SIGNED_IN" && session?.user) {
-    
+
     currentUserId.value = session.user.id
 
     await Promise.all([
@@ -184,7 +209,10 @@ supabase.auth.onAuthStateChange(async (event, session) => {
 
 
 function setMode(newMode) {
-  if (newMode === mode.value) return
+  if (newMode === "friends" && !currentUserId.value) {
+    showAuthModal.value = true
+    return
+  }
   mode.value = newMode
   rebuildGlobeData()
 }
@@ -523,17 +551,16 @@ function initializeGlobe() {
       
       el.onclick = (e) => {
         e.stopPropagation()
+        if (!currentUserId.value) {      
+          showAuthModal.value = true
+          return
+        }
         if (activePinTooltip === d) {
-          const oldTooltips = document.querySelectorAll('.pin-tooltip')
-          oldTooltips.forEach(t => t.remove())
+          document.querySelectorAll('.pin-tooltip').forEach(t => t.remove())
           activePinTooltip = null
-          if (globeEl.value) {
-            globeEl.value.style.pointerEvents = 'auto'
-          }
+          if (globeEl.value) globeEl.value.style.pointerEvents = 'auto'
         } else {
-          const oldTooltips = document.querySelectorAll('.pin-tooltip')
-          oldTooltips.forEach(t => t.remove())
-          // also remove any open trip previews when opening a pin
+          document.querySelectorAll('.pin-tooltip').forEach(t => t.remove())
           const oldPreviews = document.querySelectorAll('.trip-preview-tooltip')
           oldPreviews.forEach(p => p.remove())
           activeTripPreview = null
@@ -849,11 +876,13 @@ function showTripPreview(arc, event) {
 }
 
 function handleArcClick(arc, event) {
-  // Normalize comparison by tripId so different object references still match
+  if (!currentUserId.value) {        
+    showAuthModal.value = true
+    return
+  }
   const clickedId = arc ? arc.tripId : null
   const activeId = activeTripPreview && activeTripPreview.tripId ? activeTripPreview.tripId : null
 
-  // If a preview exists for the same trip, close it
   if (activeId && clickedId && Number(activeId) === Number(clickedId)) {
     activeTripPreview = null
     const preview = document.querySelector('.trip-preview-tooltip')
@@ -861,7 +890,6 @@ function handleArcClick(arc, event) {
     return
   }
 
-  // otherwise remove any existing preview and show the new one
   const existingPreview = document.querySelector('.trip-preview-tooltip')
   if (existingPreview) existingPreview.remove()
   activeTripPreview = null
@@ -1012,4 +1040,73 @@ function handleResize() {
 .globe-container:active {
   cursor: grabbing;
 }
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(6px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 99999;
+}
+
+.modal-box {
+  background: #ffffff;
+  padding: 40px 32px;
+  border-radius: 16px;
+  width: 360px;
+  text-align: center;
+  color: #111111;
+  box-shadow: 0px 20px 40px rgba(0,0,0,0.25);
+}
+
+.modal-box h2 {
+  font-size: 22px;
+  font-weight: 700;
+  margin-bottom: 14px;
+}
+
+.modal-box p {
+  font-size: 15px;
+  opacity: 0.75;
+  margin-bottom: 32px;
+  line-height: 1.5;
+}
+
+.modal-btn {
+  width: 100%;
+  padding: 14px;
+  background: #111111;
+  border: none;
+  border-radius: 10px;
+  font-weight: 600;
+  color: white;
+  cursor: pointer;
+  margin-bottom: 20px;
+  transition: 0.25s ease;
+}
+
+.modal-btn:hover {
+  background: #000;
+  transform: translateY(-1px);
+}
+
+.modal-close {
+  width: 100%;
+  background: transparent;
+  border: 2px solid #111111;
+  padding: 14px;
+  border-radius: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: 0.25s ease;
+}
+
+.modal-close:hover {
+  background: #f5f5f5;
+}
+
+
 </style>
