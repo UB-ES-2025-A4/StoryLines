@@ -37,6 +37,22 @@
         </button>
       </div>
     </div>
+    <div v-if="noFriendsModal" class="floating-box-wrapper">
+      <div class="floating-box">
+        <h2>No tienes amigos todavía</h2>
+        <p>Aquí tienes algunas sugerencias para empezar:</p>
+
+        <div class="suggested-users">
+          <div v-for="user in suggestedUsers" :key="user.id" class="suggested-user">
+            <img :src="user.avatar_url" alt="avatar" />
+            <span>{{ user.username }}</span>
+            <button @click="router.push(`/profile/${user.id}`)">Ver perfil</button>
+          </div>
+        </div>
+
+        <button class="secondary-btn" @click="noFriendsModal = false">Cerrar</button>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -56,7 +72,10 @@ let activeTripPreview = null
 let hoveredTripId = null
 const trips = ref([])
 const friends = ref([])
-const mode = ref('discovery') // si ya lo tienes, puedes quitar esta línea
+const mode = ref('discovery')
+const noFriendsModal = ref(false)
+const suggestedUsers = ref([]) 
+
 
 
 const friendUserIds = computed(() => {
@@ -208,14 +227,55 @@ supabase.auth.onAuthStateChange(async (event, session) => {
 })
 
 
-function setMode(newMode) {
-  if (newMode === "friends" && !currentUserId.value) {
-    showAuthModal.value = true
-    return
-  }
+async function setMode(newMode) {
+  // 🔹 Cerrar cualquier modal abierto al cambiar de modo
+  showAuthModal.value = false
+  noFriendsModal.value = false
+
   mode.value = newMode
+
+  if (newMode === "friends") {
+    if (!currentUserId.value) {
+      showAuthModal.value = true
+      return
+    }
+    if (friends.value.length === 0) {
+      await fetchSuggestedUsers()
+      noFriendsModal.value = true
+      return
+    }
+  }
+
   rebuildGlobeData()
 }
+
+
+async function fetchSuggestedUsers() {
+  try {
+    // Obtén todos los perfiles (máximo 20 para no cargar de más)
+    const { data: allUsers, error } = await supabase
+      .from("profiles")
+      .select("id, username, avatar_url")
+      .limit(20)
+
+    if (error) throw error
+    if (!allUsers) return
+
+    // Crea un set con IDs de amigos y el tuyo propio
+    const excludedIds = new Set([currentUserId.value, ...friends.value.map(f => f.id)])
+
+    // Filtra los que no están en tu lista ni eres tú
+    const filtered = allUsers.filter(u => !excludedIds.has(u.id))
+
+    // Toma los tres primeros
+    suggestedUsers.value = filtered.slice(0, 3)
+    console.log("Usuarios sugeridos:", suggestedUsers.value)
+  } catch (err) {
+    console.error("Error al obtener sugerencias:", err)
+  }
+}
+
+
 
 function calculatePinSize(visitCount) {
   if (visitCount === 1) return 20
@@ -1106,6 +1166,208 @@ function handleResize() {
 
 .modal-close:hover {
   background: #f5f5f5;
+}
+.friends-modal-container {
+  display: flex;
+  justify-content: center;
+  margin-top: 20px;      /* debajo del globo */
+}
+
+.friends-modal {
+  background: #ffffff;
+  padding: 32px 28px;
+  border-radius: 16px;
+  width: 480px;
+  text-align: center;
+  color: #111111;
+  box-shadow: 0 10px 24px rgba(0,0,0,0.15);
+}
+
+.friends-modal h2 {
+  font-size: 20px;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.friends-modal p {
+  font-size: 15px;
+  opacity: 0.75;
+  margin-bottom: 28px;
+}
+
+.suggested-users {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-bottom: 28px;
+}
+
+.suggested-user {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.suggested-user img {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.suggested-user button {
+  background: #111111;
+  border: none;
+  padding: 8px 14px;
+  border-radius: 8px;
+  color: white;
+  cursor: pointer;
+  font-size: 13px;
+  transition: 0.25s;
+}
+
+.suggested-user button:hover {
+  opacity: 0.8;
+}
+
+.modal-close {
+  width: 100%;
+  padding: 12px;
+  background: transparent;
+  border: 2px solid #111;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: 0.25s;
+}
+
+.modal-close:hover {
+  background: #f5f5f5;
+}
+
+/* Wrapper invisible que no bloquea el mapa */
+.floating-box-wrapper {
+  position: fixed;
+  top: 80px;
+  right: 40px;
+  z-index: 9999;
+  pointer-events: none; /* deja pasar clicks al globo */
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+/* Caja flotante */
+.floating-box {
+  pointer-events: auto;
+  background: rgba(20, 20, 20, 0.9);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 14px;
+  padding: 24px 28px;
+  width: 320px;
+  color: #fff;
+  font-family: 'Inter', sans-serif;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+  margin-bottom: 16px;
+  animation: fadeInUp 0.3s ease-out;
+}
+
+.floating-box h2 {
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 10px;
+  color: #fff;
+}
+
+.floating-box p {
+  font-size: 14px;
+  color: #ccc;
+  line-height: 1.6;
+  margin-bottom: 20px;
+}
+
+/* Botones */
+.floating-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.primary-btn {
+  background: #007bff;
+  color: #fff;
+  border: none;
+  padding: 8px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: 0.2s;
+}
+
+.primary-btn:hover {
+  opacity: 0.85;
+}
+
+.secondary-btn {
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.3);
+  color: #ddd;
+  padding: 8px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.secondary-btn:hover {
+  background: rgba(255,255,255,0.08);
+}
+
+/* Lista de sugerencias */
+.suggested-users {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.suggested-user {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.suggested-user .user-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.suggested-user img {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.suggested-user button {
+  background: #007bff;
+  color: #fff;
+  border: none;
+  padding: 6px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 13px;
+  transition: 0.25s;
+}
+
+.suggested-user button:hover {
+  opacity: 0.85;
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 
