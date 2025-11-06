@@ -1,5 +1,6 @@
 <template>
   <div>
+    <!-- CONTROLES SUPERIORES -->
     <div class="top-controls">
       <span
         class="top-link"
@@ -21,45 +22,65 @@
         Friends
       </span>
     </div>
+
+    <!-- CONTENEDOR DEL GLOBO -->
     <div ref="globeEl" class="globe-container"></div>
+
     <!-- MODAL PARA USUARIOS NO REGISTRADOS -->
     <div v-if="showAuthModal" class="modal-overlay">
       <div class="modal-box">
         <h2>Necesitas una cuenta</h2>
         <p>Debes registrarte para usar esta funcionalidad.</p>
 
-        <button class="modal-btn" @click="goRegister">
-          Crear cuenta
-        </button>
-
-        <button class="modal-close" @click="showAuthModal = false">
-          Cerrar
-        </button>
+        <button class="modal-btn" @click="goRegister">Crear cuenta</button>
+        <button class="modal-close" @click="showAuthModal = false">Cerrar</button>
       </div>
     </div>
+
+    <!-- MODAL CUANDO NO HAY AMIGOS -->
     <div v-if="noFriendsModal" class="floating-box-wrapper">
       <div class="floating-box">
         <h2>No tienes amigos todavía</h2>
         <p>Aquí tienes algunas sugerencias para empezar:</p>
 
         <div class="suggested-users">
-          <div v-for="user in suggestedUsers" :key="user.id" class="suggested-user">
-            <img :src="user.avatar_url" alt="avatar" />
-            <span>{{ user.username }}</span>
-            <button @click="router.push(`/profile/${user.id}`)">Ver perfil</button>
+          <div
+            v-for="user in suggestedUsers"
+            :key="user.id"
+            class="suggested-user"
+          >
+            <div class="user-info">
+              <img :src="user.avatar_url" alt="avatar" />
+              <span>{{ user.username }}</span>
+            </div>
+            <button
+              class="white-btn"
+              :disabled="user.isFriend"
+              @click="addFriend(user)"
+              :class="{ 'disabled-btn': user.isFriend }"
+            >
+              {{ user.isFriend ? 'Friends' : 'Añadir amigo' }}
+            </button>
           </div>
         </div>
 
-        <button class="secondary-btn" @click="noFriendsModal = false">Cerrar</button>
+        <div class="floating-actions">
+          <button class="secondary-btn" @click="noFriendsModal = false">
+            Cerrar
+          </button>
+        </div>
       </div>
     </div>
+
+
   </div>
 </template>
+
 
 <script setup>
 import { ref, onMounted, onUnmounted, computed, watch } from 'vue'
 import Globe from 'globe.gl'
-import { dummyTrips, convertTripsToArcs, processDestinationsFromTrips } from '@/data/dummyTrips.js'
+import {  convertTripsToArcs, processDestinationsFromTrips } from '@/data/dummyTrips.js'
 import { supabase } from '@/config/supabase.js'
 import { useRouter } from 'vue-router'
 
@@ -252,28 +273,54 @@ async function setMode(newMode) {
 
 async function fetchSuggestedUsers() {
   try {
-    // Obtén todos los perfiles (máximo 20 para no cargar de más)
     const { data: allUsers, error } = await supabase
-      .from("profiles")
+      .from("users")
       .select("id, username, avatar_url")
       .limit(20)
 
     if (error) throw error
     if (!allUsers) return
 
-    // Crea un set con IDs de amigos y el tuyo propio
     const excludedIds = new Set([currentUserId.value, ...friends.value.map(f => f.id)])
+    const filtered = allUsers
+      .filter(u => !excludedIds.has(u.id))
+      .slice(0, 3)
+      .map(u => ({ ...u, isFriend: false })) // 👈 aquí se añade el estado
 
-    // Filtra los que no están en tu lista ni eres tú
-    const filtered = allUsers.filter(u => !excludedIds.has(u.id))
-
-    // Toma los tres primeros
-    suggestedUsers.value = filtered.slice(0, 3)
+    suggestedUsers.value = filtered
     console.log("Usuarios sugeridos:", suggestedUsers.value)
   } catch (err) {
     console.error("Error al obtener sugerencias:", err)
   }
 }
+
+
+async function addFriend(user) {
+  try {
+    if (!currentUserId.value) {
+      showAuthModal.value = true
+      return
+    }
+
+    const { error } = await supabase
+      .from("friends")
+      .insert([{ user_id: currentUserId.value, friend_id: user.id }])
+
+    if (error) throw error
+
+    // Marca el botón como "Friends" y desactívalo
+    user.isFriend = true
+
+    // Recarga la lista de amigos y el globo
+    await fetchFriends(currentUserId.value)
+    rebuildGlobeData()
+
+    console.log(` Amigo añadido: ${user.username}`)
+  } catch (err) {
+    console.error(" Error al añadir amigo:", err)
+  }
+}
+
 
 
 
@@ -1368,6 +1415,29 @@ function handleResize() {
 @keyframes fadeInUp {
   from { opacity: 0; transform: translateY(12px); }
   to { opacity: 1; transform: translateY(0); }
+}
+
+.white-btn {
+  background: #ffffff;
+  color: #111111;
+  border: 1px solid rgba(0,0,0,0.2);
+  padding: 6px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  transition: 0.25s ease;
+}
+
+.white-btn:hover {
+  background: #e0e0e0;
+}
+
+.white-btn.disabled-btn {
+  background: #bfbfbf;
+  color: #666;
+  cursor: default;
+  pointer-events: none;
 }
 
 
