@@ -33,7 +33,7 @@
         <p>Debes registrarte para usar esta funcionalidad.</p>
 
         <button class="modal-btn" @click="goRegister">Crear cuenta</button>
-        <button class="modal-close" @click="showAuthModal = false">Cerrar</button>
+        <button class="modal-close" @click="closeAuthModal">Cerrar</button>
       </div>
     </div>
 
@@ -202,6 +202,17 @@ const handleDocumentClick = (e) => {
     }
   }
 }
+
+function closeAuthModal() {
+  showAuthModal.value = false
+  
+  // Si el usuario NO está logueado y estaba en modo friends → vuelve a discovery
+  if (!currentUserId.value && mode.value === 'friends') {
+    mode.value = 'discovery'
+    rebuildGlobeData()
+  }
+}
+
 
 onMounted(async () => {
   const { data: { user }, error } = await supabase.auth.getUser()
