@@ -40,10 +40,23 @@
     <!-- MODAL CUANDO NO HAY AMIGOS -->
     <div v-if="noFriendsModal" class="floating-box-wrapper">
       <div class="floating-box">
-        <h2>No tienes amigos todavía</h2>
-        <p>Aquí tienes algunas sugerencias para empezar:</p>
+        <h2>
+          {{ friends.length === 0
+            ? 'No tienes amigos todavía'
+            : 'Ya tienes amigos ¿quieres añadir más?' }}
+        </h2>
 
-        <div class="suggested-users">
+        <p v-if="suggestedUsers.length > 0">
+          {{ friends.length === 0
+            ? 'Aquí tienes algunas sugerencias para empezar:'
+            : 'Aquí tienes algunas sugerencias de nuevos amigos:' }}
+        </p>
+
+        <p v-else class="no-more-users">
+          Ya no hay más usuarios que sugerir.
+        </p>
+
+        <div class="suggested-users" v-if="suggestedUsers.length > 0">
           <div
             v-for="user in suggestedUsers"
             :key="user.id"
@@ -72,7 +85,6 @@
       </div>
     </div>
 
-
   </div>
 </template>
 
@@ -96,6 +108,7 @@ const friends = ref([])
 const mode = ref('discovery')
 const noFriendsModal = ref(false)
 const suggestedUsers = ref([]) 
+const allSuggestedUsers = ref([])
 
 
 
@@ -270,54 +283,78 @@ async function setMode(newMode) {
   rebuildGlobeData()
 }
 
-
 async function fetchSuggestedUsers() {
   try {
     const { data: allUsers, error } = await supabase
       .from("users")
       .select("id, username, avatar_url")
-      .limit(20)
+      .limit(50)
 
     if (error) throw error
     if (!allUsers) return
 
-    const excludedIds = new Set([currentUserId.value, ...friends.value.map(f => f.id)])
-    const filtered = allUsers
-      .filter(u => !excludedIds.has(u.id))
-      .slice(0, 3)
-      .map(u => ({ ...u, isFriend: false })) // 👈 aquí se añade el estado
+    const excludedIds = new Set([
+      currentUserId.value,
+      ...friends.value.map(f => f.friend?.id)
+    ])
 
-    suggestedUsers.value = filtered
-    console.log("Usuarios sugeridos:", suggestedUsers.value)
+    // Filtramos posibles candidatos
+    allSuggestedUsers.value = allUsers
+      .filter(u => !excludedIds.has(u.id))
+      .map(u => ({ ...u, isFriend: false }))
+
+    // Si aún no hay sugeridos visibles, toma los primeros 3
+    if (suggestedUsers.value.length === 0) {
+      suggestedUsers.value = allSuggestedUsers.value.slice(0, 3)
+    }
+
+    console.log("Usuarios disponibles:", allSuggestedUsers.value.length)
+    console.log("Mostrando:", suggestedUsers.value)
   } catch (err) {
     console.error("Error al obtener sugerencias:", err)
   }
 }
 
 
+
 async function addFriend(user) {
   try {
-    if (!currentUserId.value) {
-      showAuthModal.value = true
-      return
+    const res = await fetch('/api/add-friend', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        user_id: currentUserId.value,
+        friend_id: user.id
+      })
+    })
+
+    const data = await res.json()
+    if (!data.ok) throw new Error(data.error)
+
+    // 🧩 Eliminar el usuario añadido
+    allSuggestedUsers.value = allSuggestedUsers.value.filter(u => u.id !== user.id)
+    const removedIndex = suggestedUsers.value.findIndex(u => u.id === user.id)
+    suggestedUsers.value.splice(removedIndex, 1)
+
+    // 🔁 Si quedan candidatos, elegimos uno aleatorio que no esté en pantalla
+    const remaining = allSuggestedUsers.value.filter(
+      u => !suggestedUsers.value.some(s => s.id === u.id)
+    )
+    if (remaining.length > 0) {
+      const randomNew = remaining[Math.floor(Math.random() * remaining.length)]
+      suggestedUsers.value.splice(removedIndex, 0, randomNew)
     }
 
-    const { error } = await supabase
-      .from("friends")
-      .insert([{ user_id: currentUserId.value, friend_id: user.id }])
-
-    if (error) throw error
-
-    // Marca el botón como "Friends" y desactívalo
-    user.isFriend = true
-
-    // Recarga la lista de amigos y el globo
+    // ✅ Actualizamos amigos
     await fetchFriends(currentUserId.value)
     rebuildGlobeData()
 
-    console.log(` Amigo añadido: ${user.username}`)
+    if (allSuggestedUsers.value.length === 0 && suggestedUsers.value.length === 0) {
+      console.log("Ya no hay más usuarios para sugerir.")
+    }
+
   } catch (err) {
-    console.error(" Error al añadir amigo:", err)
+    console.error("Error al añadir amigo:", err)
   }
 }
 
@@ -1397,26 +1434,6 @@ function handleResize() {
   object-fit: cover;
 }
 
-.suggested-user button {
-  background: #007bff;
-  color: #fff;
-  border: none;
-  padding: 6px 10px;
-  border-radius: 8px;
-  cursor: pointer;
-  font-size: 13px;
-  transition: 0.25s;
-}
-
-.suggested-user button:hover {
-  opacity: 0.85;
-}
-
-@keyframes fadeInUp {
-  from { opacity: 0; transform: translateY(12px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
 .white-btn {
   background: #ffffff;
   color: #111111;
@@ -1431,6 +1448,7 @@ function handleResize() {
 
 .white-btn:hover {
   background: #e0e0e0;
+  color: #111111
 }
 
 .white-btn.disabled-btn {
@@ -1440,5 +1458,12 @@ function handleResize() {
   pointer-events: none;
 }
 
+.no-more-users {
+  font-size: 14px;
+  color: #ccc;
+  margin: 12px 0 20px;
+  text-align: center;
+  font-style: italic;
+}
 
 </style>
