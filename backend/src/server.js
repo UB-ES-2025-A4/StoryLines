@@ -243,10 +243,10 @@ app.get('/api/trips', async (req, res) => {
 
 app.get('/api/friends', async (req, res) => {
   try {
-    const userId = req.query.userId; // lo puedes pasar por query si no usas auth directa
+    const userId = req.query.userId;
     if (!userId) return res.status(400).json({ error: 'Falta userId' });
 
-    // 1️⃣ Buscar todas las relaciones donde el usuario sea user_id o friend_id
+    // 🔹 Solo obtener las relaciones donde YO soy el que sigue (user_id = mi id)
     const { data, error } = await supabaseAdmin
       .from('friends')
       .select(`
@@ -254,30 +254,24 @@ app.get('/api/friends', async (req, res) => {
         user_id,
         friend_id,
         created_at,
-        user:users!friends_user_id_fkey(id, username, display_name, user_color, avatar_url),
         friend:users!friends_friend_id_fkey(id, username, display_name, user_color, avatar_url)
       `)
-      .or(`user_id.eq.${userId},friend_id.eq.${userId}`);
+      .eq('user_id', userId);
 
     if (error) return res.status(500).json({ error: error.message });
 
-    // 2️⃣ Transformar los datos para que siempre devuelva "el otro usuario" como `friend`
-    const formatted = data.map((row) => {
-      const isSender = row.user_id === userId;
-      const friendData = isSender ? row.friend : row.user;
-
-      return {
-        id: row.id,
-        created_at: row.created_at,
-        friend: {
-          id: friendData?.id,
-          username: friendData?.username,
-          display_name: friendData?.display_name,
-          user_color: friendData?.user_color,
-          avatar_url: friendData?.avatar_url
-        }
-      };
-    });
+    // 🔹 Formatear datos limpios para el frontend
+    const formatted = data.map(row => ({
+      id: row.id,
+      created_at: row.created_at,
+      friend: {
+        id: row.friend?.id,
+        username: row.friend?.username,
+        display_name: row.friend?.display_name,
+        user_color: row.friend?.user_color,
+        avatar_url: row.friend?.avatar_url
+      }
+    }));
 
     return res.json({ ok: true, friends: formatted });
   } catch (e) {
@@ -285,6 +279,7 @@ app.get('/api/friends', async (req, res) => {
     res.status(500).json({ error: 'Error interno obteniendo amigos' });
   }
 });
+
 
 app.post('/api/add-friend', async (req, res) => {
   try {

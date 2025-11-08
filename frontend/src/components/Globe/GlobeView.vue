@@ -109,32 +109,30 @@ const mode = ref('discovery')
 const noFriendsModal = ref(false)
 const suggestedUsers = ref([]) 
 const allSuggestedUsers = ref([])
-
-
-
-const friendUserIds = computed(() => {
-  return friends.value
-    .map(f => f.friend?.id)
-    .filter(Boolean) // elimina undefined/null
-})
-
-
 const currentUserId = ref(null)
+
+
+
 const filteredTrips = computed(() => {
   if (mode.value === 'discovery') return trips.value
 
-  const myUserId = currentUserId.value
+  const myUserId = String(currentUserId.value || '')
   if (!myUserId) return []
 
-  // Combinar tus viajes + los de tus amigos
-  const visibleUserIds = [...friendUserIds.value, myUserId].map(String)
+  // Ya vienen solo los que YO sigo
+  const friendIds = friends.value.map(f => String(f.friend?.id || '')).filter(Boolean)
 
-  // Mostrar viajes cuyo user_id o userId esté en la lista
+  const visibleUserIds = new Set([myUserId, ...friendIds])
+
   return trips.value.filter(t => {
-    const tripOwnerId = String(t.userId || t.user_id || '').trim()
-    return visibleUserIds.includes(tripOwnerId)
+    const tripOwnerId = String(t.user_id || t.userId || '').trim()
+    return visibleUserIds.has(tripOwnerId)
   })
 })
+
+
+
+
 
 const showAuthModal = ref(false)
 const router = useRouter()
