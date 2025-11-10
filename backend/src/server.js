@@ -198,9 +198,7 @@ app.get('/api/trips', async (req, res) => {
     // Obtener todos los viajes con usuario
     const { data: trips, error: tripsError } = await supabaseAdmin
       .from('trips')
-      .select('*, users:user_id(id, username, display_name, user_color)')
-      .eq('status', 'published');
-
+      .select('*, users:user_id(id, username, display_name, user_color)');
     if (tripsError) return res.status(500).json({ error: tripsError.message });
 
     // Obtener todas las paradas de los viajes con país
