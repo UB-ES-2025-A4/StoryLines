@@ -6,6 +6,7 @@ import Home from '@/views/Home.vue'
 import Login from '@/views/Login.vue'
 import Register from '@/views/Register.vue'
 import Profile from '@/views/Profile.vue'
+import CreatePost from '@/views/CreateTrip.vue'
 
 const routes = [
   {
@@ -31,8 +32,14 @@ const routes = [
      name: 'Profile',
      component: Profile,
      meta: { requiresAuth: true } // Solo para usuarios autenticados
-   }
+   },
 
+  {
+    path: '/createtrip',
+    name: 'CreateTrip',
+    component: CreatePost,
+    meta: { requiresAuth: true }   // <- IMPORTANTE
+  }
 ]
 
 const router = createRouter({
