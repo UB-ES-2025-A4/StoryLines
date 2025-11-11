@@ -242,7 +242,7 @@ export default {
 }
 
 .trip-title {
-  font-size: 2rem;
+  font-size: 1.5rem;
   margin-bottom: 2rem;
   color: #fff;
 }
@@ -263,7 +263,7 @@ export default {
   padding: 2rem;
   border: 1.5px solid #fff;
   border-radius: 12px;
-  background: #0A0A0A;
+  background: rgba(10, 10, 10, 0.7);
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
