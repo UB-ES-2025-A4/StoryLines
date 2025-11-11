@@ -4,8 +4,14 @@ import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import multer from "multer";
+import path from 'path';
+import { fileURLToPath } from 'url';
+
 const app = express();
 const upload = multer({ storage: multer.memoryStorage() });
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 app.use(cors());
 app.use(express.json());
@@ -14,9 +20,11 @@ app.get('/health', (req, res) => {
   res.json({ ok: true, env: process.env.NODE_ENV || 'dev', uptime: process.uptime() });
 });
 
-app.get('/', (req, res) => res.send('Servidor funcionando '));
+//app.get('/', (req, res) => res.send('Servidor funcionando '));
 
 const PORT = process.env.PORT || 3000;
+
+
 app.listen(PORT, () => console.log(` Backend en http://localhost:${PORT}`));
 
 import { supabaseAdmin } from './config/supabase.js';
@@ -306,3 +314,11 @@ app.post('/api/add-friend', async (req, res) => {
   }
 })
 
+// Servir el frontend compilado (build de Vue/React)
+const frontendPath = path.join(__dirname, '../../frontend/dist');
+app.use(express.static(frontendPath));
+
+// Cualquier ruta que no sea de API devolverá index.html
+app.get('/*', (req, res) => {
+  res.sendFile(path.join(frontendPath, 'index.html'));
+});
