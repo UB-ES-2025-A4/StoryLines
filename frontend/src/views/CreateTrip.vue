@@ -106,14 +106,11 @@
                 <button @click="openStopFile(index)" class="upload-btn">Seleccionar imágenes</button>
               </div>
               <div class="form-fields">
-                <label>Título de la parada</label>
-                <!--<input v-model="stop.title" type="text" placeholder="Ej: Parada en Tokio" />-->
                 <label>Ciudad (opcional)</label>
-                <input v-model="stop.city" type="text" placeholder="Ej: Tokio" @focus="stop.countryOpen = true" @input="stop.countryOpen = true" />
+                <input v-model="stop.city" type="text" placeholder="Ej: Tokio" />
                 <label>País</label>
                 <input v-model="stop.countrySearch" type="text" placeholder="Buscar país..." @focus="stop.countryOpen = true" @input="stop.countryOpen = true" />
-                <label>Descripción (opcional)</label>
-                <textarea v-model="stop.description" rows="3"></textarea>
+            
                 <ul v-show="stop.countryOpen" class="dropdown">
                   <li v-for="c in filteredCountries(stop.countrySearch)" :key="c.id" @click="selectCountry(stop, c)">
                     {{ c.name }}
@@ -122,6 +119,8 @@
                     No hay resultados
                   </li>
                 </ul>
+                <label>Descripción (opcional)</label>
+                <textarea v-model="stop.description" rows="3"></textarea>
               </div>
               <button v-if="trip.stops.length > 1" class="delete-btn" @click="removeStop(index)">Eliminar</button>
             </div>
@@ -632,6 +631,7 @@ export default {
   z-index: 10;
   width: 100%;
   max-height: 250px;
+  max-width: 380px;
   overflow-y: auto;
   background: #fff;
   border: 1px solid #ddd;
@@ -673,6 +673,7 @@ export default {
   margin: 0 auto;
   display: block;
   font-size: 1.1rem;
+  cursor: pointer;
 }
 
 .delete-btn {
@@ -686,6 +687,7 @@ export default {
   margin-left: auto;
   margin-right: auto;
   font-size: 1.1rem;
+  cursor: pointer;
 }
 
 .actions {
@@ -704,6 +706,7 @@ export default {
   border: none;
   max-width: 250px;
   font-size: 1.1rem;
+  cursor: pointer;
 }
 
 .actions button:first-child {
@@ -738,6 +741,7 @@ export default {
   border: none;
   max-width: 250px;
   font-size: 1.1rem;
+  cursor: pointer;
 }
 
 .step-actions .next-btn {
@@ -760,6 +764,7 @@ export default {
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  cursor: pointer;
 }
 
 .arrow-icon {
