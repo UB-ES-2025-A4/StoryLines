@@ -49,7 +49,7 @@
               </div>
               <div class="form-fields">
                 <label>Título del viaje</label>
-                <input v-model="trip.trip_name" type="text" placeholder="Ej: Ruta por Japón" />
+                <input v-model="trip.trip_name" type="text" placeholder="Ej: Viaje a Japón" />
                 <div class="date-fields">
                   <div class="date-field">
                     <label>Fecha de inicio</label>
@@ -82,6 +82,7 @@
   </button>
   <div class="stops-route">
     <div v-for="(stop, index) in trip.stops" :key="index" class="stop-card-wrapper">
+      <h3 v-if="index === 0" class="stop-origin-title">Origen del viaje</h3>
       <div class="input-container stop-card">
         <div class="image-upload">
           <label>Fotos (opcional)</label>
@@ -122,11 +123,9 @@
         </div>
         <div class="form-fields">
           <label>Ciudad (opcional)</label>
-          <input v-model="stop.city" type="text" placeholder="Ej: Tokio" @focus="stop.countryOpen = true" @input="stop.countryOpen = true" />
+          <input v-model="stop.city" type="text" placeholder="Ej: Tokio"/>
           <label>País</label>
           <input v-model="stop.countrySearch" type="text" placeholder="Buscar país..." @focus="stop.countryOpen = true" @input="stop.countryOpen = true" />
-          <label>Descripción (opcional)</label>
-          <textarea v-model="stop.description" rows="3"></textarea>
           <ul v-show="stop.countryOpen" class="dropdown">
             <li v-for="c in filteredCountries(stop.countrySearch)" :key="c.id" @click="selectCountry(stop, c)">
               {{ c.name }}
@@ -135,8 +134,10 @@
               No hay resultados
             </li>
           </ul>
+          <label>Descripción (opcional)</label>
+          <textarea v-model="stop.description" rows="3"></textarea>
         </div>
-        <button v-if="trip.stops.length > 1" class="remove-stop-btn" @click="removeStop(index)">X</button>
+        <button v-if="index > 0" class="remove-stop-btn" @click="removeStop(index)">X</button>
       </div>
       <div v-if="index < trip.stops.length - 1" class="route-line"></div>
     </div>
@@ -205,6 +206,15 @@ export default {
           description: '',
           images: [],
           currentImageIndex: 0
+        },
+        {
+          city: '',
+          country_id: '',
+          countrySearch: '',
+          countryOpen: false,
+          description: '',
+          images: [],
+          currentImageIndex: 0
         }
       ]
     })
@@ -230,6 +240,7 @@ export default {
       await loadCountries()
       loading.value = false
       window.addEventListener('click', closeAllDropdowns)
+      stopFileInputs.value = new Array(trip.value.stops.length).fill(null)
     })
 
     const closeAllDropdowns = (e) => {
@@ -322,7 +333,7 @@ const removeCurrentStopImage = (index) => {
     // Validaciones publicar
     const validateRequiredFields = () => {
       for (const s of trip.value.stops) { if (!s.country_id) { error.value = 'En cada parada el país es obligatorio.'; return false } }
-      if (trip.value.stops.length < 1) { error.value = 'Debes añadir al menos 1 parada para publicar.'; return false }
+      if (trip.value.stops.length < 2) { error.value = 'Debes añadir al menos 2 paradas para publicar.'; return false }
       error.value = ''; return true
     }
 
@@ -380,6 +391,7 @@ const removeCurrentStopImage = (index) => {
           trip_id: tripId,
           city: stop.city || null,
           country_id: stop.country_id,
+          description: stop.description || null,
           images: stop.images?.length ? stop.images : []
         }
         const { error: stopErr } = await supabase.from('trip_stops').insert(stopPayload)
@@ -674,6 +686,7 @@ const removeCurrentStopImage = (index) => {
   z-index: 10;
   width: 100%;
   max-height: 250px;
+  max-width: 280px;
   overflow-y: auto;
   background: #fff;
   border: 1px solid #ddd;
@@ -740,9 +753,10 @@ const removeCurrentStopImage = (index) => {
   display: flex;
   gap: 1.5rem;
   margin-top: 2rem;
+  margin-left: 2.5rem;
+  margin-right: 2.5rem;
   max-width:1100px;
   justify-content: center;
-  cursor: pointer;
 }
 
 .actions button {
@@ -751,8 +765,9 @@ const removeCurrentStopImage = (index) => {
   border-radius: 8px;
   color: white;
   border: none;
-  max-width: 250px;
+  max-width: 1100px;
   font-size: 1.1rem;
+  cursor: pointer;
 }
 
 .actions button:first-child {
@@ -947,5 +962,11 @@ const removeCurrentStopImage = (index) => {
 .trash-icon {
   width: 16px;
   height: 16px;
+}
+
+.stop-origin-title {
+  font-size: 1.2rem;
+  margin-bottom: 1rem;
+  text-align: center;
 }
 </style>
