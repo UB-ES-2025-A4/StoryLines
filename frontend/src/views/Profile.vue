@@ -371,7 +371,6 @@
     padding: 3rem 1rem;
     box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
     min-height: 100vh;
-    margin-left: 250px;
   }
   
   /* --- CABECERA PERFIL --- */

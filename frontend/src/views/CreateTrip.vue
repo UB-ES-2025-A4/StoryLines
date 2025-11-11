@@ -1,26 +1,23 @@
 <template>
   <div class="create-trip">
     <!-- Sidebar -->
-<div class="sidebar">
-  <img src="@/assets/LogoBlanco.png" alt="StoryLines Logo" class="logo" />
-  <nav>
-    <router-link to="/" class="nav-item" :class="{ 'active': $route.path === '/' }">
-      <svg class="icon" v-html="homeIcon"></svg>
-      <span>Home</span>
-    </router-link>
-
-    <router-link to="/create" class="nav-item" :class="{ 'active': $route.path === '/create' }">
-      <svg class="icon" v-html="createIcon"></svg>
-      <span>Create</span>
-    </router-link>
-
-    <router-link to="/profile" class="nav-item" :class="{ 'active': $route.path === '/profile' }">
-      <svg class="icon" v-html="profileIcon"></svg>
-      <span>Profile</span>
-    </router-link>
-
-  </nav>
-</div>
+    <div class="sidebar">
+      <img src="@/assets/LogoBlanco.png" alt="StoryLines Logo" class="logo" />
+      <nav>
+        <router-link to="/" class="nav-item" :class="{ 'active': $route.path === '/' }">
+          <svg class="icon" v-html="homeIcon"></svg>
+          <span>Home</span>
+        </router-link>
+        <router-link to="/create" class="nav-item" :class="{ 'active': $route.path === '/create' }">
+          <svg class="icon" v-html="createIcon"></svg>
+          <span>Create</span>
+        </router-link>
+        <router-link to="/profile" class="nav-item" :class="{ 'active': $route.path === '/profile' }">
+          <svg class="icon" v-html="profileIcon"></svg>
+          <span>Profile</span>
+        </router-link>
+      </nav>
+    </div>
 
     <!-- Main Content -->
     <div class="main-content">
@@ -29,107 +26,120 @@
       <div v-if="loading" class="loading">Cargando...</div>
 
       <div v-else class="trip-content">
-        <!-- Portada Section -->
-        <h2 class="section-title">Portada</h2>
-        <div class="section-card">
-          <div class="input-container">
-            <div class="image-upload">
-              <label>Foto de portada</label>
-              <img
-                :src="coverPreview || 'https://jkfenner.com/wp-content/uploads/2019/11/default-450x450.jpg'"
-                class="preview"
-                alt="Portada del viaje"
-              />
-              <input
-                type="file"
-                ref="coverInput"
-                accept="image/*"
-                style="display:none"
-                @change="handleCoverUpload"
-              />
-              <button @click="$refs.coverInput.click()" class="upload-btn">Seleccionar imagen</button>
-            </div>
-            <div class="form-fields">
-              <label>Título del viaje</label>
-              <input v-model="trip.trip_name" type="text" placeholder="Ej: Ruta por Japón" />
-              <div class="date-fields">
-                <div class="date-field">
-                  <label>Fecha de inicio</label>
-                  <input type="date" v-model="trip.start_date" />
-                </div>
-                <div class="date-field">
-                  <label>Fecha de fin</label>
-                  <input type="date" v-model="trip.end_date" />
-                </div>
+        <!-- Step 1: Portada Section -->
+        <div v-if="currentStep === 1">
+          <h2 class="section-title">Portada</h2>
+          <div class="section-card">
+            <div class="input-container">
+              <div class="image-upload">
+                <label>Foto de portada</label>
+                <img
+                  :src="coverPreview || 'https://jkfenner.com/wp-content/uploads/2019/11/default-450x450.jpg'"
+                  class="preview"
+                  alt="Portada del viaje"
+                />
+                <input
+                  type="file"
+                  ref="coverInput"
+                  accept="image/*"
+                  style="display:none"
+                  @change="handleCoverUpload"
+                />
+                <button @click="$refs.coverInput.click()" class="upload-btn">Seleccionar imagen</button>
               </div>
-              <label>Descripción (opcional)</label>
-              <textarea v-model="trip.description" rows="3"></textarea>
+              <div class="form-fields">
+                <label>Título del viaje</label>
+                <input v-model="trip.trip_name" type="text" placeholder="Ej: Ruta por Japón" />
+                <div class="date-fields">
+                  <div class="date-field">
+                    <label>Fecha de inicio</label>
+                    <input type="date" v-model="trip.start_date" />
+                  </div>
+                  <div class="date-field">
+                    <label>Fecha de fin</label>
+                    <input type="date" v-model="trip.end_date" />
+                  </div>
+                </div>
+                <label>Descripción (opcional)</label>
+                <textarea v-model="trip.description" rows="3"></textarea>
+              </div>
+            </div>
+            <div class="step-actions">
+              <button class="next-btn" @click="goToStops" :disabled="!canProceedToStops">Siguiente</button>
+              <button class="cancel" @click="cancelTrip">Cancelar</button>
             </div>
           </div>
         </div>
 
-        <!-- Paradas Section -->
-        <h2 class="section-title">Paradas</h2>
-        <div class="section-card">
-          <div v-for="(stop, index) in trip.stops" :key="index" class="input-container">
-            <div class="image-upload">
-              <label>Fotos (opcional)</label>
-              <img
-                v-if="stop.images.length > 0"
-                :src="stop.images[0]"
-                class="preview"
-                alt="Foto parada"
-              />
-              <img
-                v-else
-                src="https://jkfenner.com/wp-content/uploads/2019/11/default-450x450.jpg"
-                class="preview"
-                alt="Parada por defecto"
-              />
-              <input
-                type="file"
-                :ref="el => stopFileInputs[index] = el"
-                style="display:none"
-                accept="image/*"
-                multiple
-                @change="e => handleStopImagesUpload(e, index)"
-              />
-              <button @click="openStopFile(index)" class="upload-btn">Seleccionar imágenes</button>
+        <!-- Step 2: Paradas Section -->
+        <div v-if="currentStep === 2">
+          <h2 class="section-title">Paradas</h2>
+          <div class="section-card">
+            <button class="back-btn" @click="goToCover">
+            <svg class="arrow-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M15 18L9 12L15 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg> Volver
+</button>
+            <div v-for="(stop, index) in trip.stops" :key="index" class="input-container">
+              <div class="image-upload">
+                <label>Fotos (opcional)</label>
+                <img
+                  v-if="stop.images.length > 0"
+                  :src="stop.images[0]"
+                  class="preview"
+                  alt="Foto parada"
+                />
+                <img
+                  v-else
+                  src="https://jkfenner.com/wp-content/uploads/2019/11/default-450x450.jpg"
+                  class="preview"
+                  alt="Parada por defecto"
+                />
+                <input
+                  type="file"
+                  :ref="el => stopFileInputs[index] = el"
+                  style="display:none"
+                  accept="image/*"
+                  multiple
+                  @change="e => handleStopImagesUpload(e, index)"
+                />
+                <button @click="openStopFile(index)" class="upload-btn">Seleccionar imágenes</button>
+              </div>
+              <div class="form-fields">
+                <label>Título de la parada</label>
+                <!--<input v-model="stop.title" type="text" placeholder="Ej: Parada en Tokio" />-->
+                <label>Ciudad (opcional)</label>
+                <input v-model="stop.city" type="text" placeholder="Ej: Tokio" @focus="stop.countryOpen = true" @input="stop.countryOpen = true" />
+                <label>País</label>
+                <input v-model="stop.countrySearch" type="text" placeholder="Buscar país..." @focus="stop.countryOpen = true" @input="stop.countryOpen = true" />
+                <label>Descripción (opcional)</label>
+                <textarea v-model="stop.description" rows="3"></textarea>
+                <ul v-show="stop.countryOpen" class="dropdown">
+                  <li v-for="c in filteredCountries(stop.countrySearch)" :key="c.id" @click="selectCountry(stop, c)">
+                    {{ c.name }}
+                  </li>
+                  <li v-if="filteredCountries(stop.countrySearch).length === 0" class="empty">
+                    No hay resultados
+                  </li>
+                </ul>
+              </div>
+              <button v-if="trip.stops.length > 1" class="delete-btn" @click="removeStop(index)">Eliminar</button>
             </div>
-            <div class="form-fields">
-              <label>Título de la parada</label>
-              <input v-model="stop.title" type="text" placeholder="Ej: Parada en Tokio" />
-              <label>Ciudad (opcional)</label>
-              <input v-model="stop.city" type="text" placeholder="Ej: Tokio" @focus="stop.countryOpen = true" @input="stop.countryOpen = true" />
-              <label>País</label>
-              <input v-model="stop.countrySearch" type="text" placeholder="Buscar país..." @focus="stop.countryOpen = true" @input="stop.countryOpen = true" />
-              <label>Descripción (opcional)</label>
-              <textarea v-model="stop.description" rows="3"></textarea>
-              <ul v-show="stop.countryOpen" class="dropdown">
-                <li v-for="c in filteredCountries(stop.countrySearch)" :key="c.id" @click="selectCountry(stop, c)">
-                  {{ c.name }}
-                </li>
-                <li v-if="filteredCountries(stop.countrySearch).length === 0" class="empty">
-                  No hay resultados
-                </li>
-              </ul>
+            <div class="add-stop-container">
+              <button class="add-stop-btn" @click="addStop">Añadir parada</button>
             </div>
-            <button v-if="trip.stops.length > 1" class="delete-btn" @click="removeStop(index)">Eliminar</button>
           </div>
-          <div class="add-stop-container">
-            <button class="add-stop-btn" @click="addStop">Añadir parada</button>
-          </div>
-        </div>
 
-        <!-- Actions -->
-        <div class="actions">
-          <button @click="publishTrip" :disabled="saving">
-            {{ saving ? 'Publicando...' : 'Publicar viaje' }}
-          </button>
-          <button class="save-draft" @click="saveDraft" :disabled="saving">
-            {{ saving ? 'Guardando...' : 'Guardar borrador' }}
-          </button>
-          <button class="cancel" @click="cancelTrip">Cancelar</button>
+          <!-- Actions -->
+          <div class="actions">
+            <button @click="publishTrip" :disabled="saving">
+              {{ saving ? 'Publicando...' : 'Publicar viaje' }}
+            </button>
+            <button class="save-draft" @click="saveDraft" :disabled="saving">
+              {{ saving ? 'Guardando...' : 'Guardar borrador' }}
+            </button>
+            <button class="cancel" @click="cancelTrip">Cancelar</button>
+          </div>
         </div>
 
         <!-- Messages -->
@@ -155,6 +165,7 @@ export default {
     const saving = ref(false)
     const error = ref('')
     const success = ref('')
+    const currentStep = ref(1) // 1 for cover, 2 for stops
 
     const coverPreview = ref('')
 
@@ -280,15 +291,31 @@ export default {
 
     // Validaciones publicar
     const validateRequiredFields = () => {
-      if (!trip.value.cover_image) { error.value = 'La portada es obligatoria'; return false }
-      if (!trip.value.trip_name.trim()) { error.value = 'El nombre del viaje es obligatorio'; return false }
-      if (!trip.value.start_date || !trip.value.end_date) { error.value = 'Las fechas de inicio y fin son obligatorias'; return false }
-      const start = new Date(trip.value.start_date), end = new Date(trip.value.end_date)
-      if (isNaN(start) || isNaN(end)) { error.value = 'Las fechas no son válidas'; return false }
-      if (end < start) { error.value = 'La fecha de fin no puede ser anterior a la de inicio'; return false }
-      for (const s of trip.value.stops) { if (!s.country_id) { error.value = 'En cada parada el país es obligatorio'; return false } }
-      if (trip.value.stops.length < 2) { error.value = 'Debes añadir al menos 2 paradas para publicar'; return false }
+      for (const s of trip.value.stops) { if (!s.country_id) { error.value = 'En cada parada el país es obligatorio.'; return false } }
+      if (trip.value.stops.length < 1) { error.value = 'Debes añadir al menos 1 parada para publicar.'; return false }
       error.value = ''; return true
+    }
+
+    // Validaciones para pasar a paradas
+    const canProceedToStops = () => {
+      if (!trip.value.cover_image) { error.value = 'La foto de portada es obligatoria.'; return false }
+      if (!trip.value.trip_name.trim()) { error.value = 'El nombre del viaje es obligatorio.'; return false }
+      if (!trip.value.start_date || !trip.value.end_date) { error.value = 'Las fechas de inicio y fin son obligatorias.'; return false }
+      const start = new Date(trip.value.start_date), end = new Date(trip.value.end_date)
+      if (isNaN(start) || isNaN(end)) { error.value = 'Las fechas no son válidas.'; return false }
+      if (end < start) { error.value = 'La fecha de fin no puede ser anterior a la de inicio.'; return false }
+      error.value = ''; return true
+    }
+
+    // Navegación entre pasos
+    const goToStops = () => {
+      if (canProceedToStops()) {
+        currentStep.value = 2
+      }
+    }
+
+    const goToCover = () => {
+      currentStep.value = 1
     }
 
     // Paradas
@@ -365,7 +392,7 @@ export default {
       } finally { saving.value = false }
     }
 
-    //Icons
+    // Icons
     const homeIcon = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 9L12 2L21 9V20C21 21.1 20.1 22 19 22H5C3.9 22 3 21.1 3 20V9Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
     const searchIcon = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="11" cy="11" r="8" stroke="currentColor" stroke-width="2"/><path d="M21 21L16.65 16.65" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>`;
     const notificationsIcon = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M18 8C18 6.4087 17.3679 4.88258 16.2426 3.75736C15.1174 2.63214 13.5913 2 12 2C10.4087 2 8.88258 2.63214 7.75736 3.75736C6.63214 4.88258 6 6.4087 6 8C6 13.2284 3 17.9842 3 17.9842H21 17.9842C21 17.9842 18 13.2284 18 8Z" stroke="currentColor" stroke-width="2"/><path d="M12 18V18.009" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>`;
@@ -382,6 +409,7 @@ export default {
       handleCoverUpload,
       saveDraft, publishTrip, cancelTrip,
       loading, saving,
+      currentStep, goToStops, goToCover, canProceedToStops,
       homeIcon, searchIcon, notificationsIcon, createIcon, storeIcon, profileIcon, settingsIcon
     }
   }
@@ -392,7 +420,8 @@ export default {
 .create-trip {
   display: flex;
   min-height: 100vh;
-  background: url('https://images.unsplash.com/photo-1451187580459-43490279c0fa?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&q=80&w=1172') no-repeat center center/cover;
+  background: url('https://images.unsplash.com/photo-1451187580459-43490279c0fa?ixlib=rbahoo4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&q=80&w=1172') no-repeat center center/cover;
+  opacity: 0.9;
   color: #fff;
 }
 
@@ -447,10 +476,10 @@ export default {
 .nav-item.active::before {
   content: '';
   position: absolute;
-  left: 0.5rem; /* Adjusted left position for better alignment */
+  left: 0.5rem;
   top: 50%;
   transform: translateY(-50%);
-  width: 6px; /* Slightly larger indicator */
+  width: 6px;
   height: 6px;
   background: #fff;
   border-radius: 50%;
@@ -462,7 +491,7 @@ export default {
   flex-shrink: 0;
   display: flex;
   align-items: center;
-  justify-content: center; /* Centers SVG content */
+  justify-content: center;
 }
 
 .icon svg {
@@ -483,7 +512,7 @@ export default {
 }
 
 .title {
-  font-size: 1.8rem;
+  font-size: 1.5rem;
   margin-bottom: 2rem;
   text-align: center;
 }
@@ -499,11 +528,11 @@ export default {
   border-radius: 12px;
   padding: 1.5rem;
   margin-bottom: 1.5rem;
-  background: rgba(10, 10, 10);
+  background: rgba(10, 10, 10, 0.7);
   width: 700px;
   display: flex;
-  flex-direction: column; /* Stack children vertically */
-  justify-content: flex-start; /* Align content to top */
+  flex-direction: column;
+  justify-content: flex-start;
 }
 
 .input-container {
@@ -517,6 +546,7 @@ export default {
 .image-upload {
   flex: 1;
   max-width: 250px;
+  font-size: 1.1rem;
 }
 
 .image-upload label {
@@ -566,7 +596,6 @@ export default {
   filter: invert(1);
 }
 
-
 .form-fields input,
 .form-fields textarea {
   width: 100%;
@@ -574,7 +603,7 @@ export default {
   margin-bottom: 0.6rem;
   border: 1.5px solid #fff;
   border-radius: 6px;
-  background:  rgba(10, 10, 10);
+  background: rgba(10, 10, 10, 0.7);
   color: #fff;
   display: block;
   margin-left: auto;
@@ -692,6 +721,50 @@ export default {
 .actions button:disabled {
   background: #555;
   cursor: not-allowed;
+}
+
+.step-actions {
+  display: flex;
+  gap: 1.5rem;
+  margin-top: 1.5rem;
+  justify-content: center;
+}
+
+.step-actions button {
+  flex: 1;
+  padding: 0.8rem 1.2rem;
+  border-radius: 8px;
+  color: white;
+  border: none;
+  max-width: 250px;
+  font-size: 1.1rem;
+}
+
+.step-actions .next-btn {
+  background: #375689;
+}
+
+.step-actions .cancel {
+  background: #363636;
+}
+
+.back-btn {
+  background: #48494B;
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  border: none;
+  align-self: flex-start;
+  margin-bottom: 1rem;
+  font-size: 1.1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.arrow-icon {
+  width: 16px;
+  height: 16px;
 }
 
 .loading {
