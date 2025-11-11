@@ -37,7 +37,7 @@ import { supabase } from "@/config/supabase";
 export default {
   name: "CirclePhoto",
   setup(props, { emit }) {
-    const API_URL = "http://localhost:3000";
+    const API_URL = import.meta.env.PROD ? '' : 'http://localhost:3000';
     const canvas = ref(null);
     const img = ref(null);
     const isDragging = ref(false);
