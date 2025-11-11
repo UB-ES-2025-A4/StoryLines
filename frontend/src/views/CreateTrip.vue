@@ -1,127 +1,116 @@
 <template>
   <div class="create-trip">
-    <h1>Crear nuevo viaje</h1>
+    <!-- Sidebar -->
+    <div class="sidebar">
+      <img src="@/assets/LogoBlanco.png" alt="StoryLines Logo" class="logo" />
+      <nav>
+        <router-link to="/" class="nav-item" :class="{ 'active': $route.path === '/' }">
+          <svg class="icon" v-html="homeIcon"></svg>
+          <span>Home</span>
+        </router-link>
+        <router-link to="/create" class="nav-item" :class="{ 'active': $route.path === '/create' }">
+          <svg class="icon" v-html="createIcon"></svg>
+          <span>Create</span>
+        </router-link>
+        <router-link to="/profile" class="nav-item" :class="{ 'active': $route.path === '/profile' }">
+          <svg class="icon" v-html="profileIcon"></svg>
+          <span>Profile</span>
+        </router-link>
+      </nav>
+    </div>
 
-    <div v-if="loading" class="loading">Cargando...</div>
+    <!-- Main Content -->
+    <div class="main-content">
+      <h1 class="title">Creación de viaje</h1>
 
-    <div v-else class="trip-content">
-      <!-- Foto de portada -->
-      <div class="cover-section">
-        <h2>Foto de portada</h2>
-        <img
-          :src="coverPreview || 'https://via.placeholder.com/600x300?text=Portada+del+viaje'"
-          class="preview"
-          alt="Portada del viaje"
-        />
-        <input
-          type="file"
-          ref="coverInput"
-          accept="image/*"
-          style="display:none"
-          @change="handleCoverUpload"
-        />
-        <button @click="$refs.coverInput.click()">Seleccionar portada</button>
-      </div>
+      <div v-if="loading" class="loading">Cargando...</div>
 
-      <!-- Datos del viaje -->
-      <div class="form-group">
-        <label>Nombre del viaje:</label>
-        <input v-model="trip.trip_name" type="text" placeholder="Ej: Ruta por Japón" />
-      </div>
-
-      <div class="dates">
-        <div class="form-group">
-          <label>Fecha de inicio:</label>
-          <input type="date" v-model="trip.start_date" />
-        </div>
-        <div class="form-group">
-          <label>Fecha de fin:</label>
-          <input type="date" v-model="trip.end_date" />
-        </div>
-      </div>
-
-      <div class="form-group">
-        <label>Descripción del viaje (opcional):</label>
-        <textarea v-model="trip.description" rows="3"></textarea>
-      </div>
-
-      <!-- Paradas -->
-      <h2>Paradas</h2>
-
-      <div class="stop-card" v-for="(stop, index) in trip.stops" :key="index">
-        <div class="stop-header">
-          <h3>Parada {{ index + 1 }}</h3>
-          <button v-if="trip.stops.length > 1" class="delete-btn" @click="removeStop(index)">
-            ❌ Eliminar
-          </button>
-        </div>
-
-        <div class="form-group">
-          <label>Ciudad (opcional):</label>
-          <input v-model="stop.city" placeholder="Ej: Tokio" type="text" />
-        </div>
-
-        <!-- País con buscador -->
-        <div class="form-group country-picker">
-          <label>País (obligatorio):</label>
-          <div class="country-select">
-            <input
-              type="text"
-              v-model="stop.countrySearch"
-              :placeholder="getCountryNameById(stop.country_id) || 'Buscar país...'"
-              @focus="stop.countryOpen = true"
-              @input="stop.countryOpen = true"
-            />
-            <button
-              v-if="stop.country_id"
-              type="button"
-              class="clear-btn"
-              @click="clearCountry(stop)"
-              title="Quitar país"
-            >✕</button>
-
-            <ul v-show="stop.countryOpen" class="dropdown">
-              <li
-                v-for="c in filteredCountries(stop.countrySearch)"
-                :key="c.id"
-                @click="selectCountry(stop, c)"
-              >
-                {{ c.name }}
-              </li>
-              <li v-if="filteredCountries(stop.countrySearch).length === 0" class="empty">
-                No hay resultados
-              </li>
-            </ul>
-          </div>
-        </div>
-
-        <div class="form-group">
-          <label>Descripción (opcional):</label>
-          <textarea v-model="stop.description" rows="3"></textarea>
-        </div>
-
-        <!-- Fotos de la parada -->
-        <div class="form-group">
-          <label>Fotos de la parada (opcional):</label>
-
-          <div class="stop-images-preview">
-            <div
-              v-for="(img, i) in stop.images"
-              :key="i"
-              style="display:inline-block; position:relative; margin:5px;"
-            >
-              <img :src="img" class="stop-img" alt="Foto parada" />
-              <button
-                type="button"
-                class="delete-btn"
-                style="position:absolute; top:-8px; right:-8px; padding:2px 6px; border-radius:50%;"
-                @click="removeStopImage(index, i)"
-                title="Eliminar imagen"
-              >×</button>
+      <div v-else class="trip-content">
+        <!-- Step 1: Portada Section -->
+        <div v-if="currentStep === 1">
+          <h2 class="section-title">Portada</h2>
+          <div class="section-card">
+            <div class="input-container">
+              <div class="image-upload">
+                <label>Foto de portada</label>
+                <img
+                  :src="coverPreview || 'https://jkfenner.com/wp-content/uploads/2019/11/default-450x450.jpg'"
+                  class="preview"
+                  alt="Portada del viaje"
+                />
+                <input
+                  type="file"
+                  ref="coverInput"
+                  accept="image/*"
+                  style="display:none"
+                  @change="handleCoverUpload"
+                />
+                <button @click="$refs.coverInput.click()" class="upload-btn">Seleccionar imagen</button>
+              </div>
+              <div class="form-fields">
+                <label>Título del viaje</label>
+                <input v-model="trip.trip_name" type="text" placeholder="Ej: Viaje a Japón" />
+                <div class="date-fields">
+                  <div class="date-field">
+                    <label>Fecha de inicio</label>
+                    <input type="date" v-model="trip.start_date" />
+                  </div>
+                  <div class="date-field">
+                    <label>Fecha de fin</label>
+                    <input type="date" v-model="trip.end_date" />
+                  </div>
+                </div>
+                <label>Descripción (opcional)</label>
+                <textarea v-model="trip.description" rows="3"></textarea>
+              </div>
+            </div>
+            <div class="step-actions">
+              <button class="next-btn" @click="goToStops" :disabled="!canProceedToStops">Siguiente</button>
+              <button class="cancel" @click="cancelTrip">Cancelar</button>
             </div>
           </div>
+        </div>
 
-          <!-- ref por índice -->
+        <!-- Step 2: Paradas Section -->
+        <div v-if="currentStep === 2">
+          <h2 class="section-title">Paradas</h2>
+          <div class="section-card">
+  <button class="back-btn" @click="goToCover">
+    <svg class="arrow-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M15 18L9 12L15 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg> Volver
+  </button>
+  <div class="stops-route">
+    <div v-for="(stop, index) in trip.stops" :key="index" class="stop-card-wrapper">
+      <h3 v-if="index === 0" class="stop-origin-title">Origen del viaje</h3>
+      <div class="input-container stop-card">
+        <div class="image-upload">
+          <label>Fotos (opcional)</label>
+          <div class="stop-images">
+            <button class="nav-arrow left" @click="changeStopImage(stop, -1)" :disabled="stop.currentImageIndex === 0 || stop.images.length <= 1">
+              <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M15 18L9 12L15 6" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </button>
+            <div class="preview-wrapper">
+              <img
+                :src="stop.images.length > 0 ? stop.images[stop.currentImageIndex] : 'https://jkfenner.com/wp-content/uploads/2019/11/default-450x450.jpg'"
+                class="stop-image"
+                alt="Foto parada"
+              />
+              <button v-if="stop.images.length > 0" class="remove-img-btn" @click="removeCurrentStopImage(index)">
+                <svg class="trash-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M3 6H5H21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M8 6V4C8 3.44772 8.44772 3 9 3H15C15.5523 3 16 3.44772 16 4V6M19 6V20C19 20.5523 18.5523 21 18 21H6C5.44772 21 5 20.5523 5 20V6H19Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </button>
+            </div>
+            <button class="nav-arrow right" @click="changeStopImage(stop, 1)" :disabled="stop.currentImageIndex === stop.images.length - 1 || stop.images.length <= 1">
+              <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M9 6L15 12L9 18" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </button>
+          </div>
           <input
             type="file"
             :ref="el => stopFileInputs[index] = el"
@@ -130,27 +119,49 @@
             multiple
             @change="e => handleStopImagesUpload(e, index)"
           />
-          <button @click="openStopFile(index)">Subir fotos</button>
+          <button @click="openStopFile(index)" class="upload-btn">Seleccionar imágenes</button>
         </div>
+        <div class="form-fields">
+          <label>Ciudad (opcional)</label>
+          <input v-model="stop.city" type="text" placeholder="Ej: Tokio"/>
+          <label>País</label>
+          <input v-model="stop.countrySearch" type="text" placeholder="Buscar país..." @focus="stop.countryOpen = true" @input="stop.countryOpen = true" />
+          <ul v-show="stop.countryOpen" class="dropdown">
+            <li v-for="c in filteredCountries(stop.countrySearch)" :key="c.id" @click="selectCountry(stop, c)">
+              {{ c.name }}
+            </li>
+            <li v-if="filteredCountries(stop.countrySearch).length === 0" class="empty">
+              No hay resultados
+            </li>
+          </ul>
+          <label>Descripción (opcional)</label>
+          <textarea v-model="stop.description" rows="3"></textarea>
+        </div>
+        <button v-if="index > 0" class="remove-stop-btn" @click="removeStop(index)">X</button>
       </div>
+      <div v-if="index < trip.stops.length - 1" class="route-line"></div>
+    </div>
+  </div>
+  <div class="add-stop-container">
+    <button class="add-stop-btn" @click="addStop">Añadir parada</button>
+  </div>
+</div>
 
-      <button class="add-stop-btn" @click="addStop">➕ Añadir parada</button>
+          <!-- Actions -->
+          <div class="actions">
+            <button @click="publishTrip" :disabled="saving">
+              {{ saving ? 'Publicando...' : 'Publicar viaje' }}
+            </button>
+            <button class="save-draft" @click="saveDraft" :disabled="saving">
+              {{ saving ? 'Guardando...' : 'Guardar borrador' }}
+            </button>
+            <button class="cancel" @click="cancelTrip">Cancelar</button>
+          </div>
+        </div>
 
-      <!-- Mensajes -->
-      <p v-if="error" class="error">{{ error }}</p>
-      <p v-if="success" class="success">{{ success }}</p>
-
-      <!-- Acciones -->
-      <div class="actions">
-        <button @click="publishTrip" :disabled="saving">
-          {{ saving ? 'Publicando...' : 'Publicar viaje' }}
-        </button>
-
-        <button @click="saveDraft" :disabled="saving">
-          {{ saving ? 'Guardando...' : 'Guardar borrador' }}
-        </button>
-
-        <button class="cancel" @click="cancelTrip">Cancelar</button>
+        <!-- Messages -->
+        <p v-if="error" class="error">{{ error }}</p>
+        <p v-if="success" class="success">{{ success }}</p>
       </div>
     </div>
   </div>
@@ -171,6 +182,7 @@ export default {
     const saving = ref(false)
     const error = ref('')
     const success = ref('')
+    const currentStep = ref(1) // 1 for cover, 2 for stops
 
     const coverPreview = ref('')
 
@@ -192,7 +204,17 @@ export default {
           countrySearch: '',
           countryOpen: false,
           description: '',
-          images: []
+          images: [],
+          currentImageIndex: 0
+        },
+        {
+          city: '',
+          country_id: '',
+          countrySearch: '',
+          countryOpen: false,
+          description: '',
+          images: [],
+          currentImageIndex: 0
         }
       ]
     })
@@ -218,6 +240,7 @@ export default {
       await loadCountries()
       loading.value = false
       window.addEventListener('click', closeAllDropdowns)
+      stopFileInputs.value = new Array(trip.value.stops.length).fill(null)
     })
 
     const closeAllDropdowns = (e) => {
@@ -290,28 +313,57 @@ export default {
       if (stopFileInputs.value[stopIndex]) stopFileInputs.value[stopIndex].value = ''
     }
 
-    const removeStopImage = (stopIndex, imgIndex) => {
-      trip.value.stops[stopIndex].images.splice(imgIndex, 1)
+    const changeStopImage = (stop, delta) => {
+  const newIndex = stop.currentImageIndex + delta
+  if (newIndex >= 0 && newIndex < stop.images.length) {
+    stop.currentImageIndex = newIndex
+  }
+}
+
+const removeCurrentStopImage = (index) => {
+  const stop = trip.value.stops[index]
+  if (stop.images.length > 0) {
+    stop.images.splice(stop.currentImageIndex, 1)
+    if (stop.currentImageIndex > stop.images.length - 1) {
+      stop.currentImageIndex = Math.max(0, stop.images.length - 1)
     }
+  }
+}
 
     // Validaciones publicar
     const validateRequiredFields = () => {
-      if (!trip.value.cover_image) { error.value = 'La portada es obligatoria'; return false }
-      if (!trip.value.trip_name.trim()) { error.value = 'El nombre del viaje es obligatorio'; return false }
-      if (!trip.value.start_date || !trip.value.end_date) { error.value = 'Las fechas de inicio y fin son obligatorias'; return false }
-      const start = new Date(trip.value.start_date), end = new Date(trip.value.end_date)
-      if (isNaN(start) || isNaN(end)) { error.value = 'Las fechas no son válidas'; return false }
-      if (end < start) { error.value = 'La fecha de fin no puede ser anterior a la de inicio'; return false }
-      for (const s of trip.value.stops) { if (!s.country_id) { error.value = 'En cada parada el país es obligatorio'; return false } }
-      if (trip.value.stops.length < 2) { error.value = 'Debes añadir al menos 2 paradas para publicar'; return false }
+      for (const s of trip.value.stops) { if (!s.country_id) { error.value = 'En cada parada el país es obligatorio.'; return false } }
+      if (trip.value.stops.length < 2) { error.value = 'Debes añadir al menos 2 paradas para publicar.'; return false }
       error.value = ''; return true
+    }
+
+    // Validaciones para pasar a paradas
+    const canProceedToStops = () => {
+      if (!trip.value.cover_image) { error.value = 'La foto de portada es obligatoria.'; return false }
+      if (!trip.value.trip_name.trim()) { error.value = 'El nombre del viaje es obligatorio.'; return false }
+      if (!trip.value.start_date || !trip.value.end_date) { error.value = 'Las fechas de inicio y fin son obligatorias.'; return false }
+      const start = new Date(trip.value.start_date), end = new Date(trip.value.end_date)
+      if (isNaN(start) || isNaN(end)) { error.value = 'Las fechas no son válidas.'; return false }
+      if (end < start) { error.value = 'La fecha de fin no puede ser anterior a la de inicio.'; return false }
+      error.value = ''; return true
+    }
+
+    // Navegación entre pasos
+    const goToStops = () => {
+      if (canProceedToStops()) {
+        currentStep.value = 2
+      }
+    }
+
+    const goToCover = () => {
+      currentStep.value = 1
     }
 
     // Paradas
     const addStop = () => {
-      trip.value.stops.push({ city: '', country_id: '', countrySearch: '', countryOpen: false, description: '', images: [] })
-      stopFileInputs.value.push(null)
-    }
+  trip.value.stops.push({ city: '', country_id: '', countrySearch: '', countryOpen: false, description: '', images: [], currentImageIndex: 0 })
+  stopFileInputs.value.push(null)
+}
     const removeStop = (i) => {
       trip.value.stops.splice(i, 1)
       stopFileInputs.value.splice(i, 1)
@@ -339,6 +391,7 @@ export default {
           trip_id: tripId,
           city: stop.city || null,
           country_id: stop.country_id,
+          description: stop.description || null,
           images: stop.images?.length ? stop.images : []
         }
         const { error: stopErr } = await supabase.from('trip_stops').insert(stopPayload)
@@ -381,40 +434,539 @@ export default {
       } finally { saving.value = false }
     }
 
+    // Icons
+    const homeIcon = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 9L12 2L21 9V20C21 21.1 20.1 22 19 22H5C3.9 22 3 21.1 3 20V9Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+    const searchIcon = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="11" cy="11" r="8" stroke="currentColor" stroke-width="2"/><path d="M21 21L16.65 16.65" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>`;
+    const notificationsIcon = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M18 8C18 6.4087 17.3679 4.88258 16.2426 3.75736C15.1174 2.63214 13.5913 2 12 2C10.4087 2 8.88258 2.63214 7.75736 3.75736C6.63214 4.88258 6 6.4087 6 8C6 13.2284 3 17.9842 3 17.9842H21 17.9842C21 17.9842 18 13.2284 18 8Z" stroke="currentColor" stroke-width="2"/><path d="M12 18V18.009" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>`;
+    const createIcon = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 4V20M4 12H20" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+    const storeIcon = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 9H21V20C21 21.1 20.1 22 19 22H5C3.9 22 3 21.1 3 20V9Z" stroke="currentColor" stroke-width="2"/><path d="M12 22V12L10 10H14L12 12V22Z" stroke="currentColor" stroke-width="2"/></svg>`;
+    const profileIcon = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="7" r="4.5" stroke="currentColor" stroke-width="2" fill="none"/><path d="M20 21V19C20 15.134 16.866 12 13 12H11C7.134 12 4 15.134 4 19V21" stroke="currentColor" stroke-width="2"/></svg>`;
+    const settingsIcon = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2" fill="none"/><path d="M19.4 15A1.65 1.65 0 0 0 19 15C19 14.7 18.9 14.4 18.7 14.2L16.9 12.4C16.8 12.3 16.7 12.2 16.7 12C16.7 11.8 16.8 11.7 16.9 11.6L18.7 9.8C18.9 9.6 19 9.3 19 9A1.65 1.65 0 0 0 19.4 9L20.5 8A1.65 1.65 0 0 0 21 7.4L21 6.5A1.65 1.65 0 0 0 20.5 6L19.4 5A1.65 1.65 0 0 0 19 5C19 4.7 18.9 4.4 18.7 4.2L16.9 2.4C16.8 2.3 16.7 2.2 16.7 2C16.7 1.8 16.8 1.7 16.9 1.6L18.7 0C18.9 -0.2 19 0.1 19 0.4V1.5A1.65 1.65 0 0 0 19.4 2L20.5 3A1.65 1.65 0 0 0 21 3.6L21 4.5A1.65 1.65 0 0 0 20.5 5L19.4 6A1.65 1.65 0 0 0 19 6C19 6.3 18.9 6.6 18.7 6.8L16.9 8.6C16.8 8.7 16.7 8.8 16.7 9C16.7 9.2 16.8 9.3 16.9 9.4L18.7 11.2C18.9 11.4 19 11.7 19 12A1.65 1.65 0 0 0 19.4 12L20.5 13A1.65 1.65 0 0 0 21 13.6L21 14.5A1.65 1.65 0 0 0 20.5 15L19.4 16A1.65 1.65 0 0 0 19 16C19 16.3 18.9 16.6 18.7 16.8L16.9 18.6C16.8 18.7 16.7 18.8 16.7 19C16.7 19.2 16.8 19.3 16.9 19.4L18.7 21.2C18.9 21.4 19 21.7 19 22V20.5A1.65 1.65 0 0 0 19.4 20L20.5 19A1.65 1.65 0 0 0 21 18.4L21 17.5A1.65 1.65 0 0 0 20.5 17L19.4 16A1.65 1.65 0 0 0 19 16C19 15.7 18.9 15.4 18.7 15.2L16.9 13.4C16.8 13.3 16.7 13.2 16.7 13C16.7 12.8 16.8 12.7 16.9 12.6L18.7 10.8C18.9 10.6 19 10.3 19 10A1.65 1.65 0 0 0 19.4 10L20.5 9A1.65 1.65 0 0 0 21 8.4L21 7.5A1.65 1.65 0 0 0 20.5 7L19.4 6Z" stroke="currentColor" stroke-width="2"/></svg>`;
+
     return {
       trip, error, success, coverPreview, countries,
       filteredCountries, selectCountry, clearCountry, getCountryNameById,
-      addStop, removeStop, removeStopImage,
+      addStop, removeStop, changeStopImage, removeCurrentStopImage,
       stopFileInputs, openStopFile, handleStopImagesUpload,
       handleCoverUpload,
       saveDraft, publishTrip, cancelTrip,
-      loading, saving
+      loading, saving,
+      currentStep, goToStops, goToCover, canProceedToStops,
+      homeIcon, searchIcon, notificationsIcon, createIcon, storeIcon, profileIcon, settingsIcon
     }
   }
 }
 </script>
 
 <style scoped>
-.create-trip { max-width: 800px; margin: auto; padding: 1rem; }
-.preview { width: 100%; height: auto; border-radius: 8px; border: 2px solid #42b983; }
-.dates { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
-.stop-card { background: #f5f5f5; padding: 1rem; margin-bottom: 1rem; border-radius: 8px; }
-.stop-header { display: flex; justify-content: space-between; align-items: center; }
-.country-picker .country-select { position: relative; }
-.country-picker input[type="text"] { width: 100%; padding-right: 2.2rem; }
-.clear-btn { position: absolute; right: 0.4rem; top: 0.4rem; background: #eee; border: none; border-radius: 4px; padding: 0.2rem 0.4rem; cursor: pointer; }
-.dropdown { position: absolute; z-index: 10; width: 100%; max-height: 220px; overflow-y: auto; background: #fff; border: 1px solid #ddd; margin-top: 4px; border-radius: 6px; list-style: none; padding: 4px 0; }
-.dropdown li { padding: 8px 10px; cursor: pointer; }
-.dropdown li:hover { background: #f0f0f0; }
-.dropdown .empty { color: #888; cursor: default; }
-.stop-img { width: 80px; height: 80px; object-fit: cover; margin: 5px; border-radius: 6px; border: 1px solid #ccc; }
-.add-stop-btn { margin-top: 1rem; background: #42b983; color: white; padding: 0.7rem; border-radius: 5px; }
-.delete-btn { background: #e74c3c; color: white; padding: 0.4rem 0.8rem; border-radius: 5px; }
-.actions { display: flex; gap: 1rem; margin-top: 2rem; }
-.actions button { flex: 1; padding: 1rem; border-radius: 8px; color: white; background: #42b983; border: none; }
-.actions .cancel { background: #888; }
-.loading { text-align: center; padding: 2rem; }
-.form-group { margin-bottom: 1rem; }
-.error { color: #e74c3c; }
-.success { color: #2ecc71; }
+.create-trip {
+  display: flex;
+  min-height: 100vh;
+  background: url('https://images.unsplash.com/photo-1451187580459-43490279c0fa?ixlib=rbahoo4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&q=80&w=1172') no-repeat center center/cover;
+  background-attachment: fixed;
+  opacity: 0.9;
+  color: #fff;
+}
+
+.sidebar {
+  width: 250px;
+  background: #0A0A0A;
+  padding: 1.5rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  position: fixed;
+}
+
+.logo {
+  width: 120px;
+  height: auto;
+  margin-bottom: 2rem;
+  align-self: left;
+}
+
+.sidebar nav {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  font-size: 1.1rem;
+  color: #ccc;
+  padding: 0.75rem 1rem;
+  text-decoration: none;
+  border-radius: 8px;
+  transition: background 0.2s;
+  position: relative;
+  min-height: 40px;
+}
+
+.nav-item:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.nav-item.active {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.nav-item.active::before {
+  content: '';
+  position: absolute;
+  left: 0.5rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 6px;
+  height: 6px;
+  background: #fff;
+  border-radius: 50%;
+}
+
+.icon {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.icon svg {
+  width: 100%;
+  height: 100%;
+  fill: currentColor;
+}
+
+.main-content {
+  flex: 1;
+  padding: 2rem;
+  max-width: 1100px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transition: margin-left 0.2s;
+}
+
+.title {
+  font-size: 1.5rem;
+  margin-bottom: 2rem;
+  text-align: center;
+}
+
+.section-title {
+  font-size: 1.3rem;
+  margin-bottom: 0.5rem;
+  margin-left: 1rem;
+}
+
+.section-card {
+  border: 1.5px solid #fff;
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+  background: rgba(10, 10, 10, 0.7);
+  width: 1000px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+}
+
+.input-container {
+  display: flex;
+  gap: 1.2rem;
+  margin-bottom: 1.2rem;
+  align-items: flex-start;
+  max-width: 100%;
+}
+
+.stop-card {
+  padding: 2rem;
+  border: 1.5px solid #fff;
+  border-radius: 12px;
+  background: #0A0A0A;
+  position: relative;
+  min-height: 300px;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.image-upload {
+  flex: 1;
+  max-width: 450px;
+  font-size: 1.1rem;
+}
+
+.image-upload label {
+  display: block;
+  margin-bottom: 0.5rem;
+  text-align: center;
+}
+
+.preview {
+  width: 300px;
+  height: 300px;
+  object-fit: cover;
+  border-radius: 10px;
+  border: 2px solid #fff;
+  margin-bottom: 0.6rem;
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.upload-btn {
+  background: #d3d3d3;
+  border: none;
+  padding: 0.6rem 1.2rem;
+  border-radius: 6px;
+  cursor: pointer;
+  width: 300px;
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+  font-size: 1.1rem;
+}
+
+.form-fields {
+  flex: 2;
+  max-width: 600px;
+}
+
+.form-fields label {
+  display: block;
+  margin-bottom: 0.5rem;
+  text-align: left;
+  font-size: 1.1rem;
+}
+
+.form-fields input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(1);
+}
+
+.form-fields input,
+.form-fields textarea {
+  width: 100%;
+  padding: 0.6rem;
+  margin-bottom: 0.6rem;
+  border: 1.5px solid #fff;
+  border-radius: 6px;
+  background: rgba(10, 10, 10, 0.7);
+  color: #fff;
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+  font-size: 1.1rem;
+}
+
+.date-fields {
+  display: flex;
+  gap: 1.2rem;
+  justify-content: center;
+}
+
+.date-field {
+  flex: 1;
+}
+
+.date-field label {
+  margin-bottom: 0.5rem;
+  text-align: left;
+  font-size: 1.1rem;
+}
+
+.dropdown {
+  position: absolute;
+  z-index: 10;
+  width: 100%;
+  max-height: 250px;
+  max-width: 280px;
+  overflow-y: auto;
+  background: #fff;
+  border: 1px solid #ddd;
+  margin-top: 4px;
+  border-radius: 6px;
+  list-style: none;
+  padding: 6px 0;
+  color: #000;
+}
+
+.dropdown li {
+  padding: 10px 12px;
+  cursor: pointer;
+  font-size: 1.1rem;
+}
+
+.dropdown li:hover {
+  background: #f0f0f0;
+}
+
+.dropdown .empty {
+  color: #888;
+  cursor: default;
+}
+
+.add-stop-container {
+  display: flex;
+  justify-content: center;
+  margin-top: 0.5rem;
+}
+
+.add-stop-btn {
+  background: #375689;
+  color: white;
+  padding: 0.6rem 1.2rem;
+  border-radius: 6px;
+  border: none;
+  width: 250px;
+  margin: 0 auto;
+  display: block;
+  font-size: 1.1rem;
+  cursor: pointer;
+}
+
+.remove-stop-btn {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: #e74c3c;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 1.5rem;
+  height: 1.5rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  z-index: 1;
+}
+
+.actions {
+  display: flex;
+  gap: 1.5rem;
+  margin-top: 2rem;
+  margin-left: 2.5rem;
+  margin-right: 2.5rem;
+  max-width:1100px;
+  justify-content: center;
+}
+
+.actions button {
+  flex: 1;
+  padding: 0.8rem 1.2rem;
+  border-radius: 8px;
+  color: white;
+  border: none;
+  max-width: 1100px;
+  font-size: 1.1rem;
+  cursor: pointer;
+}
+
+.actions button:first-child {
+  background: #828282;
+}
+
+.actions .cancel {
+  background: #363636;
+}
+
+.actions .save-draft {
+  background: #48494B;
+}
+
+.actions button:disabled {
+  background: #555;
+  cursor: not-allowed;
+}
+
+.step-actions {
+  display: flex;
+  gap: 1.5rem;
+  margin-top: 1.5rem;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.step-actions button {
+  flex: 1;
+  padding: 0.8rem 1.2rem;
+  border-radius: 8px;
+  color: white;
+  border: none;
+  max-width: 250px;
+  font-size: 1.1rem;
+}
+
+.step-actions .next-btn {
+  background: #375689;
+}
+
+.step-actions .cancel {
+  background: #363636;
+}
+
+.back-btn {
+  background: #48494B;
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  border: none;
+  align-self: flex-start;
+  margin-bottom: 1rem;
+  font-size: 1.1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+}
+
+.arrow-icon {
+  width: 16px;
+  height: 16px;
+}
+
+.loading {
+  text-align: center;
+  padding: 2rem;
+  font-size: 1.2rem;
+}
+
+.error {
+  color: #e74c3c;
+  font-size: 1.1rem;
+}
+
+.success {
+  color: #2ecc71;
+  font-size: 1.1rem;
+}
+
+.stops-route {
+  position: relative;
+  text-align: center;
+}
+
+.stop-card-wrapper {
+  position: relative;
+  margin-bottom: 3rem;
+  display: inline-block;
+  vertical-align: top;
+}
+
+.route-line {
+  position: absolute;
+  width: 2px;
+  background: #fff;
+  height: 100px;
+  left: 50%;
+  transform: translateX(-50%);
+  top: 100%;
+  z-index: 0;
+  opacity: 1;
+}
+
+.stop-images {
+  flex: 1;
+  min-width: 0;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 400px;
+  padding: 0 10px;
+  margin-bottom: 0.6rem;
+}
+
+.stop-image {
+  width: 250px;
+  height: 250px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid #fff;
+  display: block;
+  z-index: 0;
+}
+
+.preview-wrapper {
+  position: relative;
+  width: 250px;
+  height: 250px;
+  margin: 0 auto;
+}
+
+.nav-arrow {
+  background: rgba(10, 10, 10, 0.8);
+  border: 1px solid #fff;
+  border-radius: 50%;
+  color: #fff;
+  cursor: pointer;
+  padding: 1rem;
+  opacity: 0.9;
+  transition: opacity 0.2s;
+  width: 50px;
+  height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1;
+}
+
+.nav-arrow:hover {
+  opacity: 1;
+}
+
+.nav-arrow.left {
+  margin-right: 10px;
+}
+
+.nav-arrow.right {
+  margin-left: 10px;
+}
+
+.nav-arrow:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.nav-arrow svg {
+  width: 24px;
+  height: 24px;
+}
+
+.remove-img-btn {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: #888;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 1.5rem;
+  height: 1.5rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  z-index: 1;
+}
+
+.trash-icon {
+  width: 16px;
+  height: 16px;
+}
+
+.stop-origin-title {
+  font-size: 1.2rem;
+  margin-bottom: 1rem;
+  text-align: center;
+}
 </style>
