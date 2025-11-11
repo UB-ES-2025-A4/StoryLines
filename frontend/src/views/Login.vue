@@ -2,7 +2,7 @@
   <div class="register-container">
     <div class="register">
       <!-- Imagen del logo -->
-      <img src="../LogoBlanco.png" alt="Logo" class="logo" />
+      <img src="@/assets/LogoBlanco.png" alt="Logo" class="logo" />
 
       <form @submit.prevent="handleLogin" class="form-content">
         <div class="form-group">
