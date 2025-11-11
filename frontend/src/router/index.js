@@ -7,7 +7,7 @@ import Login from '@/views/Login.vue'
 import Register from '@/views/Register.vue'
 import Profile from '@/views/Profile.vue'
 import CreatePost from '@/views/CreateTrip.vue'
-import TripView from '@/views/TripView.vue'
+import TripView from '@/views/Post.vue'
 
 const routes = [
   {
