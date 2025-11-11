@@ -75,59 +75,76 @@
         <div v-if="currentStep === 2">
           <h2 class="section-title">Paradas</h2>
           <div class="section-card">
-            <button class="back-btn" @click="goToCover">
-            <svg class="arrow-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M15 18L9 12L15 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg> Volver
-</button>
-            <div v-for="(stop, index) in trip.stops" :key="index" class="input-container">
-              <div class="image-upload">
-                <label>Fotos (opcional)</label>
-                <img
-                  v-if="stop.images.length > 0"
-                  :src="stop.images[0]"
-                  class="preview"
-                  alt="Foto parada"
-                />
-                <img
-                  v-else
-                  src="https://jkfenner.com/wp-content/uploads/2019/11/default-450x450.jpg"
-                  class="preview"
-                  alt="Parada por defecto"
-                />
-                <input
-                  type="file"
-                  :ref="el => stopFileInputs[index] = el"
-                  style="display:none"
-                  accept="image/*"
-                  multiple
-                  @change="e => handleStopImagesUpload(e, index)"
-                />
-                <button @click="openStopFile(index)" class="upload-btn">Seleccionar imágenes</button>
-              </div>
-              <div class="form-fields">
-                <label>Ciudad (opcional)</label>
-                <input v-model="stop.city" type="text" placeholder="Ej: Tokio" />
-                <label>País</label>
-                <input v-model="stop.countrySearch" type="text" placeholder="Buscar país..." @focus="stop.countryOpen = true" @input="stop.countryOpen = true" />
-            
-                <ul v-show="stop.countryOpen" class="dropdown">
-                  <li v-for="c in filteredCountries(stop.countrySearch)" :key="c.id" @click="selectCountry(stop, c)">
-                    {{ c.name }}
-                  </li>
-                  <li v-if="filteredCountries(stop.countrySearch).length === 0" class="empty">
-                    No hay resultados
-                  </li>
-                </ul>
-                <label>Descripción (opcional)</label>
-                <textarea v-model="stop.description" rows="3"></textarea>
-              </div>
-              <button v-if="trip.stops.length > 1" class="delete-btn" @click="removeStop(index)">Eliminar</button>
+  <button class="back-btn" @click="goToCover">
+    <svg class="arrow-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M15 18L9 12L15 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg> Volver
+  </button>
+  <div class="stops-route">
+    <div v-for="(stop, index) in trip.stops" :key="index" class="stop-card-wrapper">
+      <div class="input-container stop-card">
+        <div class="image-upload">
+          <label>Fotos (opcional)</label>
+          <div class="stop-images">
+            <button class="nav-arrow left" @click="changeStopImage(stop, -1)" :disabled="stop.currentImageIndex === 0 || stop.images.length <= 1">
+              <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M15 18L9 12L15 6" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </button>
+            <div class="preview-wrapper">
+              <img
+                :src="stop.images.length > 0 ? stop.images[stop.currentImageIndex] : 'https://jkfenner.com/wp-content/uploads/2019/11/default-450x450.jpg'"
+                class="stop-image"
+                alt="Foto parada"
+              />
+              <button v-if="stop.images.length > 0" class="remove-img-btn" @click="removeCurrentStopImage(index)">
+                <svg class="trash-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M3 6H5H21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M8 6V4C8 3.44772 8.44772 3 9 3H15C15.5523 3 16 3.44772 16 4V6M19 6V20C19 20.5523 18.5523 21 18 21H6C5.44772 21 5 20.5523 5 20V6H19Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </button>
             </div>
-            <div class="add-stop-container">
-              <button class="add-stop-btn" @click="addStop">Añadir parada</button>
-            </div>
+            <button class="nav-arrow right" @click="changeStopImage(stop, 1)" :disabled="stop.currentImageIndex === stop.images.length - 1 || stop.images.length <= 1">
+              <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M9 6L15 12L9 18" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </button>
           </div>
+          <input
+            type="file"
+            :ref="el => stopFileInputs[index] = el"
+            style="display:none"
+            accept="image/*"
+            multiple
+            @change="e => handleStopImagesUpload(e, index)"
+          />
+          <button @click="openStopFile(index)" class="upload-btn">Seleccionar imágenes</button>
+        </div>
+        <div class="form-fields">
+          <label>Ciudad (opcional)</label>
+          <input v-model="stop.city" type="text" placeholder="Ej: Tokio" @focus="stop.countryOpen = true" @input="stop.countryOpen = true" />
+          <label>País</label>
+          <input v-model="stop.countrySearch" type="text" placeholder="Buscar país..." @focus="stop.countryOpen = true" @input="stop.countryOpen = true" />
+          <label>Descripción (opcional)</label>
+          <textarea v-model="stop.description" rows="3"></textarea>
+          <ul v-show="stop.countryOpen" class="dropdown">
+            <li v-for="c in filteredCountries(stop.countrySearch)" :key="c.id" @click="selectCountry(stop, c)">
+              {{ c.name }}
+            </li>
+            <li v-if="filteredCountries(stop.countrySearch).length === 0" class="empty">
+              No hay resultados
+            </li>
+          </ul>
+        </div>
+        <button v-if="trip.stops.length > 1" class="remove-stop-btn" @click="removeStop(index)">X</button>
+      </div>
+      <div v-if="index < trip.stops.length - 1" class="route-line"></div>
+    </div>
+  </div>
+  <div class="add-stop-container">
+    <button class="add-stop-btn" @click="addStop">Añadir parada</button>
+  </div>
+</div>
 
           <!-- Actions -->
           <div class="actions">
@@ -186,7 +203,8 @@ export default {
           countrySearch: '',
           countryOpen: false,
           description: '',
-          images: []
+          images: [],
+          currentImageIndex: 0
         }
       ]
     })
@@ -284,9 +302,22 @@ export default {
       if (stopFileInputs.value[stopIndex]) stopFileInputs.value[stopIndex].value = ''
     }
 
-    const removeStopImage = (stopIndex, imgIndex) => {
-      trip.value.stops[stopIndex].images.splice(imgIndex, 1)
+    const changeStopImage = (stop, delta) => {
+  const newIndex = stop.currentImageIndex + delta
+  if (newIndex >= 0 && newIndex < stop.images.length) {
+    stop.currentImageIndex = newIndex
+  }
+}
+
+const removeCurrentStopImage = (index) => {
+  const stop = trip.value.stops[index]
+  if (stop.images.length > 0) {
+    stop.images.splice(stop.currentImageIndex, 1)
+    if (stop.currentImageIndex > stop.images.length - 1) {
+      stop.currentImageIndex = Math.max(0, stop.images.length - 1)
     }
+  }
+}
 
     // Validaciones publicar
     const validateRequiredFields = () => {
@@ -319,9 +350,9 @@ export default {
 
     // Paradas
     const addStop = () => {
-      trip.value.stops.push({ city: '', country_id: '', countrySearch: '', countryOpen: false, description: '', images: [] })
-      stopFileInputs.value.push(null)
-    }
+  trip.value.stops.push({ city: '', country_id: '', countrySearch: '', countryOpen: false, description: '', images: [], currentImageIndex: 0 })
+  stopFileInputs.value.push(null)
+}
     const removeStop = (i) => {
       trip.value.stops.splice(i, 1)
       stopFileInputs.value.splice(i, 1)
@@ -403,7 +434,7 @@ export default {
     return {
       trip, error, success, coverPreview, countries,
       filteredCountries, selectCountry, clearCountry, getCountryNameById,
-      addStop, removeStop, removeStopImage,
+      addStop, removeStop, changeStopImage, removeCurrentStopImage,
       stopFileInputs, openStopFile, handleStopImagesUpload,
       handleCoverUpload,
       saveDraft, publishTrip, cancelTrip,
@@ -420,6 +451,7 @@ export default {
   display: flex;
   min-height: 100vh;
   background: url('https://images.unsplash.com/photo-1451187580459-43490279c0fa?ixlib=rbahoo4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&q=80&w=1172') no-repeat center center/cover;
+  background-attachment: fixed;
   opacity: 0.9;
   color: #fff;
 }
@@ -502,7 +534,7 @@ export default {
 .main-content {
   flex: 1;
   padding: 2rem;
-  max-width: 900px;
+  max-width: 1100px;
   margin: 0 auto;
   display: flex;
   flex-direction: column;
@@ -528,7 +560,7 @@ export default {
   padding: 1.5rem;
   margin-bottom: 1.5rem;
   background: rgba(10, 10, 10, 0.7);
-  width: 700px;
+  width: 1000px;
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
@@ -542,21 +574,32 @@ export default {
   max-width: 100%;
 }
 
+.stop-card {
+  padding: 2rem;
+  border: 1.5px solid #fff;
+  border-radius: 12px;
+  background: #0A0A0A;
+  position: relative;
+  min-height: 300px;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
 .image-upload {
   flex: 1;
-  max-width: 250px;
+  max-width: 450px;
   font-size: 1.1rem;
 }
 
 .image-upload label {
   display: block;
   margin-bottom: 0.5rem;
-  text-align: left;
+  text-align: center;
 }
 
 .preview {
-  width: 250px;
-  height: 250px;
+  width: 300px;
+  height: 300px;
   object-fit: cover;
   border-radius: 10px;
   border: 2px solid #fff;
@@ -572,7 +615,7 @@ export default {
   padding: 0.6rem 1.2rem;
   border-radius: 6px;
   cursor: pointer;
-  width: 100%;
+  width: 300px;
   display: block;
   margin-left: auto;
   margin-right: auto;
@@ -581,7 +624,7 @@ export default {
 
 .form-fields {
   flex: 2;
-  max-width: 450px;
+  max-width: 600px;
 }
 
 .form-fields label {
@@ -631,7 +674,6 @@ export default {
   z-index: 10;
   width: 100%;
   max-height: 250px;
-  max-width: 380px;
   overflow-y: auto;
   background: #fff;
   border: 1px solid #ddd;
@@ -660,7 +702,7 @@ export default {
 .add-stop-container {
   display: flex;
   justify-content: center;
-  margin-top: 1.5rem;
+  margin-top: 0.5rem;
 }
 
 .add-stop-btn {
@@ -676,26 +718,31 @@ export default {
   cursor: pointer;
 }
 
-.delete-btn {
+.remove-stop-btn {
+  position: absolute;
+  top: 10px;
+  right: 10px;
   background: #e74c3c;
   color: white;
-  padding: 0.5rem 1rem;
-  border-radius: 6px;
   border: none;
-  margin-top: 0.6rem;
-  display: block;
-  margin-left: auto;
-  margin-right: auto;
-  font-size: 1.1rem;
+  border-radius: 50%;
+  width: 1.5rem;
+  height: 1.5rem;
   cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  z-index: 1;
 }
 
 .actions {
   display: flex;
   gap: 1.5rem;
   margin-top: 2rem;
-  max-width: 700px;
+  max-width:1100px;
   justify-content: center;
+  cursor: pointer;
 }
 
 .actions button {
@@ -706,7 +753,6 @@ export default {
   border: none;
   max-width: 250px;
   font-size: 1.1rem;
-  cursor: pointer;
 }
 
 .actions button:first-child {
@@ -731,6 +777,7 @@ export default {
   gap: 1.5rem;
   margin-top: 1.5rem;
   justify-content: center;
+  cursor: pointer;
 }
 
 .step-actions button {
@@ -741,7 +788,6 @@ export default {
   border: none;
   max-width: 250px;
   font-size: 1.1rem;
-  cursor: pointer;
 }
 
 .step-actions .next-btn {
@@ -786,5 +832,120 @@ export default {
 .success {
   color: #2ecc71;
   font-size: 1.1rem;
+}
+
+.stops-route {
+  position: relative;
+  text-align: center;
+}
+
+.stop-card-wrapper {
+  position: relative;
+  margin-bottom: 3rem;
+  display: inline-block;
+  vertical-align: top;
+}
+
+.route-line {
+  position: absolute;
+  width: 2px;
+  background: #fff;
+  height: 100px;
+  left: 50%;
+  transform: translateX(-50%);
+  top: 100%;
+  z-index: 0;
+  opacity: 1;
+}
+
+.stop-images {
+  flex: 1;
+  min-width: 0;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 400px;
+  padding: 0 10px;
+  margin-bottom: 0.6rem;
+}
+
+.stop-image {
+  width: 250px;
+  height: 250px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid #fff;
+  display: block;
+  z-index: 0;
+}
+
+.preview-wrapper {
+  position: relative;
+  width: 250px;
+  height: 250px;
+  margin: 0 auto;
+}
+
+.nav-arrow {
+  background: rgba(10, 10, 10, 0.8);
+  border: 1px solid #fff;
+  border-radius: 50%;
+  color: #fff;
+  cursor: pointer;
+  padding: 1rem;
+  opacity: 0.9;
+  transition: opacity 0.2s;
+  width: 50px;
+  height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1;
+}
+
+.nav-arrow:hover {
+  opacity: 1;
+}
+
+.nav-arrow.left {
+  margin-right: 10px;
+}
+
+.nav-arrow.right {
+  margin-left: 10px;
+}
+
+.nav-arrow:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.nav-arrow svg {
+  width: 24px;
+  height: 24px;
+}
+
+.remove-img-btn {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: #888;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 1.5rem;
+  height: 1.5rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  z-index: 1;
+}
+
+.trash-icon {
+  width: 16px;
+  height: 16px;
 }
 </style>
