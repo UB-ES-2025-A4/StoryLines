@@ -73,19 +73,23 @@
           <h3>Viajes recientes</h3>
         </div>
         <div class="trips-container">
-          <div class="trip-card" v-for="trip in trips" :key="trip.id">
-            <img :src="trip.image" alt="Foto del viaje" class="trip-image" />
-            <div class="trip-info">
-              <div class="trip-details">
-                <h4>{{ trip.title }}</h4>
-                <p>{{ trip.description }}</p>
+          <div v-if="trips.length > 0" class="trip-cards-wrapper">
+            <div class="trip-card" v-for="trip in trips" :key="trip.id">
+              <img :src="trip.image" alt="Foto del viaje" class="trip-image" />
+              <div class="trip-info">
+                <div class="trip-details">
+                  <h4>{{ trip.title }}</h4>
+                  <p>{{ trip.description }}</p>
+                </div>
               </div>
-              <div class="trip-stats">
-                <span>♡ {{ formatCount(trip.likes) }}</span>
-                <span>👁 {{ formatCount(trip.views) }}</span>
+              <button class="menu-btn" @click="currentMenuTrip = currentMenuTrip === trip.id ? null : trip.id">⋯</button>
+              <div v-if="currentMenuTrip === trip.id" class="menu-dropdown">
+                <button>Editar viaje</button>
+                <button>Borrar viaje</button>
               </div>
             </div>
           </div>
+          <div v-else class="no-trips-message">No hay viajes registrados</div>
         </div>
       </div>
     </div>
@@ -119,6 +123,7 @@
       const hovering = ref(false)
       const fileInput = ref(null)
       const showChangePictureModal = ref(false)
+      const currentMenuTrip = ref(null)
   
       // Cargar perfil al montar
       onMounted(async () => {
@@ -342,7 +347,8 @@
         createIcon,
         storeIcon,
         profileIcon,
-        settingsIcon
+        settingsIcon,
+        currentMenuTrip
       }
     }
   }
@@ -491,10 +497,10 @@
   .trips-container {
     display: flex;
     flex-direction: column;
-    gap: 1.6rem;
     padding: 1.5rem 2rem;
     background: rgba(11, 47, 74, 0.3);
     border-radius: 0;
+    min-height: 200px;
   }
   
   /* --- TARJETA DE VIAJE --- */
@@ -507,6 +513,7 @@
     padding: 0;
     transition: all 0.3s ease;
     height: 150px;
+    position: relative;
   }
   
   .trip-card:hover {
@@ -525,7 +532,7 @@
   .trip-info {
     display: flex;
     justify-content: space-between;
-    width: 100;
+    width: 100%;
   }
   
   .trip-details {
@@ -543,16 +550,6 @@
     font-size: 0.95rem;
     opacity: 0.9;
     color: #0a0a0a;
-  }
-  
-  .trip-stats {
-    display: flex;
-    flex-direction: column;
-    font-size: 1rem;
-    opacity: 0.8;
-    color: #0a0a0a;
-    flex-shrink: 0;
-    margin-left: 5rem;
   }
   
   .avatar-container {
@@ -655,6 +652,56 @@
   width: 100%;
   height: 100%;
   fill: currentColor;
+}
+
+.no-trips-message {
+  text-align: center;
+  font-size: 1.2rem;
+  color: #fff;
+  margin: auto 0;
+}
+
+.menu-btn {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: #0a0a0a;
+}
+
+.menu-dropdown {
+  position: absolute;
+  top: 30px;
+  right: 10px;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+  display: flex;
+  flex-direction: column;
+  z-index: 10;
+}
+
+.menu-dropdown button {
+  padding: 0.5rem 1rem;
+  border: none;
+  background: none;
+  cursor: pointer;
+  text-align: left;
+  width: 100%;
+  color: #0a0a0a;
+}
+
+.menu-dropdown button:hover {
+  background: #f0f0f0;
+}
+
+.trip-cards-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
 }
 
   </style>
