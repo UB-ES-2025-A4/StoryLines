@@ -295,7 +295,7 @@ export default {
 }
 
 .nav-arrow {
-  background: rgba(10, 10, 10, 0.8);
+  background: rgba(10, 10, 10, 0.7);
   border: 1px solid #fff;
   border-radius: 50%;
   color: #fff;
@@ -342,20 +342,20 @@ export default {
 }
 
 .stop-title {
-  font-size: 1.5rem; /* Slightly larger for emphasis */
+  font-size: 1.5rem;
   margin-bottom: 1rem;
 }
 
 .stop-info {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem; /* Better spacing between items */
+  gap: 0.75rem;
 }
 
 .stop-info p {
   margin: 0;
   font-size: 1.1rem;
-  line-height: 1.5; /* Improved readability */
+  line-height: 1.5;
 }
 
 .route-line {
