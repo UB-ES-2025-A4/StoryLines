@@ -407,10 +407,10 @@ app.get('/api/trips/:id', async (req, res) => {
 });
 
 // Servir el frontend compilado (build de Vue/React)
-const frontendPath = path.join(__dirname, '../../frontend/');
+const frontendPath = path.join(__dirname, '../../frontend/dist');
 app.use(express.static(frontendPath));
 
 // Cualquier ruta que no sea de API devolverá index.html
-app.get((req, res) => {
+app.get('/*', (req, res) => {
   res.sendFile(path.join(frontendPath, 'index.html'));
 });
