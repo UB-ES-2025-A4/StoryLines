@@ -1,31 +1,30 @@
 <template>
-  <!-- TEMPLATE -->
   <div class="profile-page">
-        <!-- Sidebar -->
-<div class="sidebar">
-  <img src="@/assets/LogoBlanco.png" alt="StoryLines Logo" class="logo" />
-  <nav>
-    <router-link to="/" class="nav-item" :class="{ 'active': $route.path === '/' }">
-      <svg class="icon" v-html="homeIcon"></svg>
-      <span>Home</span>
-    </router-link>
+    <!-- Sidebar -->
+    <div class="sidebar">
+      <img src="@/assets/LogoBlanco.png" alt="StoryLines Logo" class="logo" />
+      <nav>
+        <router-link to="/" class="nav-item" :class="{ 'active': $route.path === '/' }">
+          <svg class="icon" v-html="homeIcon"></svg>
+          <span>Home</span>
+        </router-link>
 
-    <router-link to="/createtrip" class="nav-item" :class="{ 'active': $route.path === '/create' }">
-      <svg class="icon" v-html="createIcon"></svg>
-      <span>Create</span>
-    </router-link>
+        <router-link to="/createtrip" class="nav-item" :class="{ 'active': $route.path === '/create' }">
+          <svg class="icon" v-html="createIcon"></svg>
+          <span>Create</span>
+        </router-link>
 
-    <router-link to="/profile" class="nav-item" :class="{ 'active': $route.path === '/profile' }">
-      <svg class="icon" v-html="profileIcon"></svg>
-      <span>Profile</span>
-    </router-link>
-
-  </nav>
-</div>
+        <router-link to="/profile" class="nav-item" :class="{ 'active': $route.path === '/profile' }">
+          <svg class="icon" v-html="profileIcon"></svg>
+          <span>Profile</span>
+        </router-link>
+      </nav>
+    </div>
 
     <div v-if="loading" class="loading">Cargando...</div>
-  
+
     <div v-else class="profile-card">
+      <!-- Cabecera del perfil -->
       <div class="profile-header">
         <div class="avatar-container" @mouseenter="hovering = true" @mouseleave="hovering = false">
           <img
@@ -37,7 +36,7 @@
             <i class="fa fa-camera camera-icon"></i>
           </div>
         </div>
-  
+
         <div class="profile-text">
           <h2 class="username">{{ profileData.username || 'Nombre de usuario' }}</h2>
           <h1 class="display-name">{{ profileData.display_name }}</h1>
@@ -47,14 +46,12 @@
           </button>
         </div>
       </div>
-  
-      <!-- ChangePicture insertado justo debajo del perfil -->
+
+      <!-- ChangePicture -->
       <div v-if="showChangePicture" class="change-picture-container">
-        <ChangePicture 
-          @image-updated="handleImageUpdated"
-        />
+        <ChangePicture @image-updated="handleImageUpdated" />
       </div>
-  
+
       <!-- Formulario de edición -->
       <div v-if="isEditing" class="edit-form">
         <input type="text" v-model="profileData.username" placeholder="Nombre de usuario" />
@@ -66,294 +63,213 @@
         <div v-if="error" class="alert alert-error">{{ error }}</div>
         <div v-if="success" class="alert alert-success">{{ success }}</div>
       </div>
-  
+
       <!-- VIAJES -->
       <div class="recent-trips-section">
         <div class="recent-trips-header">
-          <h3>Viajes recientes</h3>
+          <h3>Viajes publicados</h3>
         </div>
         <div class="trips-container">
           <div v-if="trips.length > 0" class="trip-cards-wrapper">
-            <div class="trip-card" v-for="trip in trips" :key="trip.id">
+            <div class="trip-card" v-for="trip in trips" :key="trip.id" @click="goToTrip(trip.id)">
               <img :src="trip.image" alt="Foto del viaje" class="trip-image" />
               <div class="trip-info">
                 <div class="trip-details">
                   <h4>{{ trip.title }}</h4>
-                  <p>{{ trip.description }}</p>
+                  <p>{{ truncateText(trip.description, 120) }}</p>
                 </div>
               </div>
-              <button class="menu-btn" @click="currentMenuTrip = currentMenuTrip === trip.id ? null : trip.id">⋯</button>
+              <button class="menu-btn" @click.stop="toggleMenu(trip.id)">⋯</button>
               <div v-if="currentMenuTrip === trip.id" class="menu-dropdown">
-                <button>Editar viaje</button>
-                <button>Borrar viaje</button>
+                <button @click.stop="editTrip(trip.id)">✏️ Editar viaje (TO-DO)</button>
+                <button @click.stop="deleteTrip(trip.id)">🗑️ Borrar viaje (TO-DO)</button>
               </div>
             </div>
           </div>
-          <div v-else class="no-trips-message">No hay viajes registrados</div>
+          <div v-else class="no-trips-message">No hay viajes publicados</div>
         </div>
       </div>
     </div>
   </div>
-  
-  </template>
-  
-  <script>
-  import { ref, onMounted, computed } from 'vue'
-  import { supabase } from '@/config/supabase'
-  import ChangePicture from '@/components/Profile/ChangePicture.vue'
-  
-  export default {
-    name: 'Profile',
-    components: { ChangePicture },
-    setup(props, { emit }) {
-      const showChangePicture = ref(false);
-      const user = ref(null)
-      const profileData = ref({
-        username: '',
-        display_name: '',
-        bio: '',
-        avatar_url: ''
-      })
-      const originalData = ref({})
-      const isEditing = ref(false)
-      const loading = ref(true)
-      const saving = ref(false)
-      const error = ref('')
-      const success = ref('')
-      const hovering = ref(false)
-      const fileInput = ref(null)
-      const showChangePictureModal = ref(false)
-      const currentMenuTrip = ref(null)
-  
-      // Cargar perfil al montar
-      onMounted(async () => {
-        await loadProfile()
-      })
-  
-      const loadProfile = async () => {
-        loading.value = true
-        try {
-          // Obtener usuario actual
-          const { data: { session } } = await supabase.auth.getSession()
-          user.value = session?.user
-  
-          if (!user.value) return
-  
-          // Obtener datos del perfil desde la tabla users
-          const { data, error: fetchError } = await supabase
-            .from('users')
-            .select('*')
-            .eq('id', user.value.id)
-            .single()
-  
-          if (fetchError && fetchError.code !== 'PGRST116') {
-            throw fetchError
-          }
-  
-          // Si existe perfil, cargar datos
-          if (data) {
-            profileData.value = { ...data }
-            originalData.value = { ...data }
-          }
-        } catch (err) {
-          error.value = 'Error al cargar el perfil'
-          console.error(err)
-        } finally {
-          loading.value = false
-        }
-      }
-      const API_URL = '';
-      const saveProfile = async () => {
-        error.value = ''
-        success.value = ''
-        saving.value = true
-  
-        try {
-          const { data: { session } } = await supabase.auth.getSession()
-          const token = session?.access_token
-  
-          const payload = {
-            userId: user.value.id,
-            username: profileData.value.username,
-            display_name: profileData.value.display_name,
-            bio: profileData.value.bio,
-            avatar_url: profileData.value.avatar_url
-          }
-  
-          const res = await fetch(`${API_URL}/api/profile`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              ...(token ? { Authorization: `Bearer ${token}` } : {})
-            },
-            body: JSON.stringify(payload)
-          })
-  
-          // 👇 Intentar siempre leer el body aunque haya error
-          let body = {}
-          try {
-            body = await res.json()
-          } catch (e) {
-            console.warn('No se pudo parsear el body como JSON')
-          }
-  
-          if (!res.ok) {
-            // 👇 si el backend devolvió un mensaje, lo mostramos
-            const msg = body.error || `Error ${res.status}`
-            throw new Error(msg)
-          }
-  
-          success.value = body.message || 'Perfil actualizado correctamente ✅'
-          originalData.value = { ...profileData.value }
-          isEditing.value = false
-        } catch (err) {
-          console.error('saveProfile error:', err)
-          error.value = err.message || 'Error al guardar el perfil'
-        } finally {
-          saving.value = false
-        }
-      }
-  
-  
-      const cancelEdit = () => {
-        profileData.value = { ...originalData.value }
-        isEditing.value = false
-        error.value = ''
-      }
-  
-      const handleImageUpdated = (newUrl) => {
-        profileData.value.avatar_url = newUrl;
-        showChangePicture.value = false; // cerrar automáticamente
-      }
-  
-      const handleFileChange = async (event) => {
-        const file = event.target.files[0]
-        if (!file) return
-  
-        // Validar tipo de archivo
-        if (!file.type.startsWith('image/')) {
-          error.value = 'Por favor selecciona una imagen válida'
-          return
-        }
-  
-        // Validar tamaño (máximo 2MB)
-        if (file.size > 2 * 1024 * 1024) {
-          error.value = 'La imagen no puede superar los 2MB'
-          return
-        }
-  
-        try {
-          // Subir imagen a Supabase Storage
-          const fileExt = file.name.split('.').pop()
-          const fileName = `${user.value.id}-${Date.now()}.${fileExt}`
-          const filePath = `avatars/${fileName}`
-  
-          const { error: uploadError } = await supabase.storage
-            .from('profile-pictures')
-            .upload(filePath, file)
-  
-          if (uploadError) throw uploadError
-  
-          // Obtener URL pública
-          const { data } = supabase.storage
-            .from('profile-pictures')
-            .getPublicUrl(filePath)
-  
-          profileData.value.avatar_url = data.publicUrl
-  
-          // Guardar automáticamente
-          await saveProfile()
-        } catch (err) {
-          error.value = 'Error al subir la imagen'
-          console.error(err)
-        }
-      }
-  
-      const formatCount = (count) => {
-        if (count >= 1000000) {
-          if (count % 1000000 === 0) {
-            return (count / 1000000).toFixed(0) + 'M'
-          }
-          return (count / 1000000).toFixed(1) + 'M'
-        }
-        if (count >= 1000){
-          if (count % 1000 === 0) {
-            return (count / 1000).toFixed(0) + 'K'
-          }
-          return (count / 1000).toFixed(1) + 'K'
-        }
-        return count
-      }
-  
-      const trips = ref([
-        {
-          id: 1,
-          title: 'Mi viaje a Islandia',
-          description: 'Este es el album de mi viaje.',
-          image: 'https://images.unsplash.com/photo-1500043357865-c6b8827edf10?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&q=80&w=1170',
-          likes: 500000,
-          views: 1200000
-        },
-        {
-          id: 2,
-          title: 'Mi viaje a Paris',
-          description: 'Este es el album de mi viaje.',
-          image: 'https://images.unsplash.com/photo-1549144511-f099e773c147?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&q=80&w=687',
-          likes: 900000,
-          views: 3000000
-        },
-        {
-          id: 3,
-          title: 'Mi viaje a Tokyo',
-          description: 'Este es el album de mi viaje.',
-          image: 'https://images.unsplash.com/photo-1542051841857-5f90071e7989?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&q=80&w=1170',
-          likes: 5500000,
-          views: 11700000
-        }
-      ])
+</template>
 
-      //Icons
-    const homeIcon = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 9L12 2L21 9V20C21 21.1 20.1 22 19 22H5C3.9 22 3 21.1 3 20V9Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
-    const searchIcon = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="11" cy="11" r="8" stroke="currentColor" stroke-width="2"/><path d="M21 21L16.65 16.65" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>`;
-    const notificationsIcon = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M18 8C18 6.4087 17.3679 4.88258 16.2426 3.75736C15.1174 2.63214 13.5913 2 12 2C10.4087 2 8.88258 2.63214 7.75736 3.75736C6.63214 4.88258 6 6.4087 6 8C6 13.2284 3 17.9842 3 17.9842H21 17.9842C21 17.9842 18 13.2284 18 8Z" stroke="currentColor" stroke-width="2"/><path d="M12 18V18.009" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>`;
-    const createIcon = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 4V20M4 12H20" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
-    const storeIcon = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 9H21V20C21 21.1 20.1 22 19 22H5C3.9 22 3 21.1 3 20V9Z" stroke="currentColor" stroke-width="2"/><path d="M12 22V12L10 10H14L12 12V22Z" stroke="currentColor" stroke-width="2"/></svg>`;
-    const profileIcon = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="7" r="4.5" stroke="currentColor" stroke-width="2" fill="none"/><path d="M20 21V19C20 15.134 16.866 12 13 12H11C7.134 12 4 15.134 4 19V21" stroke="currentColor" stroke-width="2"/></svg>`;
-    const settingsIcon = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2" fill="none"/><path d="M19.4 15A1.65 1.65 0 0 0 19 15C19 14.7 18.9 14.4 18.7 14.2L16.9 12.4C16.8 12.3 16.7 12.2 16.7 12C16.7 11.8 16.8 11.7 16.9 11.6L18.7 9.8C18.9 9.6 19 9.3 19 9A1.65 1.65 0 0 0 19.4 9L20.5 8A1.65 1.65 0 0 0 21 7.4L21 6.5A1.65 1.65 0 0 0 20.5 6L19.4 5A1.65 1.65 0 0 0 19 5C19 4.7 18.9 4.4 18.7 4.2L16.9 2.4C16.8 2.3 16.7 2.2 16.7 2C16.7 1.8 16.8 1.7 16.9 1.6L18.7 0C18.9 -0.2 19 0.1 19 0.4V1.5A1.65 1.65 0 0 0 19.4 2L20.5 3A1.65 1.65 0 0 0 21 3.6L21 4.5A1.65 1.65 0 0 0 20.5 5L19.4 6A1.65 1.65 0 0 0 19 6C19 6.3 18.9 6.6 18.7 6.8L16.9 8.6C16.8 8.7 16.7 8.8 16.7 9C16.7 9.2 16.8 9.3 16.9 9.4L18.7 11.2C18.9 11.4 19 11.7 19 12A1.65 1.65 0 0 0 19.4 12L20.5 13A1.65 1.65 0 0 0 21 13.6L21 14.5A1.65 1.65 0 0 0 20.5 15L19.4 16A1.65 1.65 0 0 0 19 16C19 16.3 18.9 16.6 18.7 16.8L16.9 18.6C16.8 18.7 16.7 18.8 16.7 19C16.7 19.2 16.8 19.3 16.9 19.4L18.7 21.2C18.9 21.4 19 21.7 19 22V20.5A1.65 1.65 0 0 0 19.4 20L20.5 19A1.65 1.65 0 0 0 21 18.4L21 17.5A1.65 1.65 0 0 0 20.5 17L19.4 16A1.65 1.65 0 0 0 19 16C19 15.7 18.9 15.4 18.7 15.2L16.9 13.4C16.8 13.3 16.7 13.2 16.7 13C16.7 12.8 16.8 12.7 16.9 12.6L18.7 10.8C18.9 10.6 19 10.3 19 10A1.65 1.65 0 0 0 19.4 10L20.5 9A1.65 1.65 0 0 0 21 8.4L21 7.5A1.65 1.65 0 0 0 20.5 7L19.4 6Z" stroke="currentColor" stroke-width="2"/></svg>`;
+<script>
+import { ref, onMounted } from 'vue'
+import { supabase } from '@/config/supabase'
+import { useRouter } from 'vue-router'
+import ChangePicture from '@/components/Profile/ChangePicture.vue'
 
-  
-      return {
-        user,
-        profileData,
-        isEditing,
-        loading,
-        saving,
-        error,
-        success,
-        fileInput,
-        hovering,
-        showChangePictureModal,
-        saveProfile,
-        cancelEdit,
-        handleFileChange,
-        showChangePicture,
-        profileData,
-        handleImageUpdated,
-        trips,
-        formatCount,
-        homeIcon,
-        searchIcon,
-        notificationsIcon,
-        createIcon,
-        storeIcon,
-        profileIcon,
-        settingsIcon,
-        currentMenuTrip
+export default {
+  name: 'Profile',
+  components: { ChangePicture },
+  setup() {
+    const router = useRouter()
+    const showChangePicture = ref(false)
+    const user = ref(null)
+    const profileData = ref({ username: '', display_name: '', bio: '', avatar_url: '' })
+    const originalData = ref({})
+    const isEditing = ref(false)
+    const loading = ref(true)
+    const saving = ref(false)
+    const error = ref('')
+    const success = ref('')
+    const hovering = ref(false)
+    const currentMenuTrip = ref(null)
+    const trips = ref([])
+
+    // === Cargar perfil ===
+    const loadProfile = async () => {
+      loading.value = true
+      try {
+        const { data: { session } } = await supabase.auth.getSession()
+        user.value = session?.user
+        if (!user.value) return
+
+        const { data, error: fetchError } = await supabase
+          .from('users')
+          .select('*')
+          .eq('id', user.value.id)
+          .single()
+
+        if (fetchError && fetchError.code !== 'PGRST116') throw fetchError
+        if (data) {
+          profileData.value = { ...data }
+          originalData.value = { ...data }
+        }
+      } catch (err) {
+        console.error('Error al cargar el perfil:', err)
+        error.value = 'Error al cargar el perfil'
+      } finally {
+        loading.value = false
       }
     }
+
+    // === Guardar perfil (versión original tuya) ===
+    const API_URL = ''
+    const saveProfile = async () => {
+      error.value = ''
+      success.value = ''
+      saving.value = true
+      try {
+        const { data: { session } } = await supabase.auth.getSession()
+        const token = session?.access_token
+
+        const payload = {
+          userId: user.value.id,
+          username: profileData.value.username,
+          display_name: profileData.value.display_name,
+          bio: profileData.value.bio,
+          avatar_url: profileData.value.avatar_url
+        }
+
+        const res = await fetch(`${API_URL}/api/profile`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { Authorization: `Bearer ${token}` } : {})
+          },
+          body: JSON.stringify(payload)
+        })
+
+        let body = {}
+        try {
+          body = await res.json()
+        } catch {
+          console.warn('No se pudo parsear el body como JSON')
+        }
+
+        if (!res.ok) throw new Error(body.error || `Error ${res.status}`)
+        success.value = body.message || 'Perfil actualizado correctamente ✅'
+        originalData.value = { ...profileData.value }
+        isEditing.value = false
+      } catch (err) {
+        console.error('saveProfile error:', err)
+        error.value = err.message || 'Error al guardar el perfil'
+      } finally {
+        saving.value = false
+      }
+    }
+
+    // === Cargar viajes publicados ===
+    const loadTrips = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession()
+        user.value = session?.user
+        if (!user.value) return
+
+        const { data, error: tripsError } = await supabase
+          .from('trips')
+          .select('id, trip_name, description, cover_image, status, start_date')
+          .eq('user_id', user.value.id)
+          .eq('status', 'published')
+          .order('start_date', { ascending: false })
+
+        if (tripsError) throw tripsError
+
+        trips.value = (data || []).map(trip => ({
+          id: trip.id,
+          title: trip.trip_name || 'Sin título',
+          description: trip.description || 'Sin descripción',
+          image: trip.cover_image || 'https://jkfenner.com/wp-content/uploads/2019/11/default-450x450.jpg'
+        }))
+      } catch (err) {
+        console.error('Error cargando viajes:', err)
+      }
+    }
+
+    const truncateText = (text, limit) => (text?.length > limit ? text.slice(0, limit) + '...' : text || '')
+    const goToTrip = (tripId) => router.push(`/post/${tripId}`)
+    const toggleMenu = (tripId) => {
+      currentMenuTrip.value = currentMenuTrip.value === tripId ? null : tripId
+    }
+
+    const editTrip = (tripId) => console.log('TODO editar viaje:', tripId)
+    const deleteTrip = (tripId) => console.log('TODO eliminar viaje:', tripId)
+
+    const handleImageUpdated = (newUrl) => {
+      profileData.value.avatar_url = newUrl
+      showChangePicture.value = false
+    }
+
+    onMounted(async () => {
+      await loadProfile()
+      await loadTrips()
+    })
+
+    // ICONOS
+    const homeIcon = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 9L12 2L21 9V20C21 21.1 20.1 22 19 22H5C3.9 22 3 21.1 3 20V9Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`
+    const createIcon = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 4V20M4 12H20" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`
+    const profileIcon = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="7" r="4.5" stroke="currentColor" stroke-width="2"/><path d="M20 21V19C20 15.134 16.866 12 13 12H11C7.134 12 4 15.134 4 19V21" stroke="currentColor" stroke-width="2"/></svg>`
+
+    return {
+      user,
+      profileData,
+      isEditing,
+      loading,
+      saving,
+      error,
+      success,
+      hovering,
+      showChangePicture,
+      handleImageUpdated,
+      trips,
+      currentMenuTrip,
+      truncateText,
+      toggleMenu,
+      editTrip,
+      deleteTrip,
+      goToTrip,
+      homeIcon,
+      createIcon,
+      profileIcon,
+      saveProfile
+    }
   }
-  </script>
-  
+}
+</script>
+
+
+
   <style scoped>
   .profile-page {
     min-height: 100vh;

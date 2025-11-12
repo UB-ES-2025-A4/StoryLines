@@ -7,7 +7,7 @@ import Login from '@/views/Login.vue'
 import Register from '@/views/Register.vue'
 import Profile from '@/views/Profile.vue'
 import CreatePost from '@/views/CreateTrip.vue'
-import TripView from '@/views/Post.vue'
+import Post from '@/views/Post.vue' 
 
 const routes = [
   {
@@ -43,11 +43,10 @@ const routes = [
   },
 
   {
-    path: '/viewtrip',
-    name: 'TripView',
-    component: TripView,
-    meta: { requiresAuth: true }
-  }
+    path: '/post/:id',    // ✅ ruta dinámica
+    name: 'Post',
+    component: Post
+  },
 ]
 
 const router = createRouter({

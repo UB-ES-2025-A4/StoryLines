@@ -558,7 +558,7 @@ function createTooltipContent(destination) {
 function createTripPreviewTooltip(arc) {
   const trip = trips.value.find(t => t.id === arc.tripId)
   if (!trip) return ''
-  
+
   return `
     <div style="
       background: rgba(0, 0, 0, 0.95);
@@ -620,18 +620,24 @@ function createTripPreviewTooltip(arc) {
           ${trip.description}
         </div>
         
-        <button style="
-          width: 100%;
-          background: ${trip.userColor};
-          color: white;
-          border: none;
-          padding: 10px;
-          border-radius: 8px;
-          font-size: 14px;
-          font-weight: 600;
-          cursor: pointer;
-          transition: opacity 0.2s;
-        " onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'">
+        <button 
+          class="view-full-trip-btn"
+          data-trip-id="${trip.id}"
+          style="
+            width: 100%;
+            background: ${trip.userColor};
+            color: white;
+            border: none;
+            padding: 10px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity 0.2s;
+          "
+          onmouseover="this.style.opacity='0.8'"
+          onmouseout="this.style.opacity='1'"
+        >
           Ver Viaje Completo
         </button>
       </div>
@@ -650,6 +656,7 @@ function createTripPreviewTooltip(arc) {
     </div>
   `
 }
+
 
 function initializeGlobe() {
   const arcs = convertTripsToArcs(filteredTrips.value)
@@ -928,32 +935,28 @@ function calculateBestPosition(x, y, previewWidth = 320, previewHeight = 400, ex
 
 function showTripPreviewFromTooltip(tripId, tooltipElement, clickEvent) {
   const existingPreview = document.querySelector('.trip-preview-tooltip')
-  if (existingPreview) {
-    existingPreview.remove()
-  }
-  
+  if (existingPreview) existingPreview.remove()
+
   const trip = trips.value.find(t => t.id === tripId)
   if (!trip) return
-  
+
   const arc = { tripId: trip.id }
-  
+
   if (globeEl.value) {
     globeEl.value.style.pointerEvents = 'none'
   }
-  
+
   const preview = document.createElement('div')
   preview.className = 'trip-preview-tooltip'
   preview.innerHTML = createTripPreviewTooltip(arc)
   preview.style.position = 'fixed'
   preview.style.zIndex = '10001'
   preview.style.pointerEvents = 'auto'
-  
-  preview.addEventListener('click', (e) => {
-    e.stopPropagation()
-  })
-  
+
+  preview.addEventListener('click', (e) => e.stopPropagation())
+
   document.body.appendChild(preview)
-  
+
   let posX, posY
   if (clickEvent && typeof clickEvent.clientX === 'number' && typeof clickEvent.clientY === 'number') {
     posX = clickEvent.clientX
@@ -965,24 +968,32 @@ function showTripPreviewFromTooltip(tripId, tooltipElement, clickEvent) {
   }
 
   const position = calculateBestPosition(posX, posY, 320, 400, 8)
-
   preview.style.left = `${position.left}px`
   preview.style.top = `${position.top}px`
   preview.style.transform = position.transform
-  
-  const button = preview.querySelector('button')
+
+  const button = preview.querySelector('.view-full-trip-btn')
   if (button) {
-    // keep the button visually clickable but prevent it from doing anything
-    // (stopPropagation + preventDefault) so it has no functionality
-    try {
-      button.addEventListener('click', (ev) => { ev.stopPropagation(); ev.preventDefault(); })
-    } catch (e) {
-      // ignore
-    }
+    button.addEventListener('click', (ev) => {
+      ev.stopPropagation()
+      ev.preventDefault()
+
+      const tripId = button.getAttribute('data-trip-id')
+
+      // 🔹 Cerrar tooltips y previews
+      document.querySelectorAll('.pin-tooltip, .trip-preview-tooltip').forEach(el => el.remove())
+      activePinTooltip = null
+      activeTripPreview = null
+      if (globeEl.value) globeEl.value.style.pointerEvents = 'auto'
+
+      // 🔹 Navegar al Post.vue
+      router.push(`/post/${tripId}`)
+    })
   }
-  
+
   activeTripPreview = { tripId }
 }
+
 
 window.openTripPreview = function(tripId, tooltipElement) {
   showTripPreviewFromTooltip(tripId, tooltipElement)
@@ -990,45 +1001,50 @@ window.openTripPreview = function(tripId, tooltipElement) {
 
 function showTripPreview(arc, event) {
   const existingPreview = document.querySelector('.trip-preview-tooltip')
-  if (existingPreview) {
-    existingPreview.remove()
-  }
-  
+  if (existingPreview) existingPreview.remove()
+
   if (globeEl.value) {
     globeEl.value.style.pointerEvents = 'none'
   }
-  
+
   const preview = document.createElement('div')
   preview.className = 'trip-preview-tooltip'
   preview.innerHTML = createTripPreviewTooltip(arc)
   preview.style.position = 'fixed'
   preview.style.zIndex = '10001'
   preview.style.pointerEvents = 'auto'
-  
-  preview.addEventListener('click', (e) => {
-    e.stopPropagation()
-  })
-  
-  const button = preview.querySelector('button')
-  if (button) {
-    // keep the button visually clickable but prevent it from doing anything
-    try {
-      button.addEventListener('click', (ev) => { ev.stopPropagation(); ev.preventDefault(); })
-    } catch (e) {
-      // ignore
-    }
-  }
-  
+
+  preview.addEventListener('click', (e) => e.stopPropagation())
+
   document.body.appendChild(preview)
-  
+
   const position = calculateBestPosition(event.clientX, event.clientY)
-  
   preview.style.left = `${position.left}px`
   preview.style.top = `${position.top}px`
   preview.style.transform = position.transform
-  
+
+  const button = preview.querySelector('.view-full-trip-btn')
+  if (button) {
+    button.addEventListener('click', (ev) => {
+      ev.stopPropagation()
+      ev.preventDefault()
+
+      const tripId = button.getAttribute('data-trip-id')
+
+      // 🔹 Cerrar tooltips y previews
+      document.querySelectorAll('.pin-tooltip, .trip-preview-tooltip').forEach(el => el.remove())
+      activePinTooltip = null
+      activeTripPreview = null
+      if (globeEl.value) globeEl.value.style.pointerEvents = 'auto'
+
+      // 🔹 Navegar a Post.vue
+      router.push(`/post/${tripId}`)
+    })
+  }
+
   activeTripPreview = { tripId: arc.tripId }
 }
+
 
 function handleArcClick(arc, event) {
   if (!currentUserId.value) {        

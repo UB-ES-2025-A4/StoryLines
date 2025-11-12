@@ -331,11 +331,31 @@ const removeCurrentStopImage = (index) => {
 }
 
     // Validaciones publicar
-    const validateRequiredFields = () => {
-      for (const s of trip.value.stops) { if (!s.country_id) { error.value = 'En cada parada el país es obligatorio.'; return false } }
-      if (trip.value.stops.length < 2) { error.value = 'Debes añadir al menos 2 paradas para publicar.'; return false }
-      error.value = ''; return true
+const validateRequiredFields = () => {
+  for (const [i, s] of trip.value.stops.entries()) {
+    if (!s.country_id) {
+      error.value = `En la parada ${i + 1} el país es obligatorio.`;
+      return false;
     }
+    if (!s.images || s.images.length === 0) {
+      error.value = `Debes subir al menos una foto en la parada ${i + 1}.`;
+      return false;
+    }
+  }
+
+  if (trip.value.stops.length < 2) {
+    error.value = 'Debes añadir al menos 2 paradas para publicar.';
+    return false;
+  }
+
+  if (!trip.value.cover_image) {
+    error.value = 'Debes añadir una foto de portada antes de publicar.';
+    return false;
+  }
+
+  error.value = '';
+  return true;
+};
 
     // Validaciones para pasar a paradas
     const canProceedToStops = () => {

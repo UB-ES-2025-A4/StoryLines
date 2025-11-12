@@ -314,11 +314,103 @@ app.post('/api/add-friend', async (req, res) => {
   }
 })
 
+
+// Obtener un viaje individual con paradas y comentarios
+app.get('/api/trips/:id', async (req, res) => {
+  try {
+    const tripId = req.params.id;
+    if (!tripId) return res.status(400).json({ ok: false, error: 'Falta el ID del viaje' });
+
+    // 1️⃣ Viaje principal con datos del usuario
+    const { data: trip, error: tripError } = await supabaseAdmin
+      .from('trips')
+      .select(`
+        id,
+        user_id,
+        trip_name,
+        description,
+        cover_image,
+        start_date,
+        end_date,
+        status,
+        users:user_id(id, username, display_name, user_color)
+      `)
+      .eq('id', tripId)
+      .single();
+
+    if (tripError || !trip) {
+      return res.status(404).json({ ok: false, error: tripError?.message || 'Viaje no encontrado' });
+    }
+
+    // 2️⃣ Paradas del viaje
+    const { data: stops, error: stopsError } = await supabaseAdmin
+      .from('trip_stops')
+      .select(`
+        id,
+        city,
+        description,
+        images,
+        country:countries!trip_stops_country_id_fkey(id, name, latitude, longitude)
+      `)
+      .eq('trip_id', tripId);
+
+    if (stopsError) {
+      console.error('[STOPS ERROR]', stopsError);
+      return res.status(500).json({ ok: false, error: 'Error obteniendo paradas' });
+    }
+
+    // 3️⃣ Comentarios
+    const { data: comments, error: commentsError } = await supabaseAdmin
+      .from('comments')
+      .select('id, user, text, created_at')
+      .eq('trip_id', tripId)
+      .order('created_at', { ascending: false });
+
+    if (commentsError) {
+      console.error('[COMMENTS ERROR]', commentsError);
+    }
+
+    // 4️⃣ Formatear datos finales
+    const formattedStops = stops.map(stop => ({
+      title: stop.city || 'Stop',
+      city: stop.city,
+      country: stop.country?.name || '',
+      description: stop.description || '',
+      images: stop.images || [],
+      lat: stop.country?.latitude,
+      lng: stop.country?.longitude,
+      currentImageIndex: 0
+    }));
+
+    const fullTrip = {
+      id: trip.id,
+      trip_name: trip.trip_name,
+      description: trip.description,
+      cover_image: trip.cover_image,
+      start_date: trip.start_date,
+      end_date: trip.end_date,
+      user: {
+        id: trip.users?.id,
+        username: trip.users?.username,
+        display_name: trip.users?.display_name,
+        color: trip.users?.user_color
+      },
+      stops: formattedStops,
+      comments: comments || []
+    };
+
+    res.json({ ok: true, trip: fullTrip });
+  } catch (e) {
+    console.error('[GET TRIP BY ID ERROR]', e);
+    res.status(500).json({ ok: false, error: 'Error interno obteniendo el viaje' });
+  }
+});
+
 // Servir el frontend compilado (build de Vue/React)
-const frontendPath = path.join(__dirname, '../../frontend/dist');
+const frontendPath = path.join(__dirname, '../../frontend/');
 app.use(express.static(frontendPath));
 
 // Cualquier ruta que no sea de API devolverá index.html
-app.get('/*', (req, res) => {
+app.use((req, res) => {
   res.sendFile(path.join(frontendPath, 'index.html'));
 });

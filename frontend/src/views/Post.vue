@@ -1,69 +1,106 @@
 <template>
-  <div class="post-page">
+  <div
+    class="post-page"
+    :style="{
+      backgroundImage: `url(${trip?.cover_image || defaultCover})`,
+      backgroundRepeat: 'no-repeat',
+      backgroundSize: 'cover',
+      backgroundPosition: 'center',
+      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+      backgroundBlendMode: 'overlay'
+    }"
+  >
     <!-- Sidebar -->
     <div class="sidebar">
       <img src="@/assets/LogoBlanco.png" alt="StoryLines Logo" class="logo" />
       <nav>
-        <router-link to="/" class="nav-item" :class="{ 'active': $route.path === '/' }">
+        <router-link to="/" class="nav-item" :class="{ active: $route.path === '/' }">
           <svg class="icon" v-html="homeIcon"></svg>
           <span>Home</span>
         </router-link>
-        <router-link to="/createtrip" class="nav-item" :class="{ 'active': $route.path === '/createtrip' }">
+        <router-link to="/createtrip" class="nav-item" :class="{ active: $route.path === '/createtrip' }">
           <svg class="icon" v-html="createIcon"></svg>
           <span>Create</span>
         </router-link>
-        <router-link to="/profile" class="nav-item" :class="{ 'active': $route.path === '/profile' }">
+        <router-link to="/profile" class="nav-item" :class="{ active: $route.path === '/profile' }">
           <svg class="icon" v-html="profileIcon"></svg>
           <span>Profile</span>
         </router-link>
       </nav>
     </div>
 
-    <!-- Main Content -->
+    <!-- Contenido principal -->
     <div class="main-content">
-      <div class="trip-content">
-        <!-- Trip Details -->
+      <div v-if="loading" class="loading">Cargando viaje...</div>
+      <div v-else-if="error" class="error">{{ error }}</div>
+
+      <div v-else class="trip-content">
         <div class="trip-details">
-          <h1 class="trip-title">{{ mockTrip.title }}</h1>
+          <h1 class="trip-title">{{ trip.trip_name }}</h1>
+          <p class="trip-description">{{ trip.description }}</p>
+
           <div class="stops-route">
-            <div v-for="(stop, index) in mockTrip.stops" :key="index" class="stop-card-wrapper">
-              <div class="stop-card">
+            <div
+              v-for="(stop, index) in trip.stops || []"
+              :key="index"
+              class="stop-card-wrapper"
+            >
+              <div class="stop-card fade-in">
                 <div class="stop-images">
-                  <button class="nav-arrow left" @click="changeImage(stop, -1)" :disabled="stop.currentImageIndex === 0">
-                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M15 18L9 12L15 6" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
-                  </button>
-                  <img :src="stop.images[stop.currentImageIndex]" alt="Stop image" class="stop-image" />
-                  <button class="nav-arrow right" @click="changeImage(stop, 1)" :disabled="stop.currentImageIndex === stop.images.length - 1">
-                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M9 6L15 12L9 18" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
-                  </button>
+                  <button
+                    class="nav-arrow left"
+                    @click="changeImage(stop, -1)"
+                    :disabled="stop.currentImageIndex === 0"
+                  >◀</button>
+
+                  <img
+                    :src="stop.images && stop.images.length > 0
+                      ? stop.images[stop.currentImageIndex]
+                      : defaultImage"
+                    alt="Stop image"
+                    class="stop-image"
+                  />
+
+                  <button
+                    class="nav-arrow right"
+                    @click="changeImage(stop, 1)"
+                    :disabled="!stop.images || stop.currentImageIndex === stop.images.length - 1"
+                  >▶</button>
                 </div>
+
                 <div class="stop-details">
-                  <h3 class="stop-title">{{ stop.title }}</h3>
+                  <h3 class="stop-title">{{ stop.city || 'Parada sin nombre' }}</h3>
                   <div class="stop-info">
-                    <p><strong>City:</strong> {{ stop.city }}</p>
-                    <p><strong>Country:</strong> {{ stop.country }}</p>
-                    <p><strong>Description:</strong> {{ stop.description }}</p>
+                    <p><strong>City:</strong> {{ stop.city || '—' }}</p>
+                    <p><strong>Country:</strong> {{ stop.country || '—' }}</p>
+                    <p><strong>Description:</strong> {{ stop.description || 'Sin descripción' }}</p>
                   </div>
                 </div>
               </div>
-              <div v-if="index < mockTrip.stops.length - 1" class="route-line"></div>
+
+              <div v-if="index < (trip.stops?.length || 0) - 1" class="route-line"></div>
             </div>
           </div>
         </div>
 
-        <!-- Comments Section -->
+        <!-- Comentarios -->
         <div class="comments-section">
-          <h2 class="section-title">Comments</h2>
-          <div class="comment-card" v-for="(comment, index) in mockTrip.comments" :key="index">
-            <div class="comment-header">
-              <span class="comment-username">user{{ index + 1 }}</span>
-              <span class="comment-timestamp">01:25 PM, Nov 11, 2025</span>
+          <h2 class="section-title">Comentarios</h2>
+          <div v-if="!trip.comments || trip.comments.length === 0" class="no-comments">
+            No hay comentarios todavía.
+          </div>
+          <div v-else>
+            <div
+              class="comment-card"
+              v-for="(comment, index) in trip.comments"
+              :key="index"
+            >
+              <div class="comment-header">
+                <span class="comment-username">{{ comment.user || 'Anónimo' }}</span>
+                <span class="comment-timestamp">{{ formatDate(comment.created_at) }}</span>
+              </div>
+              <p class="comment-text">{{ comment.text }}</p>
             </div>
-            <p class="comment-text">{{ comment }}</p>
           </div>
         </div>
       </div>
@@ -72,94 +109,119 @@
 </template>
 
 <script>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted } from "vue";
+import { useRoute } from "vue-router";
 
 export default {
-  name: 'Post',
+  name: "Post",
   setup() {
-    const mockTrip = ref({
-      title: 'Trip Title',
-      coverImage: 'https://jkfenner.com/wp-content/uploads/2019/11/default-450x450.jpg',
-      stops: [
-        {
-          title: 'Stop 1',
-          city: 'Sample City',
-          country: 'Sample Country',
-          description: 'This is a mock description for Stop 1.',
-          images: [
-            'https://jkfenner.com/wp-content/uploads/2019/11/default-450x450.jpg',
-            'https://jkfenner.com/wp-content/uploads/2019/11/default-450x450.jpg',
-            'https://jkfenner.com/wp-content/uploads/2019/11/default-450x450.jpg'
-          ],
-          currentImageIndex: 0
-        },
-        {
-          title: 'Stop 2',
-          city: 'Another City',
-          country: 'Another Country',
-          description: 'This is a mock description for Stop 2.',
-          images: ['https://jkfenner.com/wp-content/uploads/2019/11/default-450x450.jpg', 'https://jkfenner.com/wp-content/uploads/2019/11/default-450x450.jpg'],
-          currentImageIndex: 0
+    const route = useRoute();
+    const trip = ref(null);
+    const loading = ref(true);
+    const error = ref(null);
+
+    const defaultImage =
+      "https://jkfenner.com/wp-content/uploads/2019/11/default-450x450.jpg";
+    const defaultCover = "https://i.imgur.com/mS1b7mF.jpeg";
+
+    const fetchTrip = async () => {
+      try {
+        const id = route.params.id;
+        const res = await fetch(`/api/trips/${id}`);
+        const data = await res.json();
+
+        if (data.ok && data.trip) {
+          data.trip.stops?.forEach((stop) => {
+            stop.currentImageIndex = 0;
+            if (!Array.isArray(stop.images)) stop.images = [];
+          });
+          trip.value = data.trip;
+        } else {
+          error.value = data.error || "Error al cargar el viaje";
         }
-      ],
-      comments: ['Great trip!', 'Amazing photos!', 'Can’t wait to see more!']
-    })
+      } catch (e) {
+        error.value = "Error de conexión con el servidor";
+      } finally {
+        loading.value = false;
+      }
+    };
 
     const changeImage = (stop, delta) => {
-      const newIndex = stop.currentImageIndex + delta
+      const newIndex = stop.currentImageIndex + delta;
       if (newIndex >= 0 && newIndex < stop.images.length) {
-        stop.currentImageIndex = newIndex
+        stop.currentImageIndex = newIndex;
       }
-    }
+    };
 
-    onMounted(() => {
-    })
+    const formatDate = (dateStr) => {
+      if (!dateStr) return "";
+      const date = new Date(dateStr);
+      return date.toLocaleString("es-ES", {
+        dateStyle: "short",
+        timeStyle: "short",
+      });
+    };
 
-    const homeIcon = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 9L12 2L21 9V20C21 21.1 20.1 22 19 22H5C3.9 22 3 21.1 3 20V9Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
-    const createIcon = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 4V20M4 12H20" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
-    const profileIcon = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="7" r="4.5" stroke="currentColor" stroke-width="2" fill="none"/><path d="M20 21V19C20 15.134 16.866 12 13 12H11C7.134 12 4 15.134 4 19V21" stroke="currentColor" stroke-width="2"/></svg>`;
+    const homeIcon = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none"
+    xmlns="http://www.w3.org/2000/svg"><path d="M3 9L12 2L21 9V20C21 21.1 20.1 22 19 22H5C3.9 22 3 21.1 3 20V9Z"
+    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+    const createIcon = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none"
+    xmlns="http://www.w3.org/2000/svg"><path d="M12 4V20M4 12H20"
+    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+    const profileIcon = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none"
+    xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="7" r="4.5"
+    stroke="currentColor" stroke-width="2" fill="none"/><path d="M20 21V19C20 15.134 16.866 12 13 12H11C7.134 12 4 15.134 4 19V21"
+    stroke="currentColor" stroke-width="2"/></svg>`;
+
+    onMounted(fetchTrip);
 
     return {
-      mockTrip,
+      trip,
+      loading,
+      error,
       changeImage,
+      formatDate,
+      defaultImage,
+      defaultCover,
       homeIcon,
       createIcon,
-      profileIcon
-    }
-  }
-}
+      profileIcon,
+    };
+  },
+};
 </script>
 
 <style scoped>
+/* ======= GENERAL ======= */
 .post-page {
   display: flex;
   min-height: 100vh;
-  background: url('https://jkfenner.com/wp-content/uploads/2019/11/default-450x450.jpg') no-repeat center center/cover;
-  background-color: rgba(0, 0, 0, 0.5);
-  background-blend-mode: overlay;
   color: #fff;
   position: relative;
 }
 
+/* ======= SIDEBAR ======= */
 .sidebar {
   width: 250px;
-  background: #0A0A0A;
+  background: #0a0a0a;
   padding: 1.5rem 1.5rem;
   display: flex;
   flex-direction: column;
   height: 100vh;
   position: fixed;
+  left: 0;
+  top: 0;
+  overflow-y: auto;
 }
 
 .logo {
-  width: 120px;
+  width: 130px;
   height: auto;
   margin-bottom: 2rem;
-  align-self: left;
+  align-self: flex-start;
 }
 
 .sidebar nav {
-  flex: 1;
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
@@ -174,9 +236,7 @@ export default {
   padding: 0.75rem 1rem;
   text-decoration: none;
   border-radius: 8px;
-  transition: background 0.2s;
-  position: relative;
-  min-height: 40px;
+  transition: background 0.2s, color 0.2s;
 }
 
 .nav-item:hover {
@@ -189,74 +249,62 @@ export default {
   background: rgba(255, 255, 255, 0.05);
 }
 
-.nav-item.active::before {
-  content: '';
-  position: absolute;
-  left: 0.5rem;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 6px;
-  height: 6px;
-  background: #fff;
-  border-radius: 50%;
-}
-
 .icon {
   width: 20px;
   height: 20px;
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
 }
 
-.icon svg {
-  width: 100%;
-  height: 100%;
-  fill: currentColor;
-}
-
+/* ======= MAIN CONTENT (centrado) ======= */
 .main-content {
   flex: 1;
-  padding: 2rem 2rem 2rem 0;
+  padding: 2rem;
+  margin-left: 250px;
+  margin-right: 350px; /* espacio para comentarios */
   display: flex;
   justify-content: center;
   align-items: flex-start;
   min-height: 100vh;
-  width: 100%;
 }
 
+/* ======= CONTENIDO DEL VIAJE ======= */
 .trip-content {
   display: flex;
-  gap: 2rem;
-  max-width: 1200px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
   width: 100%;
-  justify-content: center;
+  max-width: 900px;
+  margin: 0 auto;
+  text-align: center;
 }
 
 .trip-details {
-  flex: 1;
+  width: 100%;
   max-width: 850px;
   text-align: center;
-  padding-top: 1rem;
+  margin: 0 auto;
 }
 
 .trip-title {
-  font-size: 1.5rem;
-  margin-bottom: 2rem;
+  font-size: 1.8rem;
+  margin-bottom: 1rem;
   color: #fff;
 }
 
-.stops-route {
-  position: relative;
-  text-align: center;
+.trip-description {
+  color: #ccc;
+  font-size: 1.1rem;
+  margin-bottom: 2rem;
+  max-width: 700px;
+  margin-inline: auto;
+  line-height: 1.6;
 }
 
+/* ======= STOP CARDS ======= */
 .stop-card-wrapper {
   position: relative;
   margin-bottom: 6rem;
-  display: inline-block;
-  vertical-align: top;
+  width: 100%;
 }
 
 .stop-card {
@@ -269,19 +317,17 @@ export default {
   align-items: flex-start;
   max-width: 850px;
   margin: 0 auto;
-  position: relative;
-  min-height: 300px; /* Increased height */
+  min-height: 300px;
+  animation: fadeIn 0.6s ease-in;
 }
 
 .stop-images {
   flex: 1;
-  min-width: 0;
   position: relative;
   display: flex;
   align-items: center;
   justify-content: space-between;
   width: 350px;
-  padding: 0 10px;
 }
 
 .stop-image {
@@ -290,8 +336,6 @@ export default {
   object-fit: cover;
   border-radius: 8px;
   border: 1px solid #fff;
-  display: block;
-  z-index: 0;
 }
 
 .nav-arrow {
@@ -308,34 +352,18 @@ export default {
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1;
 }
 
 .nav-arrow:hover {
   opacity: 1;
 }
-
-.nav-arrow.left {
-  margin-right: 10px;
-}
-
-.nav-arrow.right {
-  margin-left: 10px;
-}
-
 .nav-arrow:disabled {
   opacity: 0.3;
   cursor: not-allowed;
 }
 
-.nav-arrow svg {
-  width: 24px;
-  height: 24px;
-}
-
 .stop-details {
   flex: 1;
-  min-width: 0;
   padding-left: 1.5rem;
   text-align: left;
   max-width: 400px;
@@ -346,14 +374,8 @@ export default {
   margin-bottom: 1rem;
 }
 
-.stop-info {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-}
-
 .stop-info p {
-  margin: 0;
+  margin: 0.3rem 0;
   font-size: 1.1rem;
   line-height: 1.5;
 }
@@ -366,17 +388,17 @@ export default {
   left: 50%;
   transform: translateX(-50%);
   top: 100%;
-  z-index: 0;
-  opacity: 1;
 }
 
+/* ======= PANEL DE COMENTARIOS ======= */
 .comments-section {
   flex: 0 0 300px;
   position: fixed;
-  right: 2rem;
+  right: 1.5rem;
   top: 2rem;
   bottom: 2rem;
-  background: #0A0A0A;
+  width: 300px;
+  background: #0a0a0a;
   border: 1.5px solid #fff;
   border-radius: 12px;
   padding: 1.5rem;
@@ -386,7 +408,6 @@ export default {
 .section-title {
   font-size: 1.3rem;
   margin-bottom: 0.5rem;
-  margin-left: 0;
 }
 
 .comment-card {
@@ -396,7 +417,7 @@ export default {
 .comment-header {
   display: flex;
   justify-content: space-between;
-  font-size: 1.0rem;
+  font-size: 1rem;
   color: #ccc;
   margin-bottom: 0.3rem;
 }
@@ -413,5 +434,17 @@ export default {
 .comment-text {
   font-size: 1.1rem;
   margin: 0;
+}
+
+/* ======= ANIMACIÓN FADE-IN ======= */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 </style>
