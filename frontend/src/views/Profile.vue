@@ -81,8 +81,8 @@
               </div>
               <button class="menu-btn" @click.stop="toggleMenu(trip.id)">⋯</button>
               <div v-if="currentMenuTrip === trip.id" class="menu-dropdown">
-                <button @click.stop="editTrip(trip.id)">✏️ Editar viaje (TO-DO)</button>
-                <button @click.stop="deleteTrip(trip.id)">🗑️ Borrar viaje (TO-DO)</button>
+                <button @click.stop="editTrip(trip.id)">Editar</button>
+                <button @click.stop="deleteTrip(trip.id)">Eliminar</button>
               </div>
             </div>
           </div>
@@ -94,7 +94,7 @@
 </template>
 
 <script>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { supabase } from '@/config/supabase'
 import { useRouter } from 'vue-router'
 import ChangePicture from '@/components/Profile/ChangePicture.vue'
@@ -231,9 +231,24 @@ export default {
       showChangePicture.value = false
     }
 
+    const handleClickOutside = (event) => {
+      if (currentMenuTrip.value !== null) {
+        const menuBtn = event.target.closest('.menu-btn')
+        const menuDropdown = event.target.closest('.menu-dropdown')
+        if (!menuBtn && !menuDropdown) {
+          currentMenuTrip.value = null
+        }
+      }
+    }
+
     onMounted(async () => {
       await loadProfile()
       await loadTrips()
+      document.addEventListener('click', handleClickOutside)
+    })
+
+    onUnmounted(() => {
+      document.removeEventListener('click', handleClickOutside)
     })
 
     // ICONOS
@@ -268,9 +283,7 @@ export default {
 }
 </script>
 
-
-
-  <style scoped>
+<style scoped>
   .profile-page {
     min-height: 100vh;
     background: url('https://images.unsplash.com/photo-1604608672516-f1b9b1d37076?ixlib=rb-4.1.0')

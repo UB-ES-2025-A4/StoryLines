@@ -411,6 +411,6 @@ const frontendPath = path.join(__dirname, '../../frontend/');
 app.use(express.static(frontendPath));
 
 // Cualquier ruta que no sea de API devolverá index.html
-app.use((req, res) => {
+app.get((req, res) => {
   res.sendFile(path.join(frontendPath, 'index.html'));
 });
