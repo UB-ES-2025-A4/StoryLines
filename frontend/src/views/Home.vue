@@ -1,5 +1,8 @@
 <template>
   <div class="home">
+    <!-- Sidebar -->
+    <Sidebar />
+
     <!-- Globo 3D como fondo -->
     <GlobeView />
     
@@ -22,24 +25,6 @@
       </nav>
     </header>
 
-    <!-- Sidebar -->
-    <div class="sidebar">
-      <img src="@/assets/LogoBlanco.png" alt="StoryLines Logo" class="logo" />
-      <nav>
-        <router-link to="/" class="nav-item" :class="{ 'active': $route.path === '/' }">
-          <svg class="icon" v-html="homeIcon"></svg>
-          <span>Home</span>
-        </router-link>
-        <router-link to="/createtrip" class="nav-item" :class="{ 'active': $route.path === '/create' }">
-          <svg class="icon" v-html="createIcon"></svg>
-          <span>Create</span>
-        </router-link>
-        <router-link to="/profile" class="nav-item" :class="{ 'active': $route.path === '/profile' }">
-          <svg class="icon" v-html="profileIcon"></svg>
-          <span>Profile</span>
-        </router-link>
-      </nav>
-    </div>
   </div>
 </template>
 
@@ -48,6 +33,7 @@ import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { supabase } from '@/config/supabase'
 import GlobeView from '@/components/Globe/GlobeView.vue'
+import Sidebar from '@/components/Sidebar.vue'
 
 const router = useRouter()
 const user = ref(null)
@@ -68,10 +54,6 @@ const handleLogout = async () => {
   router.push('/login')
 }
 
-// SVG Icons
-const homeIcon = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 9L12 2L21 9V20C21 21.1 20.1 22 19 22H5C3.9 22 3 21.1 3 20V9Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
-const createIcon = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 4V20M4 12H20" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
-const profileIcon = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="7" r="4.5" stroke="currentColor" stroke-width="2" fill="none"/><path d="M20 21V19C20 15.134 16.866 12 13 12H11C7.134 12 4 15.134 4 19V21" stroke="currentColor" stroke-width="2"/></svg>`;
 </script>
 
 <style scoped>

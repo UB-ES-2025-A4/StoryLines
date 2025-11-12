@@ -11,23 +11,7 @@
     }"
   >
     <!-- Sidebar -->
-    <div class="sidebar">
-      <img src="@/assets/LogoBlanco.png" alt="StoryLines Logo" class="logo" />
-      <nav>
-        <router-link to="/" class="nav-item" :class="{ active: $route.path === '/' }">
-          <svg class="icon" v-html="homeIcon"></svg>
-          <span>Home</span>
-        </router-link>
-        <router-link to="/createtrip" class="nav-item" :class="{ active: $route.path === '/createtrip' }">
-          <svg class="icon" v-html="createIcon"></svg>
-          <span>Create</span>
-        </router-link>
-        <router-link to="/profile" class="nav-item" :class="{ active: $route.path === '/profile' }">
-          <svg class="icon" v-html="profileIcon"></svg>
-          <span>Profile</span>
-        </router-link>
-      </nav>
-    </div>
+    <Sidebar />
 
     <!-- Contenido principal -->
     <div class="main-content">
@@ -111,9 +95,11 @@
 <script>
 import { ref, onMounted } from "vue";
 import { useRoute } from "vue-router";
+import Sidebar from '@/components/Sidebar.vue';
 
 export default {
   name: "Post",
+  components: { Sidebar },
   setup() {
     const route = useRoute();
     const trip = ref(null);

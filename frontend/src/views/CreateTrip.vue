@@ -1,23 +1,7 @@
 <template>
   <div class="create-trip">
     <!-- Sidebar -->
-    <div class="sidebar">
-      <img src="@/assets/LogoBlanco.png" alt="StoryLines Logo" class="logo" />
-      <nav>
-        <router-link to="/" class="nav-item" :class="{ 'active': $route.path === '/' }">
-          <svg class="icon" v-html="homeIcon"></svg>
-          <span>Home</span>
-        </router-link>
-        <router-link to="/create" class="nav-item" :class="{ 'active': $route.path === '/create' }">
-          <svg class="icon" v-html="createIcon"></svg>
-          <span>Create</span>
-        </router-link>
-        <router-link to="/profile" class="nav-item" :class="{ 'active': $route.path === '/profile' }">
-          <svg class="icon" v-html="profileIcon"></svg>
-          <span>Profile</span>
-        </router-link>
-      </nav>
-    </div>
+    <Sidebar />
 
     <!-- Main Content -->
     <div class="main-content">
@@ -171,9 +155,11 @@
 import { ref, onMounted } from 'vue'
 import { supabase } from '@/config/supabase'
 import { useRouter } from 'vue-router'
+import Sidebar from '@/components/Sidebar.vue' 
 
 export default {
   name: 'CreateTrip',
+  components: { Sidebar },
   setup() {
     const router = useRouter()
 
@@ -454,14 +440,7 @@ const validateRequiredFields = () => {
       } finally { saving.value = false }
     }
 
-    // Icons
-    const homeIcon = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 9L12 2L21 9V20C21 21.1 20.1 22 19 22H5C3.9 22 3 21.1 3 20V9Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
-    const searchIcon = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="11" cy="11" r="8" stroke="currentColor" stroke-width="2"/><path d="M21 21L16.65 16.65" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>`;
-    const notificationsIcon = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M18 8C18 6.4087 17.3679 4.88258 16.2426 3.75736C15.1174 2.63214 13.5913 2 12 2C10.4087 2 8.88258 2.63214 7.75736 3.75736C6.63214 4.88258 6 6.4087 6 8C6 13.2284 3 17.9842 3 17.9842H21 17.9842C21 17.9842 18 13.2284 18 8Z" stroke="currentColor" stroke-width="2"/><path d="M12 18V18.009" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>`;
-    const createIcon = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 4V20M4 12H20" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
-    const storeIcon = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 9H21V20C21 21.1 20.1 22 19 22H5C3.9 22 3 21.1 3 20V9Z" stroke="currentColor" stroke-width="2"/><path d="M12 22V12L10 10H14L12 12V22Z" stroke="currentColor" stroke-width="2"/></svg>`;
-    const profileIcon = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="7" r="4.5" stroke="currentColor" stroke-width="2" fill="none"/><path d="M20 21V19C20 15.134 16.866 12 13 12H11C7.134 12 4 15.134 4 19V21" stroke="currentColor" stroke-width="2"/></svg>`;
-    const settingsIcon = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2" fill="none"/><path d="M19.4 15A1.65 1.65 0 0 0 19 15C19 14.7 18.9 14.4 18.7 14.2L16.9 12.4C16.8 12.3 16.7 12.2 16.7 12C16.7 11.8 16.8 11.7 16.9 11.6L18.7 9.8C18.9 9.6 19 9.3 19 9A1.65 1.65 0 0 0 19.4 9L20.5 8A1.65 1.65 0 0 0 21 7.4L21 6.5A1.65 1.65 0 0 0 20.5 6L19.4 5A1.65 1.65 0 0 0 19 5C19 4.7 18.9 4.4 18.7 4.2L16.9 2.4C16.8 2.3 16.7 2.2 16.7 2C16.7 1.8 16.8 1.7 16.9 1.6L18.7 0C18.9 -0.2 19 0.1 19 0.4V1.5A1.65 1.65 0 0 0 19.4 2L20.5 3A1.65 1.65 0 0 0 21 3.6L21 4.5A1.65 1.65 0 0 0 20.5 5L19.4 6A1.65 1.65 0 0 0 19 6C19 6.3 18.9 6.6 18.7 6.8L16.9 8.6C16.8 8.7 16.7 8.8 16.7 9C16.7 9.2 16.8 9.3 16.9 9.4L18.7 11.2C18.9 11.4 19 11.7 19 12A1.65 1.65 0 0 0 19.4 12L20.5 13A1.65 1.65 0 0 0 21 13.6L21 14.5A1.65 1.65 0 0 0 20.5 15L19.4 16A1.65 1.65 0 0 0 19 16C19 16.3 18.9 16.6 18.7 16.8L16.9 18.6C16.8 18.7 16.7 18.8 16.7 19C16.7 19.2 16.8 19.3 16.9 19.4L18.7 21.2C18.9 21.4 19 21.7 19 22V20.5A1.65 1.65 0 0 0 19.4 20L20.5 19A1.65 1.65 0 0 0 21 18.4L21 17.5A1.65 1.65 0 0 0 20.5 17L19.4 16A1.65 1.65 0 0 0 19 16C19 15.7 18.9 15.4 18.7 15.2L16.9 13.4C16.8 13.3 16.7 13.2 16.7 13C16.7 12.8 16.8 12.7 16.9 12.6L18.7 10.8C18.9 10.6 19 10.3 19 10A1.65 1.65 0 0 0 19.4 10L20.5 9A1.65 1.65 0 0 0 21 8.4L21 7.5A1.65 1.65 0 0 0 20.5 7L19.4 6Z" stroke="currentColor" stroke-width="2"/></svg>`;
+    
 
     return {
       trip, error, success, coverPreview, countries,
@@ -471,8 +450,7 @@ const validateRequiredFields = () => {
       handleCoverUpload,
       saveDraft, publishTrip, cancelTrip,
       loading, saving,
-      currentStep, goToStops, goToCover, canProceedToStops,
-      homeIcon, searchIcon, notificationsIcon, createIcon, storeIcon, profileIcon, settingsIcon
+      currentStep, goToStops, goToCover, canProceedToStops
     }
   }
 }

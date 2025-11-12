@@ -1,25 +1,7 @@
 <template>
   <div class="profile-page">
     <!-- Sidebar -->
-    <div class="sidebar">
-      <img src="@/assets/LogoBlanco.png" alt="StoryLines Logo" class="logo" />
-      <nav>
-        <router-link to="/" class="nav-item" :class="{ 'active': $route.path === '/' }">
-          <svg class="icon" v-html="homeIcon"></svg>
-          <span>Home</span>
-        </router-link>
-
-        <router-link to="/createtrip" class="nav-item" :class="{ 'active': $route.path === '/create' }">
-          <svg class="icon" v-html="createIcon"></svg>
-          <span>Create</span>
-        </router-link>
-
-        <router-link to="/profile" class="nav-item" :class="{ 'active': $route.path === '/profile' }">
-          <svg class="icon" v-html="profileIcon"></svg>
-          <span>Profile</span>
-        </router-link>
-      </nav>
-    </div>
+    <Sidebar />
 
     <div v-if="loading" class="loading">Cargando...</div>
 
@@ -116,10 +98,11 @@ import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { supabase } from '@/config/supabase'
 import { useRouter } from 'vue-router'
 import ChangePicture from '@/components/Profile/ChangePicture.vue'
+import Sidebar from '@/components/Sidebar.vue' 
 
 export default {
   name: 'Profile',
-  components: { ChangePicture },
+  components: { ChangePicture, Sidebar },
   setup() {
     const router = useRouter()
     const showChangePicture = ref(false)
@@ -167,7 +150,7 @@ export default {
       }
     }
 
-    // === Guardar perfil (versión original tuya) ===
+    // === Guardar perfil ===
     const API_URL = ''
     const saveProfile = async () => {
       error.value = ''
@@ -302,11 +285,6 @@ export default {
       document.removeEventListener('click', handleClickOutside)
     })
 
-    // ICONOS
-    const homeIcon = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 9L12 2L21 9V20C21 21.1 20.1 22 19 22H5C3.9 22 3 21.1 3 20V9Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`
-    const createIcon = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 4V20M4 12H20" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`
-    const profileIcon = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="7" r="4.5" stroke="currentColor" stroke-width="2"/><path d="M20 21V19C20 15.134 16.866 12 13 12H11C7.134 12 4 15.134 4 19V21" stroke="currentColor" stroke-width="2"/></svg>`
-
     return {
       user,
       profileData,
@@ -329,9 +307,6 @@ export default {
       editTrip,
       deleteTrip,
       goToTrip,
-      homeIcon,
-      createIcon,
-      profileIcon,
       saveProfile
     }
   }
@@ -589,77 +564,6 @@ export default {
     font-size: 2rem;
   }
 
-  .sidebar {
-  width: 250px;
-  background: #0a0a0a;
-  padding: 1.5rem 1.5rem;
-  display: flex;
-  flex-direction: column;
-  height: 100vh;
-  position: fixed;
-  top: 0;
-  left: 0;
-  overflow-y: auto;
-  z-index: 100;
-  resize: horizontal;
-  min-width: 200px;
-  max-width: 300px;
-  transition: width 0.2s, padding 0.2s;
-}
-
-.logo {
-  width: 120px;
-  height: auto;
-  margin-bottom: 2rem;
-  /* Removed invalid align-self: left */
-  /* Align to left if desired: */
-  align-self: flex-start; /* Optional: aligns logo to the left */
-}
-
-.sidebar nav {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-}
-
-.nav-item {
-  display: flex;
-  align-items: center;
-  /* Changed from justify-content: center to flex-start for left alignment */
-  justify-content: flex-start;
-  gap: 1rem;
-  font-size: 1.1rem;
-  color: #ccc;
-  padding: 0.75rem 1rem;
-  text-decoration: none;
-  border-radius: 8px;
-  transition: background 0.2s;
-  position: relative;
-  min-height: 40px;
-  /* Removed text-align: center since it's no longer needed */
-}
-
-.nav-item:hover {
-  color: #fff;
-  background: rgba(255, 255, 255, 0.1);
-}
-
-.icon {
-  width: 20px;
-  height: 20px;
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center; /* Keeps SVG centered within its container */
-}
-
-.icon svg {
-  width: 100%;
-  height: 100%;
-  fill: currentColor;
-}
-
 .no-trips-message {
   text-align: center;
   font-size: 1.2rem;
@@ -709,5 +613,4 @@ export default {
   flex-direction: column;
   gap: 2rem;
 }
-
-  </style>
+</style>
