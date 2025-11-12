@@ -67,11 +67,29 @@
       <!-- VIAJES -->
       <div class="recent-trips-section">
         <div class="recent-trips-header">
-          <h3>Viajes publicados</h3>
+          <div class="tabs">
+            <button 
+              :class="{ 'active': currentTab === 'published' }" 
+              @click="currentTab = 'published'"
+            >
+              Viajes publicados
+            </button>
+            <span class="separator">|</span>
+            <button 
+              :class="{ 'active': currentTab === 'drafts' }" 
+              @click="currentTab = 'drafts'"
+            >
+              Borradores
+            </button>
+            <span class="separator">|</span>
+            <button>
+              Viajes guardados
+            </button>
+          </div>
         </div>
         <div class="trips-container">
-          <div v-if="trips.length > 0" class="trip-cards-wrapper">
-            <div class="trip-card" v-for="trip in trips" :key="trip.id" @click="goToTrip(trip.id)">
+          <div v-if="currentTrips.length > 0" class="trip-cards-wrapper">
+            <div class="trip-card" v-for="trip in currentTrips" :key="trip.id" @click="goToTrip(trip.id)">
               <img :src="trip.image" alt="Foto del viaje" class="trip-image" />
               <div class="trip-info">
                 <div class="trip-details">
@@ -86,7 +104,7 @@
               </div>
             </div>
           </div>
-          <div v-else class="no-trips-message">No hay viajes publicados</div>
+          <div v-else class="no-trips-message">{{ noTripsMessage }}</div>
         </div>
       </div>
     </div>
@@ -94,7 +112,7 @@
 </template>
 
 <script>
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { supabase } from '@/config/supabase'
 import { useRouter } from 'vue-router'
 import ChangePicture from '@/components/Profile/ChangePicture.vue'
@@ -116,6 +134,11 @@ export default {
     const hovering = ref(false)
     const currentMenuTrip = ref(null)
     const trips = ref([])
+    const drafts = ref([])
+    const currentTab = ref('published')
+
+    const currentTrips = computed(() => currentTab.value === 'published' ? trips.value : drafts.value)
+    const noTripsMessage = computed(() => currentTab.value === 'published' ? 'No hay viajes publicados' : 'No hay borradores')
 
     // === Cargar perfil ===
     const loadProfile = async () => {
@@ -217,6 +240,33 @@ export default {
       }
     }
 
+    // === Cargar borradores ===
+    const loadDrafts = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession()
+        user.value = session?.user
+        if (!user.value) return
+
+        const { data, error: draftsError } = await supabase
+          .from('trips')
+          .select('id, trip_name, description, cover_image, status, start_date')
+          .eq('user_id', user.value.id)
+          .eq('status', 'draft')
+          .order('start_date', { ascending: false })
+
+        if (draftsError) throw draftsError
+
+        drafts.value = (data || []).map(trip => ({
+          id: trip.id,
+          title: trip.trip_name || 'Sin título',
+          description: trip.description || 'Sin descripción',
+          image: trip.cover_image || 'https://jkfenner.com/wp-content/uploads/2019/11/default-450x450.jpg'
+        }))
+      } catch (err) {
+        console.error('Error cargando borradores:', err)
+      }
+    }
+
     const truncateText = (text, limit) => (text?.length > limit ? text.slice(0, limit) + '...' : text || '')
     const goToTrip = (tripId) => router.push(`/post/${tripId}`)
     const toggleMenu = (tripId) => {
@@ -244,6 +294,7 @@ export default {
     onMounted(async () => {
       await loadProfile()
       await loadTrips()
+      await loadDrafts()
       document.addEventListener('click', handleClickOutside)
     })
 
@@ -268,6 +319,10 @@ export default {
       showChangePicture,
       handleImageUpdated,
       trips,
+      drafts,
+      currentTab,
+      currentTrips,
+      noTripsMessage,
       currentMenuTrip,
       truncateText,
       toggleMenu,
@@ -415,11 +470,33 @@ export default {
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
   }
   
-  .recent-trips-header h3 {
-    margin: 0;
+  .tabs {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+  }
+
+  .tabs button {
+    background: none;
+    border: none;
+    color: #fff;
     font-size: 1.3rem;
     font-weight: 500;
+    padding: 0;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: border-bottom 0.3s;
+  }
+
+  .tabs button.active {
+    border-bottom: 2px solid #fff;
+  }
+
+  .separator {
     color: #fff;
+    font-size: 1.3rem;
+    font-weight: 500;
   }
   
   /* --- CONTENEDOR DE TARJETAS --- */
