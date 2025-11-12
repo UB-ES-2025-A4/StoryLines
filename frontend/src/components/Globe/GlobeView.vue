@@ -1189,7 +1189,7 @@ function handleResize() {
   padding: 0 6px;
   cursor: pointer;
   font-weight: 400;
-  font-size: 15px;
+  font-size: 1.5rem;
   line-height: 1;
   user-select: none;
 }
