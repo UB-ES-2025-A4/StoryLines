@@ -121,7 +121,14 @@ const friendUserIds = computed(() => {
 
 const currentUserId = ref(null)
 const filteredTrips = computed(() => {
-  if (mode.value === 'discovery') return trips.value
+  if (mode.value === 'discovery') {
+    // Mezclar aleatoriamente todos los viajes
+    const shuffled = [...trips.value]
+      .sort(() => Math.random() - 0.5)
+
+    // Elegir SOLO 20
+    return shuffled.slice(0, 20)
+  }
 
   const myUserId = currentUserId.value
   if (!myUserId) return []
