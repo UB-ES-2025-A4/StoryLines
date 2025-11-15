@@ -472,7 +472,7 @@ function createTooltipContent(destination) {
       tripsByUser[trip.userId] = {
         userName: trip.userName,
         userColor: trip.userColor,
-        userAvatar: `https://i.pravatar.cc/150?u=${trip.userName}`,
+        userAvatar: trip.userAvatar || '/default-avatar.png',
         trips: []
       }
     }

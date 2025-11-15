@@ -299,12 +299,14 @@ export function processDestinationsFromTrips(trips) {
       const existingTrip = cityData.trips.find(t => t.tripId === trip.id)
       if (!existingTrip) {
         cityData.trips.push({
-          tripId: trip.id,
-          userId: trip.userId,
-          userName: trip.userName,
-          userColor: trip.userColor,
-          tripName: trip.tripName
-        })
+        tripId: trip.id,
+        userId: trip.userId,
+        userName: trip.userName,
+        userColor: trip.userColor,
+        tripName: trip.tripName,
+        userAvatar: trip.userAvatar || null    
+      })
+
       }
     })
   })
@@ -314,11 +316,11 @@ export function processDestinationsFromTrips(trips) {
     dest.trips.forEach(trip => {
       if (!uniqueUsers.has(trip.userId)) {
         uniqueUsers.set(trip.userId, {
-          userId: trip.userId,
-          userName: trip.userName,
-          userColor: trip.userColor,
-          userAvatar: `https://i.pravatar.cc/150?u=${trip.userName}`
-        })
+        userId: trip.userId,
+        userName: trip.userName,
+        userColor: trip.userColor,
+        userAvatar: trip.userAvatar || '/default-avatar.png'
+      })
       }
     })
     

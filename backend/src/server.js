@@ -206,7 +206,7 @@ app.get('/api/trips', async (req, res) => {
     // Obtener todos los viajes con usuario
     const { data: trips, error: tripsError } = await supabaseAdmin
       .from('trips')
-      .select('*, users:user_id(id, username, display_name, user_color)')
+      .select('*, users:user_id(id, username, display_name, user_color, avatar_url)')
       .eq('status', 'published');
     if (tripsError) return res.status(500).json({ error: tripsError.message });
 
@@ -234,6 +234,7 @@ app.get('/api/trips', async (req, res) => {
       id: trip.id,
       userId: trip.user_id,
       userName: trip.users?.display_name || trip.users?.username || '',
+      userAvatar: trip.users?.avatar_url || null,
       userColor: trip.users?.user_color || 'rgba(192,192,192,1)',
       tripName: trip.trip_name,
       coverImage: trip.cover_image,
