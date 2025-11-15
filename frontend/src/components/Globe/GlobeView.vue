@@ -121,19 +121,33 @@ const friendUserIds = computed(() => {
 
 const currentUserId = ref(null)
 const filteredTrips = computed(() => {
-  if (mode.value === 'discovery') return trips.value
+  if (mode.value === 'discovery') {
+    // Mezclar aleatoriamente todos los viajes
+    const shuffled = [...trips.value]
+      .sort(() => Math.random() - 0.5)
+
+    // Elegir SOLO 20
+    return shuffled.slice(0, 20)
+  }
 
   const myUserId = currentUserId.value
   if (!myUserId) return []
 
-  // Combinar tus viajes + los de tus amigos
-  const visibleUserIds = [...friendUserIds.value, myUserId].map(String)
+  // IDs de TODOS tus amigos (unidireccional en cualquier dirección)
+  const allFriendIds = friends.value
+    .map(f => f.friend?.id)
+    .filter(Boolean)
+    .map(String)
 
-  // Mostrar viajes cuyo user_id o userId esté en la lista
-  return trips.value.filter(t => {
-    const tripOwnerId = String(t.userId || t.user_id || '').trim()
-    return visibleUserIds.includes(tripOwnerId)
-  })
+  // Mostrar tus propios viajes + todos los de tus amigos
+  const visibleUserIds = new Set([
+    String(myUserId),
+    ...allFriendIds
+  ])
+
+  return trips.value.filter(t => 
+    visibleUserIds.has(String(t.userId || t.user_id))
+  )
 })
 
 const showAuthModal = ref(false)
