@@ -133,14 +133,21 @@ const filteredTrips = computed(() => {
   const myUserId = currentUserId.value
   if (!myUserId) return []
 
-  // Combinar tus viajes + los de tus amigos
-  const visibleUserIds = [...friendUserIds.value, myUserId].map(String)
+  // IDs de TODOS tus amigos (unidireccional en cualquier dirección)
+  const allFriendIds = friends.value
+    .map(f => f.friend?.id)
+    .filter(Boolean)
+    .map(String)
 
-  // Mostrar viajes cuyo user_id o userId esté en la lista
-  return trips.value.filter(t => {
-    const tripOwnerId = String(t.userId || t.user_id || '').trim()
-    return visibleUserIds.includes(tripOwnerId)
-  })
+  // Mostrar tus propios viajes + todos los de tus amigos
+  const visibleUserIds = new Set([
+    String(myUserId),
+    ...allFriendIds
+  ])
+
+  return trips.value.filter(t => 
+    visibleUserIds.has(String(t.userId || t.user_id))
+  )
 })
 
 const showAuthModal = ref(false)
