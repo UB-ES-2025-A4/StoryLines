@@ -255,7 +255,7 @@ app.get('/api/friends', async (req, res) => {
     const userId = req.query.userId; // lo puedes pasar por query si no usas auth directa
     if (!userId) return res.status(400).json({ error: 'Falta userId' });
 
-    // 1️⃣ Buscar todas las relaciones donde el usuario sea user_id o friend_id
+    // Buscar todas las relaciones donde el usuario sea user_id o friend_id
     const { data, error } = await supabaseAdmin
       .from('friends')
       .select(`
@@ -270,7 +270,7 @@ app.get('/api/friends', async (req, res) => {
 
     if (error) return res.status(500).json({ error: error.message });
 
-    // 2️⃣ Transformar los datos para que siempre devuelva "el otro usuario" como `friend`
+    // 2Transformar los datos para que siempre devuelva "el otro usuario" como `friend`
     const formatted = data.map((row) => {
       const isSender = row.user_id === userId;
       const friendData = isSender ? row.friend : row.user;
