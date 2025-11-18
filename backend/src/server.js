@@ -25,7 +25,7 @@ app.get('/health', (req, res) => {
 const PORT = process.env.PORT || 3000;
 
 
-app.listen(PORT, () => console.log(` Backend en http://localhost:${PORT}`));
+app.listen(PORT, () => console.log(`The application is running on http://localhost:${PORT}`));
 
 import { supabaseAdmin } from './config/supabase.js';
 
