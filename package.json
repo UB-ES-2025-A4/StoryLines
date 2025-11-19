@@ -1,0 +1,14 @@
+{
+    "name": "fullstack-app",
+    "private": true,
+    "scripts": {
+        "install-all": "npm-run-all install:backend install:frontend",
+        "install:backend": "npm --prefix backend install",
+        "install:frontend": "npm --prefix frontend install",
+        "build-frontend": "npm --prefix frontend install && npm --prefix frontend run build",
+        "start": "npm --prefix backend start"
+    },
+    "devDependencies": {
+        "npm-run-all": "^4.1.5"
+    }
+}
