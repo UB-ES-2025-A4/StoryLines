@@ -264,37 +264,33 @@ app.get('/api/trips', async (req, res) => {
 
 app.get('/api/friends', async (req, res) => {
   try {
-    const userId = req.query.userId; // lo puedes pasar por query si no usas auth directa
+    const userId = req.query.userId;
     if (!userId) return res.status(400).json({ error: 'Falta userId' });
 
-    // Buscar todas las relaciones donde el usuario sea user_id o friend_id
     const { data, error } = await supabaseAdmin
       .from('friends')
       .select(`
         id,
         user_id,
         friend_id,
-        created_at,
+        status,
         user:users!friends_user_id_fkey(id, username, display_name, user_color, avatar_url),
         friend:users!friends_friend_id_fkey(id, username, display_name, user_color, avatar_url)
       `)
-      .or(`user_id.eq.${userId},friend_id.eq.${userId}`);
+      .or(`user_id.eq.${userId},friend_id.eq.${userId}`)
+      .eq("status", "accepted");   // <-- IMPORTANTE
 
     if (error) return res.status(500).json({ error: error.message });
 
-    // 2Transformar los datos para que siempre devuelva "el otro usuario" como `friend`
     const formatted = data.map((row) => {
       const isSender = row.user_id === userId;
       const friendData = isSender ? row.friend : row.user;
 
       return {
         id: row.id,
-        created_at: row.created_at,
         friend: {
           id: friendData?.id,
           username: friendData?.username,
-          display_name: friendData?.display_name,
-          user_color: friendData?.user_color,
           avatar_url: friendData?.avatar_url
         }
       };
@@ -306,6 +302,7 @@ app.get('/api/friends', async (req, res) => {
     res.status(500).json({ error: 'Error interno obteniendo amigos' });
   }
 });
+
 
 app.post('/api/add-friend', async (req, res) => {
   try {
@@ -327,13 +324,12 @@ app.post('/api/add-friend', async (req, res) => {
 })
 
 
-// Obtener un viaje individual con paradas y comentarios
 app.get('/api/trips/:id', async (req, res) => {
   try {
     const tripId = req.params.id;
     if (!tripId) return res.status(400).json({ ok: false, error: 'Falta el ID del viaje' });
 
-    // 1️⃣ Viaje principal con datos del usuario
+    // 1️⃣ Viaje principal
     const { data: trip, error: tripError } = await supabaseAdmin
       .from('trips')
       .select(`
@@ -354,7 +350,7 @@ app.get('/api/trips/:id', async (req, res) => {
       return res.status(404).json({ ok: false, error: tripError?.message || 'Viaje no encontrado' });
     }
 
-    // 2️⃣ Paradas del viaje
+    // 2️⃣ Paradas
     const { data: stops, error: stopsError } = await supabaseAdmin
       .from('trip_stops')
       .select(`
@@ -367,22 +363,23 @@ app.get('/api/trips/:id', async (req, res) => {
       .eq('trip_id', tripId);
 
     if (stopsError) {
-      console.error('[STOPS ERROR]', stopsError);
       return res.status(500).json({ ok: false, error: 'Error obteniendo paradas' });
     }
 
-    // 3️⃣ Comentarios
-    const { data: comments, error: commentsError } = await supabaseAdmin
+    // 3️⃣ Comentarios (NO ROMPER SI LA TABLA NO EXISTE)
+    let comments = [];
+
+    const { data: commentsData, error: commentsError } = await supabaseAdmin
       .from('comments')
       .select('id, user, text, created_at')
       .eq('trip_id', tripId)
       .order('created_at', { ascending: false });
 
-    if (commentsError) {
-      console.error('[COMMENTS ERROR]', commentsError);
+    if (!commentsError && commentsData) {
+      comments = commentsData;
     }
 
-    // 4️⃣ Formatear datos finales
+    // 4️⃣ Formateo
     const formattedStops = stops.map(stop => ({
       title: stop.city || 'Stop',
       city: stop.city,
@@ -408,7 +405,7 @@ app.get('/api/trips/:id', async (req, res) => {
         color: trip.users?.user_color
       },
       stops: formattedStops,
-      comments: comments || []
+      comments
     };
 
     res.json({ ok: true, trip: fullTrip });
@@ -417,6 +414,27 @@ app.get('/api/trips/:id', async (req, res) => {
     res.status(500).json({ ok: false, error: 'Error interno obteniendo el viaje' });
   }
 });
+
+app.get("/api/profile-data", async (req, res) => {
+  try {
+    const userId = req.query.userId;
+    if (!userId) return res.status(400).json({ ok: false, error: "Falta userId" });
+
+    const { data, error } = await supabaseAdmin
+      .from("users")
+      .select("*")
+      .eq("id", userId)
+      .single();
+
+    if (error) return res.status(500).json({ ok: false, error: error.message });
+
+    return res.json({ ok: true, profile: data });
+  } catch (e) {
+    console.error("[PROFILE DATA ERROR]", e);
+    return res.status(500).json({ ok: false, error: "Error interno" });
+  }
+});
+
 
 // Servir el frontend compilado (build de Vue/React)
 const frontendPath = path.join(__dirname, '../../frontend/dist');
