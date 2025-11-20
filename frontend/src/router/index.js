@@ -8,6 +8,7 @@ import Register from '@/views/Register.vue'
 import Profile from '@/views/Profile.vue'
 import CreatePost from '@/views/CreateTrip.vue'
 import Post from '@/views/Post.vue' 
+import VisitProfile from '@/views/VisitProfile.vue'
 
 const routes = [
   {
@@ -19,7 +20,7 @@ const routes = [
     path: '/login',
     name: 'Login',
     component: Login,
-    meta: { requiresGuest: true } // Solo para usuarios no autenticados
+    meta: { requiresGuest: true }
   },
   {
     path: '/register',
@@ -27,27 +28,33 @@ const routes = [
     component: Register,
     meta: { requiresGuest: true }
   },
+  {
+    path: '/profile',
+    name: 'Profile',
+    component: Profile,
+    meta: { requiresAuth: true }
+  },
 
   {
-     path: '/profile',
-     name: 'Profile',
-     component: Profile,
-     meta: { requiresAuth: true } // Solo para usuarios autenticados
-   },
+    path: '/user/:id',
+    name: 'VisitProfile',
+    component: VisitProfile
+  },
 
   {
     path: '/createtrip',
     name: 'CreateTrip',
     component: CreatePost,
-    meta: { requiresAuth: true }   // <- IMPORTANTE
+    meta: { requiresAuth: true }
   },
 
   {
-    path: '/post/:id',    // ✅ ruta dinámica
+    path: '/post/:id',
     name: 'Post',
     component: Post
-  },
+  }
 ]
+
 
 const router = createRouter({
   history: createWebHistory(),
