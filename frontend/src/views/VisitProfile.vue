@@ -391,8 +391,14 @@ const goToTrip = (id) => router.push(`/post/${id}`)
 
 const goToUser = (id) => {
   showFriends.value = false
-  router.push(`/user/${id}`)
+  // Si el usuario que clicas eres tú → ir a tu propio perfil
+  if (id === currentUserId.value) {
+    router.push('/profile')
+  } else {
+    router.push(`/user/${id}`)
+  }
 }
+
 
 /* ===============================
    LOAD
@@ -454,10 +460,13 @@ watch(
 
 /* === Header === */
 .profile-header {
-  display: flex;
-  align-items: center;
-  gap: 2rem;
-  margin-bottom: 2rem;
+    display: flex;
+    align-items: center;
+    text-align: left;
+    gap: 2rem;
+    margin-bottom: 2rem;
+    justify-content: flex-start;
+    margin-left: 80px; /* mueve TODO hacia la derecha */
 }
 
 .avatar {
@@ -468,11 +477,13 @@ watch(
   object-fit: cover;
 }
 
-.profile-text {
-  display: flex;
-  flex-direction: column;
-  gap: 0.6rem;
-}
+ .profile-text {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+
 
 .name-friends-row {
   display: flex;
@@ -534,8 +545,11 @@ watch(
 
 /* === Trips === */
 .recent-trips-section {
-  width: 95%;
+  width: 100%;
+  max-width: 750px;   /* MISMA ANCHURA QUE PROFILE */
+  margin: 0 auto;     /* CENTRAR */
 }
+
 
 .recent-trips-header {
   padding: 1rem 2rem;
