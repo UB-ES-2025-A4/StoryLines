@@ -15,14 +15,13 @@
         >
           <img
             class="avatar"
-            :src="
-              profileData.avatar_url &&
-              profileData.avatar_url.trim() !== ''
-                ? profileData.avatar_url
-                : defaultAvatar
-            "
+            :src="profileData.avatar_url && profileData.avatar_url.trim() !== '' 
+              ? profileData.avatar_url 
+              : defaultAvatar"
             alt="Foto de perfil"
           />
+
+          <!-- Hover change picture -->
           <div
             class="avatar-overlay"
             v-show="hovering"
@@ -37,12 +36,13 @@
             <h2 class="username">{{ profileData.username }}</h2>
 
             <button class="friends-btn" @click="showFriends = true">
-              {{ friends.length }} amigos
+              Amigos | {{ friends.length }}
             </button>
           </div>
 
           <h1 class="display-name">{{ profileData.display_name }}</h1>
           <p class="bio">{{ profileData.bio || 'Esta es mi biografía...' }}</p>
+
           <button class="edit-btn" @click="isEditing = !isEditing">
             {{ isEditing ? 'Cancelar' : 'Editar perfil' }}
           </button>
@@ -54,22 +54,16 @@
         <ChangePicture @image-updated="handleImageUpdated" />
       </div>
 
-      <!-- Formulario de edición -->
+      <!-- Formulario edición -->
       <div v-if="isEditing" class="edit-form">
-        <input
-          type="text"
-          v-model="profileData.username"
-          placeholder="Nombre de usuario"
-        />
-        <input
-          type="text"
-          v-model="profileData.display_name"
-          placeholder="Nombre"
-        />
+        <input type="text" v-model="profileData.username" placeholder="Nombre de usuario" />
+        <input type="text" v-model="profileData.display_name" placeholder="Nombre" />
         <textarea v-model="profileData.bio" placeholder="Biografía"></textarea>
+
         <button class="save-btn" @click="saveProfile" :disabled="saving">
           {{ saving ? 'Guardando...' : 'Guardar cambios' }}
         </button>
+
         <div v-if="error" class="alert alert-error">{{ error }}</div>
         <div v-if="success" class="alert alert-success">{{ success }}</div>
       </div>
@@ -78,25 +72,21 @@
       <div class="recent-trips-section">
         <div class="recent-trips-header">
           <div class="tabs">
-            <button
-              :class="{ active: currentTab === 'published' }"
-              @click="currentTab = 'published'"
-            >
+            <button :class="{ active: currentTab === 'published' }" @click="currentTab = 'published'">
               Viajes publicados
             </button>
+
             <span class="separator">|</span>
-            <button
-              :class="{ active: currentTab === 'drafts' }"
-              @click="currentTab = 'drafts'"
-            >
+
+            <button :class="{ active: currentTab === 'drafts' }" @click="currentTab = 'drafts'">
               Borradores
             </button>
+
             <span class="separator">|</span>
-            <button>
-              Viajes guardados
-            </button>
+            <button>Viajes guardados</button>
           </div>
         </div>
+
         <div class="trips-container">
           <div v-if="currentTrips.length > 0" class="trip-cards-wrapper">
             <div
@@ -105,68 +95,97 @@
               :key="trip.id"
               @click="goToTrip(trip.id)"
             >
-              <img
-                :src="trip.image"
-                alt="Foto del viaje"
-                class="trip-image"
-              />
+              <img :src="trip.image" alt="Foto del viaje" class="trip-image" />
+
               <div class="trip-info">
                 <div class="trip-details">
                   <h4>{{ trip.title }}</h4>
                   <p>{{ truncateText(trip.description, 120) }}</p>
                 </div>
               </div>
-              <button class="menu-btn" @click.stop="toggleMenu(trip.id)">
-                ⋯
-              </button>
-              <div
-                v-if="currentMenuTrip === trip.id"
-                class="menu-dropdown"
-              >
+
+              <button class="menu-btn" @click.stop="toggleMenu(trip.id)">⋯</button>
+
+              <div v-if="currentMenuTrip === trip.id" class="menu-dropdown">
                 <button @click.stop="editTrip(trip.id)">Editar</button>
                 <button @click.stop="deleteTrip(trip.id)">Eliminar</button>
               </div>
             </div>
           </div>
+
           <div v-else class="no-trips-message">
             {{ noTripsMessage }}
           </div>
         </div>
       </div>
+    </div>
 
-      <!-- POPUP AMIGOS -->
-      <div
-        v-if="showFriends"
-        class="modal-overlay"
-        @click.self="showFriends = false"
-      >
-        <div class="modal-box">
-          <button class="modal-close-x" @click="showFriends = false">
-            ✕
-          </button>
-          <h2 class="modal-title">Amigos</h2>
+    <!-- =============================== -->
+    <!-- POPUP AMIGOS (SOLO ESTE)       -->
+    <!-- =============================== -->
+    <div
+      v-if="showFriends"
+      class="modal-overlay"
+      @click.self="showFriends = false"
+    >
+      <div class="modal-box">
+        <button class="modal-close-x" @click="showFriends = false">✕</button>
+        <h2 class="modal-title">Amigos</h2>
 
-          <div v-if="friends.length === 0" class="no-friends">
-            No tienes amigos todavía.
-          </div>
+        <div v-if="friends.length === 0" class="no-friends">
+          No tienes amigos todavía.
+        </div>
 
-          <div
-            v-for="f in friends"
-            :key="f.id"
+        <div class="friends-list-scroll">
+          <div 
+            v-for="f in friends" 
+            :key="f.id" 
             class="friend-item"
-            @click="goToUser(f.id)"
           >
-            <img
-              :src="safeAvatar(f.avatar_url)"
-              class="friend-avatar"
-            />
-            <span class="friend-username">{{ f.username }}</span>
+            <div class="friend-click-zone" @click="goToUser(f.id)">
+              <img :src="safeAvatar(f.avatar_url)" class="friend-avatar" />
+              <span class="friend-username">{{ f.username }}</span>
+            </div>
+
+            <button
+              class="delete-friend-btn"
+              @click.stop="openDeleteFriendConfirm(f.id)"
+            >
+              ✕
+            </button>
           </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ============================================= -->
+    <!-- POPUP CONFIRMAR ELIMINAR AMIGO (FUERA DEL OTRO) -->
+    <!-- ============================================= -->
+    <div
+      v-if="showConfirmDelete"
+      class="modal-overlay"
+      @click.self="showConfirmDelete = false"
+    >
+      <div class="modal-box">
+        <button class="modal-close-x" @click="showConfirmDelete = false">✕</button>
+        <h2 class="modal-title">Eliminar amigo</h2>
+
+        <p>¿Seguro que quieres eliminar a este amigo?</p>
+
+        <div class="modal-actions">
+          <button class="btn-secondary" @click="showConfirmDelete = false">
+            Cancelar
+          </button>
+          <button class="btn-danger" @click="confirmDeleteFriend">
+            Eliminar
+          </button>
         </div>
       </div>
     </div>
   </div>
 </template>
+
 
 <script>
 import { ref, onMounted, onUnmounted, computed } from 'vue'
@@ -204,6 +223,37 @@ export default {
 
     const defaultAvatar =
       'https://upload.wikimedia.org/wikipedia/commons/a/ac/Default_pfp.jpg'
+
+    const showConfirmDelete = ref(false)
+    const friendToDelete = ref(null)
+
+    const openDeleteFriendConfirm = (id) => {
+      showConfirmDelete.value = true
+      friendToDelete.value = id
+    }
+
+    const confirmDeleteFriend = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession()
+
+        await fetch(`http://localhost:3000/api/delete-friend`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            user_id: user.value.id,
+            friend_id: friendToDelete.value
+          })
+        })
+
+        // Actualiza la lista
+        await loadFriends()
+
+      } catch (e) {
+        console.error("Error eliminando amigo:", e)
+      }
+
+      showConfirmDelete.value = false
+    }
 
     const safeAvatar = (url) => {
       if (!url || url === 'undefined' || url.trim() === '') {
@@ -463,7 +513,10 @@ export default {
       showFriends,
       goToUser,
       defaultAvatar,
-      safeAvatar
+      safeAvatar,
+      showConfirmDelete,
+      openDeleteFriendConfirm,
+      confirmDeleteFriend
     }
   }
 }
@@ -839,9 +892,6 @@ export default {
   cursor: pointer;
 }
 
-.friend-item:hover {
-  background: rgba(255, 255, 255, 0.1);
-}
 
 .friend-avatar {
   width: 50px;
@@ -859,6 +909,117 @@ export default {
   text-align: center;
   padding: 1rem 0;
   opacity: 0.8;
+}
+.friend-click-zone {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-grow: 1;           
+  cursor: pointer;
+  padding-right: 1rem;
+}
+
+
+.friend-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.8rem 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  cursor: default; /* ⬅ ELIMINA EL CLICK GENERAL */
+}
+
+.friend-info {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  cursor: pointer; /* SOLO ESTA PARTE ES CLICABLE */
+}
+
+.delete-friend-btn {
+  background: none;
+  border: none;
+  font-size: 1.4rem;
+  color: #ff6b6b;
+  cursor: pointer;
+  padding: 0 0.5rem;
+}
+
+.delete-friend-btn:hover {
+  color: #ff3b3b;
+}
+
+/* Contenedor de acciones */
+.modal-actions {
+  margin-top: 1.8rem;
+  display: flex;
+  justify-content: center;
+  gap: 1.2rem;        /* más separación */
+}
+
+/* Botón cancelar */
+.btn-secondary {
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  padding: 0.55rem 1.4rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 1rem;
+  transition: 0.2s;
+}
+
+/* Botón eliminar */
+.btn-danger {
+  background: #ff4b4b;
+  color: #fff;
+  padding: 0.55rem 1.4rem;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  font-size: 1rem;
+  font-weight: 600;
+  transition: 0.2s;
+}
+
+.btn-danger:hover {
+  background: #e03b3b;
+}
+
+/* Botón X de cerrar—más bonito */
+.modal-close-x {
+  top: 15px;
+  right: 15px;
+  width: 34px;
+  height: 34px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border-radius: 50%;
+  backdrop-filter: blur(4px);
+  transition: 0.2s;
+}
+
+/* Scroll para lista de amigos (máx. 5 amigos visibles) */
+.friends-list-scroll {
+  max-height: 320px;      /* ≈ 5 amigos (5 × ~60px) */
+  overflow-y: auto;
+  padding-right: 0.5rem;
+}
+
+/* Barra de scroll bonita */
+.friends-list-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+
+.friends-list-scroll::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 4px;
+}
+
+.friends-list-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.5);
 }
 
 
