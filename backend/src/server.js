@@ -265,9 +265,11 @@ app.get('/api/trips', async (req, res) => {
 app.get('/api/friends', async (req, res) => {
   try {
     const userId = req.query.userId;
+    const includePending = req.query.includePending === 'true';
+
     if (!userId) return res.status(400).json({ error: 'Falta userId' });
 
-    const { data, error } = await supabaseAdmin
+    let query = supabaseAdmin
       .from('friends')
       .select(`
         id,
@@ -277,9 +279,14 @@ app.get('/api/friends', async (req, res) => {
         user:users!friends_user_id_fkey(id, username, display_name, user_color, avatar_url),
         friend:users!friends_friend_id_fkey(id, username, display_name, user_color, avatar_url)
       `)
-      .or(`user_id.eq.${userId},friend_id.eq.${userId}`)
-      .eq("status", "accepted");   // <-- IMPORTANTE
+      .or(`user_id.eq.${userId},friend_id.eq.${userId}`);
 
+    // 👉 por defecto solo aceptados (para la lista de amigos)
+    if (!includePending) {
+      query = query.eq('status', 'accepted');
+    }
+
+    const { data, error } = await query;
     if (error) return res.status(500).json({ error: error.message });
 
     const formatted = data.map((row) => {
@@ -288,6 +295,7 @@ app.get('/api/friends', async (req, res) => {
 
       return {
         id: row.id,
+        status: row.status,          // <- importante para el botón
         friend: {
           id: friendData?.id,
           username: friendData?.username,
@@ -306,22 +314,45 @@ app.get('/api/friends', async (req, res) => {
 
 app.post('/api/add-friend', async (req, res) => {
   try {
-    const { user_id, friend_id } = req.body
+    const { user_id, friend_id } = req.body;
     if (!user_id || !friend_id)
-      return res.status(400).json({ error: 'Faltan campos' })
+      return res.status(400).json({ error: 'Faltan campos' });
 
     const { error } = await supabaseAdmin
       .from('friends')
-      .insert([{ user_id, friend_id }])
+      .insert([{ user_id, friend_id, status: 'pending' }]);
 
-    if (error) throw error
+    if (error) throw error;
 
-    return res.json({ ok: true })
+    return res.json({ ok: true });
   } catch (e) {
-    console.error('[ADD FRIEND ERROR]', e)
-    res.status(500).json({ error: e.message })
+    console.error('[ADD FRIEND ERROR]', e);
+    res.status(500).json({ error: e.message });
   }
-})
+});
+
+app.post('/api/delete-friend', async (req, res) => {
+  try {
+    const { user_id, friend_id } = req.body;
+    if (!user_id || !friend_id)
+      return res.status(400).json({ error: 'Faltan campos' });
+
+    const { error } = await supabaseAdmin
+      .from('friends')
+      .delete()
+      .or(
+        `and(user_id.eq.${user_id},friend_id.eq.${friend_id}),and(user_id.eq.${friend_id},friend_id.eq.${user_id})`
+      );
+
+    if (error) throw error;
+
+    return res.json({ ok: true });
+  } catch (e) {
+    console.error('[DELETE FRIEND ERROR]', e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
 
 
 app.get('/api/trips/:id', async (req, res) => {
