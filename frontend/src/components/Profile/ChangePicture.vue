@@ -1,7 +1,8 @@
 <template>
   <div class="photo-adjuster">
     <h1 class="photo-title">Selecciona y Ajusta tu Fotografía</h1>
-    <input type="file" @change="onFileChange" accept="image/*" />
+    <input type="file" @change="onFileChange" accept="image/png, image/jpeg, image/jpg, image/webp" />
+
 
     <div class="canvas-container">
       <canvas
@@ -47,7 +48,7 @@ export default {
     const offsetY = ref(0);
     const scale = ref(1);
     const baseScale = ref(1);
-
+    const imageMime = ref("image/png");
     const loading = ref(false);
     const error = ref("");
     const success = ref("");
@@ -61,26 +62,64 @@ export default {
       }
     });
 
+    // redimensionar grandes imágenes antes de usarla
+    const resizeImageIfNeeded = (image, mimeType) => {
+      const MAX_SIZE = 1024; // cambia si quieres
+
+      if (image.width <= MAX_SIZE && image.height <= MAX_SIZE) {
+        return image; // No hace falta redimensionar
+      }
+
+      const scale = MAX_SIZE / Math.max(image.width, image.height);
+      const newW = image.width * scale;
+      const newH = image.height * scale;
+
+      const off = document.createElement("canvas");
+      off.width = newW;
+      off.height = newH;
+
+      const ctx = off.getContext("2d");
+      ctx.drawImage(image, 0, 0, newW, newH);
+
+      // devolvemos una nueva imagen reducida
+      const resized = new Image();
+      resized.src = off.toDataURL(mimeType);
+
+      return resized;
+    };
+
     const onFileChange = (e) => {
       const file = e.target.files[0];
       if (!file) return;
+
       const reader = new FileReader();
       reader.onload = (event) => {
         const image = new Image();
         image.onload = () => {
-          img.value = image;
-          const ctx = canvas.value.getContext("2d");
-          baseScale.value = Math.max(
-            canvas.value.width / image.width,
-            canvas.value.height / image.height
-          );
-          scale.value = baseScale.value;
-          offsetX.value = (canvas.value.width - image.width * scale.value) / 2;
-          offsetY.value = (canvas.value.height - image.height * scale.value) / 2;
-          drawImage(ctx);
+
+          // REDIMENSIONAR SI ES NECESARIO
+          const reducedImage = resizeImageIfNeeded(image, file.type);
+
+          reducedImage.onload = () => {
+            img.value = reducedImage;
+            imageMime.value = file.type;
+
+            const ctx = canvas.value.getContext("2d");
+            baseScale.value = Math.max(
+              canvas.value.width / reducedImage.width,
+              canvas.value.height / reducedImage.height
+            );
+            scale.value = baseScale.value;
+
+            offsetX.value = (canvas.value.width - reducedImage.width * scale.value) / 2;
+            offsetY.value = (canvas.value.height - reducedImage.height * scale.value) / 2;
+
+            drawImage(ctx);
+          };
         };
         image.src = event.target.result;
       };
+
       reader.readAsDataURL(file);
     };
 
@@ -140,96 +179,103 @@ export default {
     };
 
     const uploadImage = async () => {
-  error.value = "";
-  success.value = "";
+      error.value = "";
+      success.value = "";
 
-  if (!img.value) {
-    error.value = "Por favor, selecciona una imagen antes de subirla.";
-    return;
-  }
+      if (!img.value) {
+        error.value = "Por favor, selecciona una imagen antes de subirla.";
+        return;
+      }
 
-  loading.value = true;
+      loading.value = true;
 
-  try {
-    // Convertir el canvas a blob y luego a Base64
-    const outputCanvas = document.createElement("canvas");
-    outputCanvas.width = 300;
-    outputCanvas.height = 300;
-    const ctx = outputCanvas.getContext("2d");
-    ctx.beginPath();
-    ctx.arc(150, 150, 150, 0, Math.PI * 2);
-    ctx.closePath();
-    ctx.clip();
-    ctx.drawImage(
-      img.value,
-      offsetX.value,
-      offsetY.value,
-      img.value.width * scale.value,
-      img.value.height * scale.value
-    );
+      try {
+        // Render final (300x300)
+        const outputCanvas = document.createElement("canvas");
+        outputCanvas.width = 300;
+        outputCanvas.height = 300;
+        const ctx = outputCanvas.getContext("2d");
 
-    const blob = await new Promise((resolve) => outputCanvas.toBlob(resolve, "image/png"));
-    if (!blob) throw new Error("No se pudo generar la imagen");
+        ctx.beginPath();
+        ctx.arc(150, 150, 150, 0, Math.PI * 2);
+        ctx.closePath();
+        ctx.clip();
 
-    const base64 = await blobToBase64(blob); // función helper
+        ctx.drawImage(
+          img.value,
+          offsetX.value,
+          offsetY.value,
+          img.value.width * scale.value,
+          img.value.height * scale.value
+        );
 
-    // Llamada al backend
-    const res = await fetch(`${API_URL}/api/upload-avatar`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ userId: user.value.id, imageBase64: base64 }),
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || "Error subiendo la imagen");
+        const blob = await new Promise((resolve) =>
+          outputCanvas.toBlob(resolve, imageMime.value)
+        );
+        imageMime.value = blob.type;
 
-    success.value = "Imagen actualizada correctamente!";
-    emit("image-updated", data.avatar_url);
-  } catch (err) {
-    error.value = err.message;
-  } finally {
-    loading.value = false;
-  }
-};
+        if (!blob) throw new Error("No se pudo generar la imagen");
 
-// helper
-const blobToBase64 = (blob) =>
-  new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onloadend = () => resolve(reader.result.split(",")[1]);
-    reader.onerror = reject;
-    reader.readAsDataURL(blob);
-  });
+        const base64 = await blobToBase64(blob);
 
+        const res = await fetch(`${API_URL}/api/upload-avatar`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            userId: user.value.id,
+            imageBase64: base64,
+            mimeType: imageMime.value
+          })
+        });
 
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Error subiendo la imagen");
 
-  const deleteImage = async () => {
-  if (!user.value) return;
-  loading.value = true;
-  error.value = "";
-  success.value = "";
+        success.value = "Imagen actualizada correctamente!";
+        emit("image-updated", data.avatar_url);
+      } catch (err) {
+        error.value = err.message;
+      } finally {
+        loading.value = false;
+      }
+    };
 
-  try {
-    const res = await fetch(`${API_URL}/api/delete-avatar`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ userId: user.value.id }),
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || "Error eliminando la imagen");
+    const blobToBase64 = (blob) =>
+      new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result.split(",")[1]);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
 
-    img.value = null;
-    const ctx = canvas.value.getContext("2d");
-    ctx.clearRect(0, 0, canvas.value.width, canvas.value.height);
+    const deleteImage = async () => {
+      if (!user.value) return;
+      loading.value = true;
+      error.value = "";
+      success.value = "";
 
-    success.value = "Imagen eliminada correctamente!";
-    emit("image-updated", null);
-  } catch (err) {
-    error.value = err.message;
-  } finally {
-    loading.value = false;
-  }
-};
+      try {
+        const res = await fetch(`${API_URL}/api/delete-avatar`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ userId: user.value.id }),
+        });
 
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Error eliminando la imagen");
+
+        img.value = null;
+        const ctx = canvas.value.getContext("2d");
+        ctx.clearRect(0, 0, canvas.value.width, canvas.value.height);
+
+        success.value = "Imagen eliminada correctamente!";
+        emit("image-updated", null);
+      } catch (err) {
+        error.value = err.message;
+      } finally {
+        loading.value = false;
+      }
+    };
 
     return {
       canvas,
@@ -246,6 +292,7 @@ const blobToBase64 = (blob) =>
     };
   },
 };
+
 </script>
 
 <style scoped>

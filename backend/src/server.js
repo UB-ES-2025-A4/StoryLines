@@ -14,7 +14,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 app.use(cors());
-app.use(express.json());
+app.use(express.json());    
 //  RUTA DE SALUD SENCILLA
 app.get('/health', (req, res) => {
   res.json({ ok: true, env: process.env.NODE_ENV || 'dev', uptime: process.uptime() });
@@ -25,7 +25,7 @@ app.get('/health', (req, res) => {
 const PORT = process.env.PORT || 3000;
 
 
-app.listen(PORT, () => console.log(` Backend en http://localhost:${PORT}`));
+app.listen(PORT, () => console.log(`The application is running on http://localhost:${PORT}`));
 
 import { supabaseAdmin } from './config/supabase.js';
 
@@ -116,12 +116,15 @@ app.post('/api/profile', async (req, res) => {
 import { Buffer } from 'buffer';
 
 // Subir avatar
-app.post('/api/upload-avatar', async (req, res) => {
+app.post("/api/upload-avatar", async (req, res) => {
   try {
-    const { userId, imageBase64 } = req.body;
-    if (!userId || !imageBase64) return res.status(400).json({ error: "Faltan datos" });
+    // Un solo destructuring, con mimeType incluido
+    const { userId, imageBase64, mimeType } = req.body;
+    if (!userId || !imageBase64) {
+      return res.status(400).json({ error: "Faltan datos" });
+    }
 
-    // Revisar si hay avatar previo
+    // Obtener usuario y avatar previo
     const { data: userData, error: fetchError } = await supabaseAdmin
       .from("users")
       .select("avatar_url")
@@ -131,28 +134,36 @@ app.post('/api/upload-avatar', async (req, res) => {
     if (fetchError) return res.status(500).json({ error: fetchError.message });
 
     if (userData?.avatar_url) {
-      // Extraer el nombre del archivo
       const oldFileName = userData.avatar_url.split("/").pop().split("?")[0];
-      // Eliminar archivo anterior
       await supabaseAdmin.storage.from("profile-pictures").remove([oldFileName]);
     }
 
-    // Subir la nueva imagen
+    // Determinar mimeType y extensión (seguro para tipos como image/svg+xml)
+    console.log("Received mimeType:", mimeType);
+    const finalMime = mimeType || "image/png";
+    const ext = (finalMime.split("/")[1] || "png").split("+")[0]; // "svg+xml" -> "svg"
+    const fileName = `${userId}-${Date.now()}.${ext}`;
+
     const buffer = Buffer.from(imageBase64, "base64");
-    const fileName = `${userId}-${Date.now()}.png`;
 
     const { error: uploadError } = await supabaseAdmin.storage
       .from("profile-pictures")
-      .upload(fileName, buffer, { upsert: true , contentType: "image/png",});
+      .upload(fileName, buffer, {
+        upsert: true,
+        contentType: finalMime,
+      });
 
-    if (uploadError) return res.status(500).json({ error: uploadError.message });
+    if (uploadError) {
+      console.error("Supabase upload error:", uploadError);
+      return res.status(500).json({ error: uploadError.message || "Error en upload" });
+    }
 
-    // Obtener URL pública
-    const { data: { publicUrl } } = supabaseAdmin.storage
+    const { data: publicData } = supabaseAdmin.storage
       .from("profile-pictures")
       .getPublicUrl(fileName);
 
-    // Actualizar usuario
+    const publicUrl = publicData?.publicUrl || null;
+
     const { error: updateError } = await supabaseAdmin
       .from("users")
       .update({ avatar_url: publicUrl, updated_at: new Date().toISOString() })
@@ -162,7 +173,7 @@ app.post('/api/upload-avatar', async (req, res) => {
 
     res.json({ ok: true, avatar_url: publicUrl });
   } catch (e) {
-    console.error(e);
+    console.error("Handler error:", e);
     res.status(500).json({ error: "Error interno subiendo avatar" });
   }
 });
@@ -206,7 +217,7 @@ app.get('/api/trips', async (req, res) => {
     // Obtener todos los viajes con usuario
     const { data: trips, error: tripsError } = await supabaseAdmin
       .from('trips')
-      .select('*, users:user_id(id, username, display_name, user_color)')
+      .select('*, users:user_id(id, username, display_name, user_color, avatar_url)')
       .eq('status', 'published');
     if (tripsError) return res.status(500).json({ error: tripsError.message });
 
@@ -234,6 +245,7 @@ app.get('/api/trips', async (req, res) => {
       id: trip.id,
       userId: trip.user_id,
       userName: trip.users?.display_name || trip.users?.username || '',
+      userAvatar: trip.users?.avatar_url || null,
       userColor: trip.users?.user_color || 'rgba(192,192,192,1)',
       tripName: trip.trip_name,
       coverImage: trip.cover_image,
@@ -252,37 +264,41 @@ app.get('/api/trips', async (req, res) => {
 
 app.get('/api/friends', async (req, res) => {
   try {
-    const userId = req.query.userId; // lo puedes pasar por query si no usas auth directa
+    const userId = req.query.userId;
+    const includePending = req.query.includePending === 'true';
+
     if (!userId) return res.status(400).json({ error: 'Falta userId' });
 
-    // Buscar todas las relaciones donde el usuario sea user_id o friend_id
-    const { data, error } = await supabaseAdmin
+    let query = supabaseAdmin
       .from('friends')
       .select(`
         id,
         user_id,
         friend_id,
-        created_at,
+        status,
         user:users!friends_user_id_fkey(id, username, display_name, user_color, avatar_url),
         friend:users!friends_friend_id_fkey(id, username, display_name, user_color, avatar_url)
       `)
       .or(`user_id.eq.${userId},friend_id.eq.${userId}`);
 
+    // 👉 por defecto solo aceptados (para la lista de amigos)
+    if (!includePending) {
+      query = query.eq('status', 'accepted');
+    }
+
+    const { data, error } = await query;
     if (error) return res.status(500).json({ error: error.message });
 
-    // 2Transformar los datos para que siempre devuelva "el otro usuario" como `friend`
     const formatted = data.map((row) => {
       const isSender = row.user_id === userId;
       const friendData = isSender ? row.friend : row.user;
 
       return {
         id: row.id,
-        created_at: row.created_at,
+        status: row.status,          // <- importante para el botón
         friend: {
           id: friendData?.id,
           username: friendData?.username,
-          display_name: friendData?.display_name,
-          user_color: friendData?.user_color,
           avatar_url: friendData?.avatar_url
         }
       };
@@ -295,33 +311,56 @@ app.get('/api/friends', async (req, res) => {
   }
 });
 
+
 app.post('/api/add-friend', async (req, res) => {
   try {
-    const { user_id, friend_id } = req.body
+    const { user_id, friend_id } = req.body;
     if (!user_id || !friend_id)
-      return res.status(400).json({ error: 'Faltan campos' })
+      return res.status(400).json({ error: 'Faltan campos' });
 
     const { error } = await supabaseAdmin
       .from('friends')
-      .insert([{ user_id, friend_id }])
+      .insert([{ user_id, friend_id, status: 'pending' }]);
 
-    if (error) throw error
+    if (error) throw error;
 
-    return res.json({ ok: true })
+    return res.json({ ok: true });
   } catch (e) {
-    console.error('[ADD FRIEND ERROR]', e)
-    res.status(500).json({ error: e.message })
+    console.error('[ADD FRIEND ERROR]', e);
+    res.status(500).json({ error: e.message });
   }
-})
+});
+
+app.post('/api/delete-friend', async (req, res) => {
+  try {
+    const { user_id, friend_id } = req.body;
+    if (!user_id || !friend_id)
+      return res.status(400).json({ error: 'Faltan campos' });
+
+    const { error } = await supabaseAdmin
+      .from('friends')
+      .delete()
+      .or(
+        `and(user_id.eq.${user_id},friend_id.eq.${friend_id}),and(user_id.eq.${friend_id},friend_id.eq.${user_id})`
+      );
+
+    if (error) throw error;
+
+    return res.json({ ok: true });
+  } catch (e) {
+    console.error('[DELETE FRIEND ERROR]', e);
+    res.status(500).json({ error: e.message });
+  }
+});
 
 
-// Obtener un viaje individual con paradas y comentarios
+
 app.get('/api/trips/:id', async (req, res) => {
   try {
     const tripId = req.params.id;
     if (!tripId) return res.status(400).json({ ok: false, error: 'Falta el ID del viaje' });
 
-    // 1️⃣ Viaje principal con datos del usuario
+    // 1️⃣ Viaje principal
     const { data: trip, error: tripError } = await supabaseAdmin
       .from('trips')
       .select(`
@@ -342,7 +381,7 @@ app.get('/api/trips/:id', async (req, res) => {
       return res.status(404).json({ ok: false, error: tripError?.message || 'Viaje no encontrado' });
     }
 
-    // 2️⃣ Paradas del viaje
+    // 2️⃣ Paradas
     const { data: stops, error: stopsError } = await supabaseAdmin
       .from('trip_stops')
       .select(`
@@ -355,22 +394,23 @@ app.get('/api/trips/:id', async (req, res) => {
       .eq('trip_id', tripId);
 
     if (stopsError) {
-      console.error('[STOPS ERROR]', stopsError);
       return res.status(500).json({ ok: false, error: 'Error obteniendo paradas' });
     }
 
-    // 3️⃣ Comentarios
-    const { data: comments, error: commentsError } = await supabaseAdmin
+    // 3️⃣ Comentarios (NO ROMPER SI LA TABLA NO EXISTE)
+    let comments = [];
+
+    const { data: commentsData, error: commentsError } = await supabaseAdmin
       .from('comments')
       .select('id, user, text, created_at')
       .eq('trip_id', tripId)
       .order('created_at', { ascending: false });
 
-    if (commentsError) {
-      console.error('[COMMENTS ERROR]', commentsError);
+    if (!commentsError && commentsData) {
+      comments = commentsData;
     }
 
-    // 4️⃣ Formatear datos finales
+    // 4️⃣ Formateo
     const formattedStops = stops.map(stop => ({
       title: stop.city || 'Stop',
       city: stop.city,
@@ -396,7 +436,7 @@ app.get('/api/trips/:id', async (req, res) => {
         color: trip.users?.user_color
       },
       stops: formattedStops,
-      comments: comments || []
+      comments
     };
 
     res.json({ ok: true, trip: fullTrip });
@@ -405,6 +445,27 @@ app.get('/api/trips/:id', async (req, res) => {
     res.status(500).json({ ok: false, error: 'Error interno obteniendo el viaje' });
   }
 });
+
+app.get("/api/profile-data", async (req, res) => {
+  try {
+    const userId = req.query.userId;
+    if (!userId) return res.status(400).json({ ok: false, error: "Falta userId" });
+
+    const { data, error } = await supabaseAdmin
+      .from("users")
+      .select("*")
+      .eq("id", userId)
+      .single();
+
+    if (error) return res.status(500).json({ ok: false, error: error.message });
+
+    return res.json({ ok: true, profile: data });
+  } catch (e) {
+    console.error("[PROFILE DATA ERROR]", e);
+    return res.status(500).json({ ok: false, error: "Error interno" });
+  }
+});
+
 
 // Servir el frontend compilado (build de Vue/React)
 const frontendPath = path.join(__dirname, '../../frontend/dist');
