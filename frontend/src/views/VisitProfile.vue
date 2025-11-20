@@ -30,6 +30,16 @@
 
           <h1 class="display-name">{{ profile.display_name }}</h1>
           <p class="bio">{{ profile.bio }}</p>
+
+          <!-- NUEVO BOTÓN DE ESTADO DE AMISTAD -->
+          <button
+            v-if="currentUserId && !isOwnProfile"
+            class="friend-action-btn"
+            :disabled="friendActionLoading"
+            @click="onFriendButtonClick"
+          >
+            {{ friendButtonLabel }}
+          </button>
         </div>
       </div>
 
@@ -83,7 +93,7 @@
           Este usuario no tiene amigos todavía.
         </div>
 
-        <!-- 👉 AQUÍ EL CAMBIO: ahora cada amigo es clicable -->
+        <!-- amigos clicables -->
         <div
           v-for="f in friends"
           :key="f.id"
@@ -99,12 +109,36 @@
         </div>
       </div>
     </div>
+
+    <!-- POPUP CONFIRMAR ELIMINAR AMIGO -->
+    <div
+      v-if="showConfirmUnfriend"
+      class="modal-overlay"
+      @click.self="showConfirmUnfriend = false"
+    >
+      <div class="modal-box">
+        <button class="modal-close-x" @click="showConfirmUnfriend = false">
+          ✕
+        </button>
+        <h2 class="modal-title">Eliminar amigo</h2>
+        <p>¿Seguro que quieres eliminar a este amigo?</p>
+        <div class="modal-actions">
+          <button class="btn-secondary" @click="showConfirmUnfriend = false">
+            Cancelar
+          </button>
+          <button class="btn-danger" @click="confirmUnfriend">
+            Eliminar
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, watch } from 'vue'
+import { ref, onMounted, watch, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { supabase } from '@/config/supabase'
 import Sidebar from '@/components/Sidebar.vue'
 
 const API_BASE = 'http://localhost:3000'
@@ -119,6 +153,14 @@ const trips = ref([])
 const friends = ref([])
 const showFriends = ref(false)
 
+// usuario logueado
+const currentUserId = ref(null)
+
+// estado del botón de amistad: 'none' | 'pending' | 'accepted'
+const friendStatus = ref('none')
+const friendActionLoading = ref(false)
+const showConfirmUnfriend = ref(false)
+
 const defaultAvatar =
   'https://upload.wikimedia.org/wikipedia/commons/a/ac/Default_pfp.jpg'
 
@@ -126,7 +168,7 @@ const defaultImg =
   'https://jkfenner.com/wp-content/uploads/2019/11/default-450x450.jpg'
 
 /* ===============================
-   CARGAR PERFIL
+   PERFIL
 ================================ */
 const loadProfile = async () => {
   try {
@@ -146,7 +188,7 @@ const loadProfile = async () => {
 }
 
 /* ===============================
-   CARGAR VIAJES PUBLICADOS
+   VIAJES PUBLICADOS
 ================================ */
 const loadTrips = async () => {
   try {
@@ -168,7 +210,7 @@ const loadTrips = async () => {
 }
 
 /* ===============================
-   CARGAR AMIGOS ACEPTADOS
+   AMIGOS ACEPTADOS (lista + contador)
 ================================ */
 const loadFriends = async () => {
   try {
@@ -194,6 +236,152 @@ const loadFriends = async () => {
 }
 
 /* ===============================
+   CARGAR USUARIO ACTUAL
+================================ */
+const loadCurrentUser = async () => {
+  try {
+    const { data: { session } } = await supabase.auth.getSession()
+    currentUserId.value = session?.user?.id || null
+  } catch (e) {
+    console.error('Error obteniendo usuario actual:', e)
+    currentUserId.value = null
+  }
+}
+
+const isOwnProfile = computed(
+  () => currentUserId.value && currentUserId.value === userId.value
+)
+
+/* ===============================
+   ESTADO DE AMISTAD (BOTÓN)
+   usa /api/friends?userId=currentUser&includePending=true
+================================ */
+const loadFriendStatus = async () => {
+  // si no hay usuario logueado o es su propio perfil → sin botón
+  if (!currentUserId.value || isOwnProfile.value) {
+    friendStatus.value = 'none'
+    return
+  }
+
+  try {
+    const res = await fetch(
+      `${API_BASE}/api/friends?userId=${currentUserId.value}&includePending=true`
+    )
+    if (!res.ok) throw new Error('Error HTTP')
+
+    const body = await res.json()
+    if (!body.ok) {
+      friendStatus.value = 'none'
+      return
+    }
+
+    const list = body.friends || []
+
+    // buscamos relación donde el otro sea el dueño del perfil
+    const relation = list.find((f) => f.friend?.id === userId.value)
+
+    if (!relation) {
+      friendStatus.value = 'none'
+    } else if (relation.status === 'pending') {
+      friendStatus.value = 'pending'
+    } else if (relation.status === 'accepted') {
+      friendStatus.value = 'accepted'
+    } else {
+      friendStatus.value = 'none'
+    }
+  } catch (e) {
+    console.error('Error obteniendo estado de amistad:', e)
+    friendStatus.value = 'none'
+  }
+}
+
+/* ===============================
+   ACCIONES DEL BOTÓN
+================================ */
+const friendButtonLabel = computed(() => {
+  if (!currentUserId.value || isOwnProfile.value) return ''
+
+  switch (friendStatus.value) {
+    case 'pending':
+      return 'Pendiente'
+    case 'accepted':
+      return 'Eliminar amigo'
+    case 'none':
+    default:
+      return 'Añadir amigo'
+  }
+})
+
+const sendFriendRequest = async () => {
+  if (!currentUserId.value || isOwnProfile.value) return
+
+  friendActionLoading.value = true
+  try {
+    const res = await fetch(`${API_BASE}/api/add-friend`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        user_id: currentUserId.value,
+        friend_id: userId.value
+      })
+    })
+
+    if (!res.ok) throw new Error('Error al crear solicitud')
+
+    friendStatus.value = 'pending'
+  } catch (e) {
+    console.error('Error al enviar solicitud de amistad:', e)
+  } finally {
+    friendActionLoading.value = false
+  }
+}
+
+const deleteFriend = async () => {
+  if (!currentUserId.value || isOwnProfile.value) return
+
+  friendActionLoading.value = true
+  try {
+    const res = await fetch(`${API_BASE}/api/delete-friend`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        user_id: currentUserId.value,
+        friend_id: userId.value
+      })
+    })
+
+    if (!res.ok) throw new Error('Error al eliminar amistad')
+
+    friendStatus.value = 'none'
+    await loadFriends() // actualizar contador y lista
+  } catch (e) {
+    console.error('Error al eliminar amistad:', e)
+  } finally {
+    friendActionLoading.value = false
+  }
+}
+
+const onFriendButtonClick = () => {
+  if (friendActionLoading.value || !currentUserId.value || isOwnProfile.value) return
+
+  if (friendStatus.value === 'none') {
+    // no hay relación → crear pending
+    sendFriendRequest()
+  } else if (friendStatus.value === 'pending') {
+    // cancelar solicitud (delete)
+    deleteFriend()
+  } else if (friendStatus.value === 'accepted') {
+    // mostrar popup de confirmación
+    showConfirmUnfriend.value = true
+  }
+}
+
+const confirmUnfriend = async () => {
+  showConfirmUnfriend.value = false
+  await deleteFriend()
+}
+
+/* ===============================
    HELPERS
 ================================ */
 const truncateText = (text, limit) =>
@@ -201,9 +389,6 @@ const truncateText = (text, limit) =>
 
 const goToTrip = (id) => router.push(`/post/${id}`)
 
-/* ===============================
-   IR AL PERFIL DEL AMIGO
-================================ */
 const goToUser = (id) => {
   showFriends.value = false
   router.push(`/user/${id}`)
@@ -214,9 +399,11 @@ const goToUser = (id) => {
 ================================ */
 onMounted(async () => {
   loading.value = true
+  await loadCurrentUser()
   await loadProfile()
   await loadTrips()
   await loadFriends()
+  await loadFriendStatus()
   loading.value = false
 })
 
@@ -228,6 +415,7 @@ watch(
     await loadProfile()
     await loadTrips()
     await loadFriends()
+    await loadFriendStatus()
     loading.value = false
   }
 )
@@ -283,7 +471,7 @@ watch(
 .profile-text {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: 0.6rem;
 }
 
 .name-friends-row {
@@ -319,6 +507,29 @@ watch(
 
 .friends-btn:hover {
   background: #e0e0e0;
+}
+
+/* === Botón de acción de amigo === */
+.friend-action-btn {
+  margin-top: 0.3rem;
+  background: #02a18f;
+  color: #fff;
+  padding: 0.4rem 1.2rem;
+  border-radius: 10px;
+  border: none;
+  font-weight: 500;
+  cursor: pointer;
+  transition: 0.2s;
+  font-size: 0.9rem;
+}
+
+.friend-action-btn[disabled] {
+  opacity: 0.7;
+  cursor: default;
+}
+
+.friend-action-btn:hover:not([disabled]) {
+  background: #028270;
 }
 
 /* === Trips === */
@@ -393,7 +604,7 @@ watch(
   color: #fff;
 }
 
-/* === Friends Modal === */
+/* === Modal genérico === */
 .modal-overlay {
   position: fixed;
   inset: 0;
@@ -437,6 +648,7 @@ watch(
   opacity: 1;
 }
 
+/* Lista de amigos en popup */
 .friend-item {
   display: flex;
   align-items: center;
@@ -467,5 +679,31 @@ watch(
   text-align: center;
   padding: 1rem 0;
   opacity: 0.8;
+}
+
+/* Botones del modal de eliminar amigo */
+.modal-actions {
+  margin-top: 1.5rem;
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.7rem;
+}
+
+.btn-secondary {
+  background: #ccc;
+  color: #111;
+  border: none;
+  border-radius: 8px;
+  padding: 0.4rem 0.9rem;
+  cursor: pointer;
+}
+
+.btn-danger {
+  background: #e74c3c;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 0.4rem 0.9rem;
+  cursor: pointer;
 }
 </style>
