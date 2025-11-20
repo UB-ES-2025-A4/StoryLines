@@ -24,7 +24,7 @@
             <h2 class="username">{{ profile.username }}</h2>
 
             <button class="friends-btn" @click="showFriends = true">
-              {{ friends.length }} amigos
+              Amigos | {{ friends.length }} 
             </button>
           </div>
 
@@ -93,20 +93,18 @@
           Este usuario no tiene amigos todavía.
         </div>
 
-        <!-- amigos clicables -->
+        <div class="friends-list-scroll">
         <div
           v-for="f in friends"
           :key="f.id"
           class="friend-item"
           @click="goToUser(f.id)"
         >
-          <img
-            :src="f.avatar_url || defaultAvatar"
-            class="friend-avatar"
-            alt="Avatar amigo"
-          />
+          <img :src="f.avatar_url || defaultAvatar" class="friend-avatar" />
           <span class="friend-username">{{ f.username }}</span>
         </div>
+      </div>
+
       </div>
     </div>
 
@@ -673,10 +671,6 @@ watch(
   transition: 0.2s;
 }
 
-.friend-item:hover {
-  background: rgba(255, 255, 255, 0.1);
-}
-
 .friend-avatar {
   width: 50px;
   height: 50px;
@@ -720,4 +714,26 @@ watch(
   padding: 0.4rem 0.9rem;
   cursor: pointer;
 }
+
+/* Scroll para lista de amigos (máx. 5 amigos visibles) */
+.friends-list-scroll {
+  max-height: 320px;      /* ≈ 5 amigos (5 × ~60px) */
+  overflow-y: auto;
+  padding-right: 0.5rem;
+}
+
+/* Barra de scroll bonita */
+.friends-list-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+
+.friends-list-scroll::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 4px;
+}
+
+.friends-list-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.5);
+}
+
 </style>
