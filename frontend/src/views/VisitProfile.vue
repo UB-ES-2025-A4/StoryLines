@@ -83,7 +83,13 @@
           Este usuario no tiene amigos todavía.
         </div>
 
-        <div v-for="f in friends" :key="f.id" class="friend-item">
+        <!-- 👉 AQUÍ EL CAMBIO: ahora cada amigo es clicable -->
+        <div
+          v-for="f in friends"
+          :key="f.id"
+          class="friend-item"
+          @click="goToUser(f.id)"
+        >
           <img
             :src="f.avatar_url || defaultAvatar"
             class="friend-avatar"
@@ -141,7 +147,6 @@ const loadProfile = async () => {
 
 /* ===============================
    CARGAR VIAJES PUBLICADOS
-   (el backend ya filtra status = 'published')
 ================================ */
 const loadTrips = async () => {
   try {
@@ -150,7 +155,6 @@ const loadTrips = async () => {
 
     const body = await res.json()
     if (body.ok) {
-      // Solo viajes de este usuario
       trips.value = (body.trips || []).filter(
         (t) => t.userId === userId.value
       )
@@ -164,8 +168,7 @@ const loadTrips = async () => {
 }
 
 /* ===============================
-   CARGAR AMIGOS (SOLO ACCEPTED)
-   El backend ya filtra status = 'accepted'
+   CARGAR AMIGOS ACEPTADOS
 ================================ */
 const loadFriends = async () => {
   try {
@@ -180,7 +183,7 @@ const loadFriends = async () => {
           username: f.friend?.username,
           avatar_url: f.friend?.avatar_url
         }))
-        .filter((f) => f.id) // limpia posibles nulos
+        .filter((f) => f.id)
     } else {
       friends.value = []
     }
@@ -199,7 +202,15 @@ const truncateText = (text, limit) =>
 const goToTrip = (id) => router.push(`/post/${id}`)
 
 /* ===============================
-   CARGAR TODO AL ENTRAR
+   IR AL PERFIL DEL AMIGO
+================================ */
+const goToUser = (id) => {
+  showFriends.value = false
+  router.push(`/user/${id}`)
+}
+
+/* ===============================
+   LOAD
 ================================ */
 onMounted(async () => {
   loading.value = true
@@ -209,9 +220,6 @@ onMounted(async () => {
   loading.value = false
 })
 
-/* ===============================
-   REACCIONAR SI CAMBIA EL :id
-================================ */
 watch(
   () => route.params.id,
   async (newId) => {
@@ -435,6 +443,12 @@ watch(
   gap: 1rem;
   padding: 0.8rem 0;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.friend-item:hover {
+  background: rgba(255, 255, 255, 0.1);
 }
 
 .friend-avatar {
