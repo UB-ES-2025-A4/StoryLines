@@ -217,13 +217,11 @@ const loadFriends = async () => {
 
     const body = await res.json()
     if (body.ok) {
-      friends.value = (body.friends || [])
-        .map((f) => ({
-          id: f.friend?.id,
-          username: f.friend?.username,
-          avatar_url: f.friend?.avatar_url
-        }))
-        .filter((f) => f.id)
+      friends.value = body.friends.map(f => ({
+        id: f.friend.id,         // UUID real
+        username: f.friend.username,
+        avatar_url: f.friend.avatar_url
+      })).filter((f) => f.id)
     } else {
       friends.value = []
     }
@@ -347,6 +345,9 @@ const deleteFriend = async () => {
         friend_id: userId.value
       })
     })
+    console.log("🔥 Eliminando amistad...");
+    console.log("USER:", currentUserId.value);
+    console.log("FRIEND:", userId.value);
 
     if (!res.ok) throw new Error('Error al eliminar amistad')
 

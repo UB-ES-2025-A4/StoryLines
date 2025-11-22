@@ -12,10 +12,15 @@
         <span>Buscar</span>
       </div>
 
-      <div class="nav-item">
+      <router-link 
+        to="/notifications" 
+        class="nav-item" 
+        :class="{ 'active': $route.path === '/notifications' }"
+      >
         <svg class="icon" v-html="notificationsIcon"></svg>
         <span>Notificaciones</span>
-      </div>
+      </router-link>
+
 
       <router-link to="/createtrip" class="nav-item" :class="{ 'active': $route.path === '/create' }">
         <svg class="icon" v-html="createIcon"></svg>

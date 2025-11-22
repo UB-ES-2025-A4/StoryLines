@@ -9,6 +9,8 @@ import Profile from '@/views/Profile.vue'
 import CreatePost from '@/views/CreateTrip.vue'
 import Post from '@/views/Post.vue' 
 import VisitProfile from '@/views/VisitProfile.vue'
+import Notification from '@/views/Notification.vue'
+
 
 const routes = [
   {
@@ -53,6 +55,14 @@ const routes = [
     name: 'Post',
     component: Post
   }
+  ,
+  {
+  path: '/notifications',
+  name: 'notifications',
+  component: Notification,
+  meta: { requiresAuth: true }
+}
+
 ]
 
 
