@@ -240,7 +240,7 @@ export default {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            user_id: user.value.id,
+            user_id: session.user.id,
             friend_id: friendToDelete.value
           })
         })
