@@ -419,7 +419,7 @@ app.post('/api/friend-request/respond', async (req, res) => {
       const name1 = buildDisplayName(u1);
       const name2 = buildDisplayName(u2);
 
-      const message = `Solicitud aceptada, ahora ${name1} y ${name2} sois amigos`;
+      const message = `Solicitud aceptada, ahora ${name1} y ${name2} sois amigos.`;
 
       // Borrar notificación previa (friend-approval)
       await supabaseAdmin

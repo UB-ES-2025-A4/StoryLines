@@ -18,7 +18,7 @@
         class="notification-card"
       >
         <div class="user-avatar">
-            <img :src="n.user_avatar || '/default-avatar.png'" :alt="n.user_name" />
+          <img v-if="n.type !== 'friend-accepted'" :src="n.sender?.avatar_url || '/default-avatar.png'" :alt="n.sender?.display_name || n.sender?.username" />
         </div>
         <div class="notification-content">
           <div class="text">
@@ -171,7 +171,7 @@ onMounted(async () => {
 
 .accept {
   background: #375689;
-  padding: 5px 10px;
+  padding: 2px 8px;
   border: none;
   color: white;
   cursor: pointer;
@@ -185,7 +185,7 @@ onMounted(async () => {
 
 .reject {
   background: #363636;
-  padding: 5px 10px;
+  padding: 2px 6px;
   border: none;
   color: white;
   cursor: pointer;
@@ -202,8 +202,8 @@ onMounted(async () => {
 }
 
 .user-avatar img {
-  width: 40px;
-  height: 40px;
+  width: 50px;
+  height: 50px;
   border-radius: 50%;
   object-fit: cover;
 }
