@@ -35,7 +35,7 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`The application is running on http://localhost:${PORT}`));
 
 import { supabaseAdmin } from './config/supabase.js';
-import { searchUsers, getFriendshipStatus } from './services/searchService.js';
+import { searchUsers, getFriendshipStatus, validateFriendRequest } from './services/searchService.js';
 
 const isUUIDv4 = (s='') => /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(s);
 
@@ -319,11 +319,27 @@ app.get('/api/friends', async (req, res) => {
   }
 });
 
+// =====================================================
+// ENDPOINTS DE SOLICITUD DE AMISTAD (US1.10 - Task 3)
+// =====================================================
+
 app.post('/api/add-friend', async (req, res) => {
   try {
     const { user_id, friend_id } = req.body;
-    if (!user_id || !friend_id)
-      return res.status(400).json({ error: 'Faltan campos' });
+    
+    // Validación de campos requeridos
+    if (!user_id || !friend_id) {
+      return res.status(400).json({ error: 'Faltan campos: user_id y friend_id son requeridos' });
+    }
+
+    // Validar que se puede enviar la solicitud
+    const validation = await validateFriendRequest(user_id, friend_id);
+    
+    if (!validation.valid) {
+      // Determinar código de status apropiado
+      const statusCode = validation.error.includes('ya') ? 409 : 400;
+      return res.status(statusCode).json({ error: validation.error });
+    }
 
     // 1) Crear relación pending y devolver la fila
     const { data: friendship, error } = await supabaseAdmin
@@ -332,7 +348,6 @@ app.post('/api/add-friend', async (req, res) => {
       .select('*')
       .single();
     
-
     if (error) throw error;
 
     // 2) Sacar nombre del que envía la solicitud
@@ -359,7 +374,11 @@ app.post('/api/add-friend', async (req, res) => {
 
     if (notifErr) throw notifErr;
 
-    return res.json({ ok: true });
+    return res.json({ 
+      ok: true, 
+      message: 'Solicitud de amistad enviada correctamente',
+      friendshipId: friendship.id 
+    });
   } catch (e) {
     console.error('[ADD FRIEND ERROR]', e);
     res.status(500).json({ error: e.message });
