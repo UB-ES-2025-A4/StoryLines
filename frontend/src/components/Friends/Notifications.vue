@@ -108,7 +108,7 @@ onMounted(async () => {
 <style scoped>
 .notifications-panel {
   width: 350px;
-  background: #000000;
+  background: #0a0a0a;
   height: 100vh;
   overflow-y: auto;
   border-left: 1px solid #333;

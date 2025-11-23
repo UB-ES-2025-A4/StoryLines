@@ -89,7 +89,7 @@ const settingsIcon = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none
 
 .sidebar {
   width: 250px;
-  background: #000000;
+  background: #0a0a0a;
   padding: 1.5rem 1.5rem;
   display: flex;
   flex-direction: column;
