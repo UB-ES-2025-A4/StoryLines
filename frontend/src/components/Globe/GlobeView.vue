@@ -41,16 +41,18 @@
     <div v-if="noFriendsModal" class="floating-box-wrapper">
       <div class="floating-box">
         <h2>
-          {{ friends.length === 0
+          {{ !hasAcceptedFriends
             ? 'No tienes amigos todavía'
             : 'Ya tienes amigos ¿quieres añadir más?' }}
         </h2>
 
+
         <p v-if="suggestedUsers.length > 0">
-          {{ friends.length === 0
+          {{ !hasAcceptedFriends
             ? 'Aquí tienes algunas sugerencias para empezar:'
             : 'Aquí tienes algunas sugerencias de nuevos amigos:' }}
         </p>
+
 
         <p v-else class="no-more-users">
           Ya no hay más usuarios que sugerir.
@@ -63,7 +65,15 @@
             class="suggested-user"
           >
             <div class="user-info">
-              <img :src="user.avatar_url" alt="avatar" />
+              <img
+                :src="
+                  user.avatar_url && user.avatar_url.trim() !== ''
+                    ? user.avatar_url
+                    : defaultAvatar
+                "
+                alt="avatar"
+              />
+
               <span>{{ user.username }}</span>
             </div>
             <button
@@ -110,13 +120,18 @@ const noFriendsModal = ref(false)
 const suggestedUsers = ref([]) 
 const allSuggestedUsers = ref([])
 
-
+const defaultAvatar = '/default-avatar.png'
 
 const friendUserIds = computed(() => {
   return friends.value
     .map(f => f.friend?.id)
     .filter(Boolean) // elimina undefined/null
 })
+
+// 🔹 Comprueba si hay ALGÚN amigo con estado 'accepted'
+const hasAcceptedFriends = computed(() =>
+  friends.value.some(f => f.status === 'accepted')
+)
 
 
 const currentUserId = ref(null)
@@ -294,16 +309,18 @@ async function setMode(newMode) {
   mode.value = newMode
 
   if (newMode === "friends") {
-    if (!currentUserId.value) {
-      showAuthModal.value = true
-      return
-    }
-    if (friends.value.length === 0) {
-      await fetchSuggestedUsers()
-      noFriendsModal.value = true
-      return
-    }
+  if (!currentUserId.value) {
+    showAuthModal.value = true
+    return
   }
+  // 🔹 Mostrar popup si NO hay amigos aceptados
+  if (!hasAcceptedFriends.value) {
+    await fetchSuggestedUsers()
+    noFriendsModal.value = true
+    return
+  }
+}
+
 
   rebuildGlobeData()
 }

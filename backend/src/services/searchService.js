@@ -98,3 +98,59 @@ export async function getFriendshipStatus(userId, targetUserId) {
 
   return 'none';
 }
+
+/**
+ * Valida que se pueda enviar una solicitud de amistad
+ * @param {string} userId - ID del usuario que envía la solicitud
+ * @param {string} targetUserId - ID del usuario objetivo
+ * @returns {Promise<Object>} { valid: boolean, error?: string }
+ */
+export async function validateFriendRequest(userId, targetUserId) {
+  // Validación 1: No puedes enviarte solicitud a ti mismo
+  if (userId === targetUserId) {
+    return {
+      valid: false,
+      error: 'No puedes enviarte una solicitud de amistad a ti mismo'
+    };
+  }
+
+  // Validación 2: Verificar que el usuario objetivo existe
+  const { data: targetUser, error: userError } = await supabaseAdmin
+    .from('users')
+    .select('id')
+    .eq('id', targetUserId)
+    .single();
+
+  if (userError || !targetUser) {
+    return {
+      valid: false,
+      error: 'El usuario objetivo no existe'
+    };
+  }
+
+  // Validación 3: Verificar que no exista una relación previa
+  const currentStatus = await getFriendshipStatus(userId, targetUserId);
+
+  if (currentStatus === 'friends') {
+    return {
+      valid: false,
+      error: 'Ya son amigos'
+    };
+  }
+
+  if (currentStatus === 'pending_sent') {
+    return {
+      valid: false,
+      error: 'Ya has enviado una solicitud de amistad a este usuario'
+    };
+  }
+
+  if (currentStatus === 'pending_received') {
+    return {
+      valid: false,
+      error: 'Este usuario ya te ha enviado una solicitud. Acéptala desde tus notificaciones.'
+    };
+  }
+
+  return { valid: true };
+}
