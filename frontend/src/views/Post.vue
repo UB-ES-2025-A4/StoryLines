@@ -53,11 +53,10 @@
                 </div>
 
                 <div class="stop-details">
-                  <h3 class="stop-title">{{ stop.city || 'Parada sin nombre' }}</h3>
+                  <h3 class="stop-title">{{ stop.country }}</h3>
                   <div class="stop-info">
-                    <p><strong>City:</strong> {{ stop.city || '—' }}</p>
-                    <p><strong>Country:</strong> {{ stop.country || '—' }}</p>
-                    <p><strong>Description:</strong> {{ stop.description || 'Sin descripción' }}</p>
+                    <p><strong>Ciudad:</strong> {{ stop.city || '—' }}</p>
+                    <p><strong>Descripción:</strong> {{ stop.description || 'Sin descripción' }}</p>
                   </div>
                 </div>
               </div>
