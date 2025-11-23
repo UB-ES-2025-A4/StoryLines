@@ -353,7 +353,7 @@ app.post('/api/add-friend', async (req, res) => {
         sender_id: user_id,
         friendship_id: friendship.id,
         type: 'friend-approval',
-        message: `${senderName} ha solicitado ser tu amigo`
+        message: `${senderName} te ha enviado una solicitud de amistad.`
       });
 
     if (notifErr) throw notifErr;
