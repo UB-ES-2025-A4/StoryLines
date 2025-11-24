@@ -50,7 +50,7 @@
     </div>
 
     <div class="notification-panel" :class="{ 'show': showNotifications }">
-      <Notifications @close="showNotifications = false" />
+      <Notifications :isVisible="showNotifications" @close="showNotifications = false" />
     </div>
   </div>
 </template>
