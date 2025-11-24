@@ -22,11 +22,6 @@ app.get('/health', (req, res) => {
 
 //app.get('/', (req, res) => res.send('Servidor funcionando '));
 
-const PORT = process.env.PORT || 3000;
-
-
-app.listen(PORT, () => console.log(` Backend en http://localhost:${PORT}`));
-
 import { supabaseAdmin } from './config/supabase.js';
 
 const isUUIDv4 = (s='') => /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(s);
@@ -414,3 +409,6 @@ app.use(express.static(frontendPath));
 app.get('/*', (req, res) => {
   res.sendFile(path.join(frontendPath, 'index.html'));
 });
+
+// ⬇️⬇️⬇️ IMPORTANTE PARA TESTEAR
+export default app;
