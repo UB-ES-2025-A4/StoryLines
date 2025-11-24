@@ -65,7 +65,7 @@
 <script setup>
 import { ref } from 'vue'
 import { useRoute } from 'vue-router'
-import Searcher from '@/components/Searcher.vue'
+import Searcher from '@/components/Friends/Searcher.vue'
 
 const route = useRoute()
 const showNotifications = ref(false)
