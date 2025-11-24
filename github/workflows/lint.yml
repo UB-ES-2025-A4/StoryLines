@@ -1,0 +1,37 @@
+name: Lint Checker
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      # FRONTEND
+      - name: Install frontend deps
+        working-directory: frontend
+        run: npm install
+
+      - name: Run frontend lint
+        working-directory: frontend
+        run: npm run lint
+
+      # BACKEND
+      - name: Install backend deps
+        working-directory: backend
+        run: npm install
+
+      - name: Run backend lint
+        working-directory: backend
+        run: npm run lint
