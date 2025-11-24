@@ -35,6 +35,7 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`The application is running on http://localhost:${PORT}`));
 
 import { supabaseAdmin } from './config/supabase.js';
+import { searchUsers, getFriendshipStatus, validateFriendRequest } from './services/searchService.js';
 
 const isUUIDv4 = (s='') => /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(s);
 
@@ -318,11 +319,27 @@ app.get('/api/friends', async (req, res) => {
   }
 });
 
+// =====================================================
+// ENDPOINTS DE SOLICITUD DE AMISTAD (US1.10 - Task 3)
+// =====================================================
+
 app.post('/api/add-friend', async (req, res) => {
   try {
     const { user_id, friend_id } = req.body;
-    if (!user_id || !friend_id)
-      return res.status(400).json({ error: 'Faltan campos' });
+    
+    // Validación de campos requeridos
+    if (!user_id || !friend_id) {
+      return res.status(400).json({ error: 'Faltan campos: user_id y friend_id son requeridos' });
+    }
+
+    // Validar que se puede enviar la solicitud
+    const validation = await validateFriendRequest(user_id, friend_id);
+    
+    if (!validation.valid) {
+      // Determinar código de status apropiado
+      const statusCode = validation.error.includes('ya') ? 409 : 400;
+      return res.status(statusCode).json({ error: validation.error });
+    }
 
     // 1) Crear relación pending y devolver la fila
     const { data: friendship, error } = await supabaseAdmin
@@ -331,7 +348,6 @@ app.post('/api/add-friend', async (req, res) => {
       .select('*')
       .single();
     
-
     if (error) throw error;
 
     // 2) Sacar nombre del que envía la solicitud
@@ -358,7 +374,11 @@ app.post('/api/add-friend', async (req, res) => {
 
     if (notifErr) throw notifErr;
 
-    return res.json({ ok: true });
+    return res.json({ 
+      ok: true, 
+      message: 'Solicitud de amistad enviada correctamente',
+      friendshipId: friendship.id 
+    });
   } catch (e) {
     console.error('[ADD FRIEND ERROR]', e);
     res.status(500).json({ error: e.message });
@@ -693,6 +713,78 @@ app.get("/api/profile-data", async (req, res) => {
   }
 });
 
+// =====================================================
+// ENDPOINTS DE BÚSQUEDA DE USUARIOS (US1.10 - Task 2)
+// =====================================================
+
+/**
+ * GET /api/search/users
+ * Busca usuarios por username
+ * Query params: q (query de búsqueda), userId (ID del usuario actual)
+ */
+app.get('/api/search/users', async (req, res) => {
+  try {
+    const { q, userId } = req.query;
+
+    if (!q || q.trim().length === 0) {
+      return res.status(400).json({ error: 'Query de búsqueda requerido (parámetro "q")' });
+    }
+
+    if (!userId) {
+      return res.status(400).json({ error: 'userId requerido' });
+    }
+
+    // Buscar usuarios (prioriza amigos, ordena alfabéticamente, limita a 10)
+    const results = await searchUsers(q, userId);
+
+    // Añadir status de amistad a cada resultado
+    const resultsWithStatus = await Promise.all(
+      results.map(async (user) => {
+        const friendshipStatus = await getFriendshipStatus(userId, user.id);
+        return {
+          id: user.id,
+          username: user.username,
+          displayName: user.display_name,
+          avatarUrl: user.avatar_url,
+          isFriend: user.isFriend,
+          friendshipStatus: friendshipStatus // 'friends', 'pending_sent', 'pending_received', 'none'
+        };
+      })
+    );
+
+    res.json({ users: resultsWithStatus });
+  } catch (error) {
+    console.error('Error en búsqueda de usuarios:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+});
+
+/**
+ * GET /api/friend-status/:targetUserId
+ * Obtiene el estado de amistad con un usuario específico
+ * Query params: userId (ID del usuario actual)
+ */
+app.get('/api/friend-status/:targetUserId', async (req, res) => {
+  try {
+    const { targetUserId } = req.params;
+    const { userId } = req.query;
+
+    if (!userId) {
+      return res.status(400).json({ error: 'userId requerido' });
+    }
+
+    const status = await getFriendshipStatus(userId, targetUserId);
+
+    res.json({ status });
+  } catch (error) {
+    console.error('Error obteniendo estado de amistad:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+});
+
+// =====================================================
+// SERVIR FRONTEND
+// =====================================================
 
 // Servir el frontend compilado (build de Vue/React)
 const frontendPath = path.join(__dirname, '../../frontend/dist');
