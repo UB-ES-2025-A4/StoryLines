@@ -369,7 +369,7 @@ app.post('/api/add-friend', async (req, res) => {
         sender_id: user_id,
         friendship_id: friendship.id,
         type: 'friend-approval',
-        message: `${senderName} ha solicitado ser tu amigo`
+        message: `${senderName} te ha enviado una solicitud de amistad.`
       });
 
     if (notifErr) throw notifErr;
@@ -439,7 +439,7 @@ app.post('/api/friend-request/respond', async (req, res) => {
       const name1 = buildDisplayName(u1);
       const name2 = buildDisplayName(u2);
 
-      const message = `Solicitud aceptada, ahora ${name1} y ${name2} sois amigos`;
+      const message = `Solicitud aceptada, ahora ${name1} y ${name2} sois amigos.`;
 
       // Borrar notificación previa (friend-approval)
       await supabaseAdmin

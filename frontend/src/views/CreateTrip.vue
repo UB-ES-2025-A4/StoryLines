@@ -44,7 +44,7 @@
                     <input type="date" v-model="trip.end_date" />
                   </div>
                 </div>
-                <label>Descripción (opcional)</label>
+                <label>Descripción</label>
                 <textarea v-model="trip.description" rows="3"></textarea>
               </div>
             </div>
@@ -69,7 +69,7 @@
       <h3 v-if="index === 0" class="stop-origin-title">Origen del viaje</h3>
       <div class="input-container stop-card">
         <div class="image-upload">
-          <label>Fotos (opcional)</label>
+          <label>Fotos</label>
           <div class="stop-images">
             <button class="nav-arrow left" @click="changeStopImage(stop, -1)" :disabled="stop.currentImageIndex === 0 || stop.images.length <= 1">
               <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -106,7 +106,7 @@
           <button @click="openStopFile(index)" class="upload-btn">Seleccionar imágenes</button>
         </div>
         <div class="form-fields">
-          <label>Ciudad (opcional)</label>
+          <label>Ciudad</label>
           <input v-model="stop.city" type="text" placeholder="Ej: Tokio"/>
           <label>País</label>
           <input v-model="stop.countrySearch" type="text" placeholder="Buscar país..." @focus="stop.countryOpen = true" @input="stop.countryOpen = true" />
@@ -118,7 +118,7 @@
               No hay resultados
             </li>
           </ul>
-          <label>Descripción (opcional)</label>
+          <label>Descripción</label>
           <textarea v-model="stop.description" rows="3"></textarea>
         </div>
         <button v-if="index > 0" class="remove-stop-btn" @click="removeStop(index)">X</button>

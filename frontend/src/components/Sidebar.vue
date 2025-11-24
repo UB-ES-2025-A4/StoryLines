@@ -54,10 +54,11 @@
     </div>
 
     <div class="notification-panel" :class="{ 'show': showNotifications }">
-      <Notifications @close="showNotifications = false" />
+    <Notifications :isVisible="showNotifications" @close="showNotifications = false" />
     </div>
     <div class="searcher-panel" :class="{ 'show': showSearcher }">
       <Searcher :isOpen="showSearcher" @close="showSearcher = false" />
+
     </div>
   </div>
 </template>
@@ -66,6 +67,7 @@
 import { ref } from 'vue'
 import { useRoute } from 'vue-router'
 import Searcher from '@/components/Friends/Searcher.vue'
+import Notifications from './Friends/Notifications.vue'
 
 const route = useRoute()
 const showNotifications = ref(false)

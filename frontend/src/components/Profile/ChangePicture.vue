@@ -64,64 +64,63 @@ export default {
 
     // redimensionar grandes imágenes antes de usarla
     const resizeImageIfNeeded = (image, mimeType) => {
-      const MAX_SIZE = 1024; // cambia si quieres
+      const MAX_SIZE = 1024;
 
       if (image.width <= MAX_SIZE && image.height <= MAX_SIZE) {
-        return image; // No hace falta redimensionar
+        return Promise.resolve(image); // Devolver una promesa resuelta
       }
 
-      const scale = MAX_SIZE / Math.max(image.width, image.height);
-      const newW = image.width * scale;
-      const newH = image.height * scale;
+      return new Promise((resolve) => {
+        const scale = MAX_SIZE / Math.max(image.width, image.height);
+        const newW = image.width * scale;
+        const newH = image.height * scale;
 
-      const off = document.createElement("canvas");
-      off.width = newW;
-      off.height = newH;
+        const off = document.createElement("canvas");
+        off.width = newW;
+        off.height = newH;
 
-      const ctx = off.getContext("2d");
-      ctx.drawImage(image, 0, 0, newW, newH);
+        const ctx = off.getContext("2d");
+        ctx.drawImage(image, 0, 0, newW, newH);
 
-      // devolvemos una nueva imagen reducida
-      const resized = new Image();
-      resized.src = off.toDataURL(mimeType);
-
-      return resized;
+        const resized = new Image();
+        resized.onload = () => resolve(resized); // Esperar a que se cargue
+        resized.src = off.toDataURL(mimeType);
+      });
     };
 
-    const onFileChange = (e) => {
+
+    const onFileChange = async (e) => {
       const file = e.target.files[0];
       if (!file) return;
 
       const reader = new FileReader();
-      reader.onload = (event) => {
+      reader.onload = async (event) => {
         const image = new Image();
-        image.onload = () => {
+        image.onload = async () => {
+          // Usar await aquí
+          const reducedImage = await resizeImageIfNeeded(image, file.type);
+          
+          img.value = reducedImage;
+          imageMime.value = file.type;
 
-          // REDIMENSIONAR SI ES NECESARIO
-          const reducedImage = resizeImageIfNeeded(image, file.type);
+          const ctx = canvas.value.getContext("2d");
+          baseScale.value = Math.max(
+            canvas.value.width / reducedImage.width,
+            canvas.value.height / reducedImage.height
+          );
+          scale.value = baseScale.value;
 
-          reducedImage.onload = () => {
-            img.value = reducedImage;
-            imageMime.value = file.type;
+          offsetX.value = (canvas.value.width - reducedImage.width * scale.value) / 2;
+          offsetY.value = (canvas.value.height - reducedImage.height * scale.value) / 2;
 
-            const ctx = canvas.value.getContext("2d");
-            baseScale.value = Math.max(
-              canvas.value.width / reducedImage.width,
-              canvas.value.height / reducedImage.height
-            );
-            scale.value = baseScale.value;
-
-            offsetX.value = (canvas.value.width - reducedImage.width * scale.value) / 2;
-            offsetY.value = (canvas.value.height - reducedImage.height * scale.value) / 2;
-
-            drawImage(ctx);
-          };
+          drawImage(ctx);
         };
         image.src = event.target.result;
       };
 
       reader.readAsDataURL(file);
     };
+
 
     const drawImage = (ctx) => {
       ctx.clearRect(0, 0, canvas.value.width, canvas.value.height);
