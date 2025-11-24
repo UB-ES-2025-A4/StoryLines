@@ -73,10 +73,18 @@ const showSearcher = ref(false)
 
 const toggleNotifications = () => {
   showNotifications.value = !showNotifications.value
+  if (showNotifications.value) {
+    showSearcher.value = false
+  }
 }
-const toggleSearcher= () => {
+
+const toggleSearcher = () => {
   showSearcher.value = !showSearcher.value
+  if (showSearcher.value) {
+    showNotifications.value = false
+  }
 }
+
 // ICONOS (mantener los mismos)
 const homeIcon = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 9L12 2L21 9V20C21 21.1 20.1 22 19 22H5C3.9 22 3 21.1 3 20V9Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`
 const createIcon = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 4V20M4 12H20" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`
