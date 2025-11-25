@@ -35,7 +35,6 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`The application is running on http://localhost:${PORT}`));
 
 import { supabaseAdmin } from './config/supabase.js';
-import { searchUsers, getFriendshipStatus, validateFriendRequest } from './services/searchService.js';
 
 const isUUIDv4 = (s='') => /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(s);
 
@@ -220,6 +219,8 @@ app.post('/api/delete-avatar', async (req, res) => {
   }
 });
 
+
+// Obtener viajes
 app.get('/api/trips', async (req, res) => {
   try {
     // Obtener todos los viajes con usuario
@@ -319,27 +320,11 @@ app.get('/api/friends', async (req, res) => {
   }
 });
 
-// =====================================================
-// ENDPOINTS DE SOLICITUD DE AMISTAD (US1.10 - Task 3)
-// =====================================================
-
 app.post('/api/add-friend', async (req, res) => {
   try {
     const { user_id, friend_id } = req.body;
-    
-    // Validación de campos requeridos
-    if (!user_id || !friend_id) {
-      return res.status(400).json({ error: 'Faltan campos: user_id y friend_id son requeridos' });
-    }
-
-    // Validar que se puede enviar la solicitud
-    const validation = await validateFriendRequest(user_id, friend_id);
-    
-    if (!validation.valid) {
-      // Determinar código de status apropiado
-      const statusCode = validation.error.includes('ya') ? 409 : 400;
-      return res.status(statusCode).json({ error: validation.error });
-    }
+    if (!user_id || !friend_id)
+      return res.status(400).json({ error: 'Faltan campos' });
 
     // 1) Crear relación pending y devolver la fila
     const { data: friendship, error } = await supabaseAdmin
@@ -348,6 +333,7 @@ app.post('/api/add-friend', async (req, res) => {
       .select('*')
       .single();
     
+
     if (error) throw error;
 
     // 2) Sacar nombre del que envía la solicitud
@@ -374,11 +360,7 @@ app.post('/api/add-friend', async (req, res) => {
 
     if (notifErr) throw notifErr;
 
-    return res.json({ 
-      ok: true, 
-      message: 'Solicitud de amistad enviada correctamente',
-      friendshipId: friendship.id 
-    });
+    return res.json({ ok: true });
   } catch (e) {
     console.error('[ADD FRIEND ERROR]', e);
     res.status(500).json({ error: e.message });
@@ -565,8 +547,6 @@ app.post('/api/delete-friend', async (req, res) => {
 });
 
 
-
-
 app.get('/api/notifications', async (req, res) => {
   try {
     const { userId } = req.query;
@@ -602,12 +582,151 @@ app.get('/api/notifications', async (req, res) => {
 });
 
 
+// LIKE a un viaje con notificación y conteo actualizado
+app.post('/api/trips/:tripId/like', async (req, res) => {
+  try {
+    const { tripId } = req.params;
+    const { userId } = req.body;
+
+    if (!tripId || !userId) {
+      return res.status(400).json({ ok: false, error: "Faltan datos" });
+    }
+
+    // 1) ¿Existe ya el like?
+    const { data: existing } = await supabaseAdmin
+      .from("trip_likes")
+      .select("id")
+      .eq("trip_id", tripId)
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    if (!existing) {
+      // Insertar like
+      const { error: insertError } = await supabaseAdmin
+        .from("trip_likes")
+        .insert({ trip_id: tripId, user_id: userId });
+
+      if (insertError && insertError.code !== "23505") {
+        return res.status(500).json({ ok: false, error: insertError.message });
+      }
+
+      // Incrementar likes en trips (RPC)
+      await supabaseAdmin.rpc("increment_trip_likes", {
+        trip_id_input: tripId,
+      });
+    }
+
+    // 2) Notificación si el like es de otra persona
+    const { data: tripData } = await supabaseAdmin
+      .from("trips")
+      .select("user_id, trip_name")
+      .eq("id", tripId)
+      .single();
+
+    if (tripData?.user_id && tripData.user_id !== userId) {
+      const { data: likerData } = await supabaseAdmin
+        .from("users")
+        .select("username, display_name")
+        .eq("id", userId)
+        .single();
+
+      const senderName =
+        likerData?.display_name || likerData?.username || "Alguien";
+
+      await supabaseAdmin.from("notifications").insert({
+        receptor_id: tripData.user_id,
+        sender_id: userId,
+        type: "trip-like",
+        message: `${senderName} le ha dado like a tu viaje "${tripData.trip_name}".`,
+      });
+    }
+
+    // 3) Conteo actualizado
+    const { count } = await supabaseAdmin
+      .from("trip_likes")
+      .select("*", { head: true, count: "exact" })
+      .eq("trip_id", tripId);
+
+    return res.json({
+      ok: true,
+      userLiked: true,
+      likes: count || 0,
+    });
+  } catch (e) {
+    console.error("[LIKE ERROR]", e);
+    return res.status(500).json({ ok: false, error: "Error interno" });
+  }
+});
+
+// UNLIKE a un viaje con conteo actualizado
+app.delete('/api/trips/:tripId/like/:userId', async (req, res) => {
+  try {
+    const { tripId, userId } = req.params;
+
+    if (!tripId || !userId) {
+      return res.status(400).json({ ok: false, error: "Faltan datos" });
+    }
+
+    // 1) Borrar like
+    const { error: deleteError } = await supabaseAdmin
+      .from("trip_likes")
+      .delete()
+      .eq("trip_id", tripId)
+      .eq("user_id", userId);
+
+    if (deleteError) {
+      return res.status(500).json({ ok: false, error: deleteError.message });
+    }
+
+    // 2) Obtener informacion del viaje
+    const { data: tripData, error: tripError } = await supabaseAdmin
+      .from("trips")
+      .select("user_id, trip_name")
+      .eq("id", tripId)
+      .single();
+
+    if (tripError) {
+      return res.status(500).json({ ok: false, error: "Viaje no encontrado." });
+    }
+
+    // 3) Borrar notificación previa de like (si existe)
+    await supabaseAdmin
+      .from("notifications")
+      .delete()
+      .eq("receptor_id", tripData.user_id)
+      .eq("sender_id", userId)
+      .eq("type", "trip-like");
+
+    // 4) Decrementar en trips usando tu RPC
+    await supabaseAdmin.rpc("decrement_trip_likes", {
+      trip_id_input: tripId,
+    });
+
+    // 5) Likes actualizados
+    const { count } = await supabaseAdmin
+      .from("trip_likes")
+      .select("*", { head: true, count: "exact" })
+      .eq("trip_id", tripId);
+
+    return res.json({
+      ok: true,
+      userLiked: false,
+      likes: count || 0,
+    });
+  } catch (e) {
+    console.error("[UNLIKE ERROR]", e);
+    return res.status(500).json({ ok: false, error: "Error interno" });
+  }
+});
+
+
+
 app.get('/api/trips/:id', async (req, res) => {
   try {
     const tripId = req.params.id;
     if (!tripId) return res.status(400).json({ ok: false, error: 'Falta el ID del viaje' });
 
-    // 1️⃣ Viaje principal
+    // Viaje principal
     const { data: trip, error: tripError } = await supabaseAdmin
       .from('trips')
       .select(`
@@ -628,7 +747,7 @@ app.get('/api/trips/:id', async (req, res) => {
       return res.status(404).json({ ok: false, error: tripError?.message || 'Viaje no encontrado' });
     }
 
-    // 2️⃣ Paradas
+    // Paradas
     const { data: stops, error: stopsError } = await supabaseAdmin
       .from('trip_stops')
       .select(`
@@ -644,7 +763,7 @@ app.get('/api/trips/:id', async (req, res) => {
       return res.status(500).json({ ok: false, error: 'Error obteniendo paradas' });
     }
 
-    // 3️⃣ Comentarios (NO ROMPER SI LA TABLA NO EXISTE)
+    // Comentarios
     let comments = [];
 
     const { data: commentsData, error: commentsError } = await supabaseAdmin
@@ -657,7 +776,24 @@ app.get('/api/trips/:id', async (req, res) => {
       comments = commentsData;
     }
 
-    // 4️⃣ Formateo
+    // like count
+    const { count: likesCount } = await supabaseAdmin
+      .from('trip_likes')
+      .select('*', { count: 'exact', head: true })
+      .eq('trip_id', tripId);
+
+    let likedByCurrentUser = false;
+
+    if (req.query.userId) {
+      const { data: likeData } = await supabaseAdmin
+        .from('trip_likes')
+        .select('*')
+        .eq('trip_id', tripId)
+        .eq('user_id', req.query.userId);
+      likedByCurrentUser = likeData.length > 0;
+    }
+
+    // Formateo
     const formattedStops = stops.map(stop => ({
       title: stop.city || 'Stop',
       city: stop.city,
@@ -683,7 +819,9 @@ app.get('/api/trips/:id', async (req, res) => {
         color: trip.users?.user_color
       },
       stops: formattedStops,
-      comments
+      comments,
+      likes: likesCount || 0,
+      userLiked: likedByCurrentUser
     };
 
     res.json({ ok: true, trip: fullTrip });
@@ -692,6 +830,85 @@ app.get('/api/trips/:id', async (req, res) => {
     res.status(500).json({ ok: false, error: 'Error interno obteniendo el viaje' });
   }
 });
+
+// LIKE a un viaje
+app.post('/api/trips/:tripId/like', async (req, res) => {
+  try {
+    const { tripId } = req.params;
+    const { userId } = req.body;
+
+    if (!tripId || !userId) {
+      return res.status(400).json({ ok: false, error: "Faltan datos" });
+    }
+
+    // Crear like (ignora duplicados)
+    const { error: likeError } = await supabaseAdmin
+      .from("trip_likes")
+      .insert({ trip_id: tripId, user_id: userId });
+
+    if (likeError && likeError.code !== "23505") { 
+      return res.status(500).json({ ok: false, error: likeError.message });
+    }
+
+    // Obtener nuevo conteo
+    const { count } = await supabaseAdmin
+      .from("trip_likes")
+      .select("*", { head: true, count: "exact" })
+      .eq("trip_id", tripId);
+
+    return res.json({
+      ok: true,
+      userLiked: true,
+      likes: count || 0
+    });
+
+  } catch (e) {
+    console.error("[LIKE ERROR]", e);
+    return res.status(500).json({ ok: false, error: "Error interno" });
+  }
+});
+
+
+// UNLIKE a un viaje
+app.delete('/api/trips/:tripId/like/:userId', async (req, res) => {
+  try {
+    const { tripId, userId } = req.params;
+
+    if (!tripId || !userId) {
+      return res.status(400).json({ ok: false, error: "Faltan datos" });
+    }
+
+    // Eliminar like
+    const { error: deleteError } = await supabaseAdmin
+      .from("trip_likes")
+      .delete()
+      .eq("trip_id", tripId)
+      .eq("user_id", userId);
+
+    if (deleteError) {
+      return res.status(500).json({ ok: false, error: deleteError.message });
+    }
+
+    // Obtener nuevo conteo
+    const { count } = await supabaseAdmin
+      .from("trip_likes")
+      .select("*", { head: true, count: "exact" })
+      .eq("trip_id", tripId);
+
+    return res.json({
+      ok: true,
+      userLiked: false,
+      likes: count || 0
+    });
+
+  } catch (e) {
+    console.error("[UNLIKE ERROR]", e);
+    return res.status(500).json({ ok: false, error: "Error interno" });
+  }
+});
+
+
+      
 
 app.get("/api/profile-data", async (req, res) => {
   try {
@@ -713,78 +930,6 @@ app.get("/api/profile-data", async (req, res) => {
   }
 });
 
-// =====================================================
-// ENDPOINTS DE BÚSQUEDA DE USUARIOS (US1.10 - Task 2)
-// =====================================================
-
-/**
- * GET /api/search/users
- * Busca usuarios por username
- * Query params: q (query de búsqueda), userId (ID del usuario actual)
- */
-app.get('/api/search/users', async (req, res) => {
-  try {
-    const { q, userId } = req.query;
-
-    if (!q || q.trim().length === 0) {
-      return res.status(400).json({ error: 'Query de búsqueda requerido (parámetro "q")' });
-    }
-
-    if (!userId) {
-      return res.status(400).json({ error: 'userId requerido' });
-    }
-
-    // Buscar usuarios (prioriza amigos, ordena alfabéticamente, limita a 10)
-    const results = await searchUsers(q, userId);
-
-    // Añadir status de amistad a cada resultado
-    const resultsWithStatus = await Promise.all(
-      results.map(async (user) => {
-        const friendshipStatus = await getFriendshipStatus(userId, user.id);
-        return {
-          id: user.id,
-          username: user.username,
-          displayName: user.display_name,
-          avatarUrl: user.avatar_url,
-          isFriend: user.isFriend,
-          friendshipStatus: friendshipStatus // 'friends', 'pending_sent', 'pending_received', 'none'
-        };
-      })
-    );
-
-    res.json({ users: resultsWithStatus });
-  } catch (error) {
-    console.error('Error en búsqueda de usuarios:', error);
-    res.status(500).json({ error: 'Error interno del servidor' });
-  }
-});
-
-/**
- * GET /api/friend-status/:targetUserId
- * Obtiene el estado de amistad con un usuario específico
- * Query params: userId (ID del usuario actual)
- */
-app.get('/api/friend-status/:targetUserId', async (req, res) => {
-  try {
-    const { targetUserId } = req.params;
-    const { userId } = req.query;
-
-    if (!userId) {
-      return res.status(400).json({ error: 'userId requerido' });
-    }
-
-    const status = await getFriendshipStatus(userId, targetUserId);
-
-    res.json({ status });
-  } catch (error) {
-    console.error('Error obteniendo estado de amistad:', error);
-    res.status(500).json({ error: 'Error interno del servidor' });
-  }
-});
-
-// =====================================================
-// SERVIR FRONTEND
-// =====================================================
 
 // Servir el frontend compilado (build de Vue/React)
 const frontendPath = path.join(__dirname, '../../frontend/dist');
