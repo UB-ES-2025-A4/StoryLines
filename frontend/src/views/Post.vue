@@ -7,9 +7,11 @@
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
     backgroundBlendMode: 'overlay'
   }">
+
     <!-- Sidebar -->
     <Sidebar />
 
+    <!-- Contenido principal -->
     <div class="main-content">
       <div v-if="loading" class="loading">Cargando viaje...</div>
       <div v-else-if="error" class="error">{{ error }}</div>
@@ -19,6 +21,7 @@
           <h1 class="trip-title">{{ trip.trip_name }}</h1>
           <p class="trip-description">{{ trip.description }}</p>
 
+          <!-- Trip actions -->
           <div class="trip-actions">
             <button class="action-button like-button" @click="toggleLike">
               <span class="like-icon" v-html="isLiked ? likeFilledIcon : likeOutlineIcon"></span>
@@ -41,15 +44,13 @@
             <div v-for="(stop, index) in trip.stops || []" :key="index" class="stop-card-wrapper">
               <div class="stop-card fade-in">
                 <div class="stop-images">
-                  <button class="nav-arrow left" @click="changeImage(stop, -1)"
-                    :disabled="stop.currentImageIndex === 0">◀</button>
+                  <button class="nav-arrow left" @click="changeImage(stop, -1)" :disabled="stop.currentImageIndex === 0">◀</button>
 
                   <img :src="stop.images && stop.images.length > 0
                     ? stop.images[stop.currentImageIndex]
                     : defaultImage" alt="Stop image" class="stop-image" />
 
-                  <button class="nav-arrow right" @click="changeImage(stop, 1)"
-                    :disabled="!stop.images || stop.currentImageIndex === stop.images.length - 1">▶</button>
+                  <button class="nav-arrow right" @click="changeImage(stop, 1)" :disabled="!stop.images || stop.currentImageIndex === stop.images.length - 1">▶</button>
                 </div>
 
                 <div class="stop-details">
@@ -66,6 +67,7 @@
           </div>
         </div>
 
+        <!-- Sección de comentarios -->
         <div v-show="showComments" class="comments-section">
           <h2 class="section-title">Comentarios</h2>
 
@@ -87,7 +89,7 @@
                 <div v-if="canDeleteComment(comment)" class="comment-actions">
                   <button @click.stop="toggleMenu(comment.id)" class="dots-btn">⋮</button>
                   <div v-if="openMenuId === comment.id" class="dropdown-menu">
-                    <button @click.stop="deleteComment(comment.id)" class="delete-option">Eliminar</button>
+                    <button @click.stop="confirmDelete(comment.id)" class="delete-option">Eliminar</button>
                   </div>
                 </div>
               </div>
@@ -97,8 +99,7 @@
           </div>
 
           <div class="comment-input-wrapper">
-            <input v-model="newComment" type="text" placeholder="Escribe tu comentario..." class="comment-input"
-              @keyup.enter="sendComment" />
+            <input v-model="newComment" type="text" placeholder="Escribe tu comentario..." class="comment-input" @keyup.enter="sendComment" />
             <button class="comment-send-btn" @click="sendComment">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                 stroke-linecap="round" stroke-linejoin="round">
@@ -107,6 +108,18 @@
             </button>
           </div>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal de confirmación -->
+  <div v-if="showDeleteModal" class="modal-overlay">
+    <div class="modal-box">
+      <p>¿Eliminar este comentario?</p>
+
+      <div class="modal-buttons">
+        <button class="modal-cancel" @click="showDeleteModal = false">Cancelar</button>
+        <button class="modal-confirm" @click="performDelete">Eliminar</button>
       </div>
     </div>
   </div>
@@ -130,20 +143,21 @@ export default {
     const commentsCount = ref(0);
     const newComment = ref("");
     const openMenuId = ref(null);
+
+    // Modal
+    const showDeleteModal = ref(false);
+    const commentToDelete = ref(null);
+
     const defaultImage = "https://jkfenner.com/wp-content/uploads/2019/11/default-450x450.jpg";
     const defaultCover = "https://i.imgur.com/mS1b7mF.jpeg";
 
-    // Like state
     const isLiked = ref(false);
     const likeCount = ref(0);
-
-    // Comments visibility
     const showComments = ref(false);
-
-    // Views
     const views = ref(0);
 
-    // Obtener usuario loggeado
+    const tripOwnerId = ref(null);
+
     let userId = null;
 
     const loadUser = async () => {
@@ -169,6 +183,7 @@ export default {
           views.value = data.trip.views ?? 0;
           comments.value = data.trip.comments ?? [];
           commentsCount.value = data.trip.commentsCount ?? 0;
+          tripOwnerId.value = data.trip.user.id;
         } else {
           error.value = data.error || "Error al cargar el viaje";
         }
@@ -225,7 +240,7 @@ export default {
 
     const canDeleteComment = (comment) => {
       if (!userId) return false;
-      return comment.user?.id === userId || trip.value?.user_id === userId;
+      return comment.user?.id === userId || tripOwnerId.value === userId;
     };
 
     const toggleMenu = (commentId) => {
@@ -234,12 +249,25 @@ export default {
 
     const closeMenuOutside = () => openMenuId.value = null;
 
-    const deleteComment = async (commentId) => {
-      if (!confirm('¿Eliminar este comentario?')) return;
+    const confirmDelete = (commentId) => {
+      commentToDelete.value = commentId;
+      showDeleteModal.value = true;
+    };
+
+
+    const performDelete = async () => {
+      const commentId = commentToDelete.value;
       const tripId = route.params.id;
+
+      showDeleteModal.value = false;
+
       try {
-        const res = await fetch(`/api/trips/${tripId}/comments/${commentId}/${userId}`, { method: 'DELETE' });
+        const res = await fetch(`/api/trips/${tripId}/comments/${commentId}/${userId}`, {
+          method: 'DELETE'
+        });
+
         const data = await res.json();
+
         if (data.ok) {
           await fetchTrip();
           openMenuId.value = null;
@@ -256,11 +284,13 @@ export default {
       return new Date(dateStr).toLocaleString("es-ES", { dateStyle: "short", timeStyle: "short" });
     };
 
+    // Action icons
     const likeOutlineIcon = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
     const likeFilledIcon = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path fill="red" stroke="white" stroke-width="2" d="M11.645 20.906l-.007-.003-.022-.01a15.741 15.741 0 01-.383-.218 25.45 25.45 0 01-4.244-3.17C4.688 15.36 2.25 12.174 2.25 8.25 2.25 5.322 4.714 3 7.688 3A5.5 5.5 0 0112 5.052 5.5 5.5 0 0116.313 3c2.973 0 5.437 2.322 5.437 5.25 0 3.925-2.438 7.111-4.739 9.256a25.175 25.175 0 01-4.244 3.17 15.247 15.247 0 01-.383.219l-.022.01-.007.004-.003.001a.752 .752 0 01-.704 0l-.003-.001z"/></svg>`;
     const commentIcon = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
     const saveIcon = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M18 7v14l-6 -4l-6 4v-14a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
     const viewsIcon = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 15a3 3 0 100-6 3 3 0 000 6z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+
 
     onMounted(async () => {
       await loadUser();
@@ -277,7 +307,11 @@ export default {
       isLiked, likeCount, toggleLike, showComments, likeOutlineIcon,
       likeFilledIcon, commentIcon, saveIcon, viewsIcon, views,
       comments, commentsCount, newComment, sendComment, formatDate,
-      openMenuId, canDeleteComment, toggleMenu, deleteComment
+      openMenuId, canDeleteComment, toggleMenu,
+      showDeleteModal,
+      commentToDelete,
+      confirmDelete,
+      performDelete
     };
   },
 };
@@ -633,4 +667,57 @@ export default {
       transform: translateY(0)
     }
   }
+
+  .modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.75);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 5000;
+}
+
+.modal-box {
+  background: #111;
+  padding: 1.5rem 2rem;
+  border-radius: 10px;
+  border: 1px solid #555;
+  text-align: center;
+  color: white;
+}
+
+.modal-buttons {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+
+.modal-cancel,
+.modal-confirm {
+  padding: 0.6rem 1.2rem;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.modal-cancel {
+  background: #333;
+  color: #ccc;
+}
+
+.modal-cancel:hover {
+  background: #444;
+}
+
+.modal-confirm {
+  background: #ff4d4d;
+  color: white;
+}
+
+.modal-confirm:hover {
+  background: #ff3333;
+}
 </style>

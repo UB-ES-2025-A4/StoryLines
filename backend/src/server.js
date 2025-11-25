@@ -954,7 +954,6 @@ app.delete('/api/trips/:tripId/comments/:commentId/:userId', async (req, res) =>
       .delete()
       .eq("id", commentId)
       .eq("trip_id", tripId)
-      .eq("user_id", userId);
 
     if (deleteError) {
       return res.status(500).json({ ok: false, error: deleteError.message });
