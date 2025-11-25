@@ -199,7 +199,14 @@ export const supabaseAdmin = {
         },
       };
     }
-
+    if (table === "friends") {
+      return {
+        insert: async () => ({
+          data: [{ id: "f1" }],
+          error: null,
+        }),
+      };
+    }
 
     // ================================================================
     // TABLE: comments
