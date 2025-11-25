@@ -6,9 +6,9 @@ import Home from '@/views/Home.vue'
 import Login from '@/views/Login.vue'
 import Register from '@/views/Register.vue'
 import Profile from '@/views/Profile.vue'
-import CreatePost from '@/views/CreateTrip.vue'
 import Post from '@/views/Post.vue' 
 import VisitProfile from '@/views/VisitProfile.vue'
+import CreateTrip from '@/views/CreateTrip.vue'
 
 const routes = [
   {
@@ -44,7 +44,7 @@ const routes = [
   {
     path: '/createtrip',
     name: 'CreateTrip',
-    component: CreatePost,
+    component: CreateTrip,
     meta: { requiresAuth: true }
   },
 
@@ -52,6 +52,13 @@ const routes = [
     path: '/post/:id',
     name: 'Post',
     component: Post
+  },
+
+  {
+    path: '/createtrip/:id?',
+    name: 'CreateTrip',
+    component: CreateTrip,
+    meta: { requiresAuth: true }
   }
 ]
 
