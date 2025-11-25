@@ -758,6 +758,7 @@ app.get('/api/trips/:id', async (req, res) => {
         start_date,
         end_date,
         status,
+        views,
         users:user_id(id, username, display_name, user_color)
       `)
       .eq('id', tripId)
@@ -813,6 +814,9 @@ app.get('/api/trips/:id', async (req, res) => {
       likedByCurrentUser = likeData.length > 0;
     }
 
+    // Incrementar views
+    await supabaseAdmin.rpc('increment_trip_views', { trip_id_input: tripId });
+
     // Formateo
     const formattedStops = stops.map(stop => ({
       title: stop.city || 'Stop',
@@ -841,7 +845,8 @@ app.get('/api/trips/:id', async (req, res) => {
       stops: formattedStops,
       comments,
       likes: likesCount || 0,
-      userLiked: likedByCurrentUser
+      userLiked: likedByCurrentUser,
+      views: trip.views || 0
     };
 
     res.json({ ok: true, trip: fullTrip });
