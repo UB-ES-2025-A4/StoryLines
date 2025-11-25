@@ -8,7 +8,11 @@
           <span>Home</span>
         </router-link>
 
-        <div class="nav-item">
+        <div 
+          class="nav-item" 
+          :class="{ 'active': showSearcher }"
+          @click="toggleSearcher"
+        >
           <svg class="icon" v-html="searchIcon"></svg>
           <span>Buscar</span>
         </div>
@@ -50,7 +54,11 @@
     </div>
 
     <div class="notification-panel" :class="{ 'show': showNotifications }">
-      <Notifications @close="showNotifications = false" />
+    <Notifications :isVisible="showNotifications" @close="showNotifications = false" />
+    </div>
+    <div class="searcher-panel" :class="{ 'show': showSearcher }">
+      <Searcher :isOpen="showSearcher" @close="showSearcher = false" />
+
     </div>
   </div>
 </template>
@@ -58,13 +66,25 @@
 <script setup>
 import { ref } from 'vue'
 import { useRoute } from 'vue-router'
+import Searcher from '@/components/Friends/Searcher.vue'
 import Notifications from './Friends/Notifications.vue'
 
 const route = useRoute()
 const showNotifications = ref(false)
+const showSearcher = ref(false)
 
 const toggleNotifications = () => {
   showNotifications.value = !showNotifications.value
+  if (showNotifications.value) {
+    showSearcher.value = false
+  }
+}
+
+const toggleSearcher = () => {
+  showSearcher.value = !showSearcher.value
+  if (showSearcher.value) {
+    showNotifications.value = false
+  }
 }
 
 // ICONOS (mantener los mismos)
@@ -104,6 +124,18 @@ const settingsIcon = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none
 }
 
 .notification-panel.show {
+  width: 350px;
+}
+
+.searcher-panel {
+  width: 0;
+  overflow: hidden;
+  transition: width 0.3s ease;
+  background: #0a0a0a;
+  border-left: 1px solid #333;
+}
+
+.searcher-panel.show {
   width: 350px;
 }
 
@@ -157,4 +189,3 @@ const settingsIcon = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none
   fill: currentColor;
 }
 </style>
-

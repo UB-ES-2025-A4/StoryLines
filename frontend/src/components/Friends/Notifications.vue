@@ -1,4 +1,3 @@
-<!-- frontend/src/components/Notifications.vue -->
 <template>
   <div class="notifications-panel">
     <div class="panel-header">
@@ -36,10 +35,12 @@
   </div>
 </template>
 
+
 <script setup>
-import { ref, onMounted } from "vue"
+import { ref, onMounted, watch } from "vue"
 import { supabase } from "@/config/supabase"
 
+const props = defineProps(['isVisible'])
 defineEmits(['close'])
 
 const currentUserId = ref("")
@@ -100,6 +101,12 @@ onMounted(async () => {
   const { data: { session } } = await supabase.auth.getSession()
   currentUserId.value = session?.user?.id || ""
   if (currentUserId.value) {
+    loadNotifications()
+  }
+})
+
+watch(() => props.isVisible, (newValue) => {
+  if (newValue && currentUserId.value) {
     loadNotifications()
   }
 })
@@ -170,7 +177,8 @@ onMounted(async () => {
 }
 
 .accept {
-  background: #375689;
+  background: #52865e;
+  font-weight: 550;
   padding: 2px 8px;
   border: none;
   color: white;
@@ -180,12 +188,13 @@ onMounted(async () => {
 }
 
 .accept:hover {
-  background: #4a6ba3;
+  background: #668d6f;
 }
 
 .reject {
   background: #363636;
-  padding: 2px 6px;
+  font-weight: 550;
+  padding: 3px 7px;
   border: none;
   color: white;
   cursor: pointer;

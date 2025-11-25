@@ -95,7 +95,10 @@
               :key="trip.id"
               @click="goToTrip(trip.id)"
             >
-              <img :src="trip.image" alt="Foto del viaje" class="trip-image" />
+              <div class="trip-image-container">
+                <img :src="trip.image" alt="Foto del viaje" class="trip-image" :class="{ faded: currentTab === 'drafts' }" />
+                <div v-if="currentTab === 'drafts'" class="draft-watermark">BORRADOR</div>
+              </div>
 
               <div class="trip-info">
                 <div class="trip-details">
@@ -108,7 +111,7 @@
 
               <div v-if="currentMenuTrip === trip.id" class="menu-dropdown">
                 <button @click.stop="editTrip(trip.id)">Editar</button>
-                <button @click.stop="deleteTrip(trip.id)">Eliminar</button>
+                <button @click.stop="openDeleteTripConfirm(trip.id)">Eliminar</button>
               </div>
             </div>
           </div>
@@ -160,21 +163,21 @@
     </div>
 
     <!-- ============================================= -->
-    <!-- POPUP CONFIRMAR ELIMINAR AMIGO (FUERA DEL OTRO) -->
+    <!-- POPUP CONFIRMAR ELIMINAR AMIGO -->
     <!-- ============================================= -->
     <div
-      v-if="showConfirmDelete"
+      v-if="showConfirmDeleteFriend"
       class="modal-overlay"
-      @click.self="showConfirmDelete = false"
+      @click.self="showConfirmDeleteFriend = false"
     >
       <div class="modal-box">
-        <button class="modal-close-x" @click="showConfirmDelete = false">✕</button>
+        <button class="modal-close-x" @click="showConfirmDeleteFriend = false">✕</button>
         <h2 class="modal-title">Eliminar amigo</h2>
 
         <p>¿Seguro que quieres eliminar a este amigo?</p>
 
         <div class="modal-actions">
-          <button class="btn-secondary" @click="showConfirmDelete = false">
+          <button class="btn-secondary" @click="showConfirmDeleteFriend = false">
             Cancelar
           </button>
           <button class="btn-danger" @click="confirmDeleteFriend">
@@ -183,9 +186,33 @@
         </div>
       </div>
     </div>
+
+    <!-- ============================================= -->
+    <!-- POPUP CONFIRMAR ELIMINAR VIAJE -->
+    <!-- ============================================= -->
+    <div
+      v-if="showConfirmDeleteTrip"
+      class="modal-overlay"
+      @click.self="showConfirmDeleteTrip = false"
+    >
+      <div class="modal-box">
+        <button class="modal-close-x" @click="showConfirmDeleteTrip = false">✕</button>
+        <h2 class="modal-title">Eliminar viaje</h2>
+
+        <p>¿Seguro que quieres eliminar este viaje?</p>
+
+        <div class="modal-actions">
+          <button class="btn-secondary" @click="showConfirmDeleteTrip = false">
+            Cancelar
+          </button>
+          <button class="btn-danger" @click="confirmDeleteTrip">
+            Eliminar
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
-
 
 <script>
 import { ref, onMounted, onUnmounted, computed } from 'vue'
@@ -224,11 +251,14 @@ export default {
     const defaultAvatar =
       'https://upload.wikimedia.org/wikipedia/commons/a/ac/Default_pfp.jpg'
 
-    const showConfirmDelete = ref(false)
+    const showConfirmDeleteFriend = ref(false)
     const friendToDelete = ref(null)
 
+    const showConfirmDeleteTrip = ref(false)
+    const tripToDelete = ref(null)
+
     const openDeleteFriendConfirm = (id) => {
-      showConfirmDelete.value = true
+      showConfirmDeleteFriend.value = true
       friendToDelete.value = id
     }
 
@@ -252,7 +282,36 @@ export default {
         console.error("Error eliminando amigo:", e)
       }
 
-      showConfirmDelete.value = false
+      showConfirmDeleteFriend.value = false
+    }
+
+    const openDeleteTripConfirm = (id) => {
+      showConfirmDeleteTrip.value = true
+      tripToDelete.value = id
+    }
+
+    const confirmDeleteTrip = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession()
+        if (!session?.user) return
+
+        const { error: deleteError } = await supabase
+          .from('trips')
+          .delete()
+          .eq('id', tripToDelete.value)
+          .eq('user_id', session.user.id) // Seguridad extra
+
+        if (deleteError) throw deleteError
+
+        // Recargar listas
+        await loadTrips()
+        await loadDrafts()
+      } catch (e) {
+        console.error("Error eliminando viaje:", e)
+      }
+
+      showConfirmDeleteTrip.value = false
+      currentMenuTrip.value = null
     }
 
     const safeAvatar = (url) => {
@@ -455,9 +514,7 @@ export default {
     }
 
     const editTrip = (tripId) =>
-      console.log('TODO editar viaje:', tripId)
-    const deleteTrip = (tripId) =>
-      console.log('TODO eliminar viaje:', tripId)
+      router.push(`/createtrip/${tripId}`)
 
     const handleImageUpdated = (newUrl) => {
       profileData.value.avatar_url = newUrl
@@ -506,7 +563,6 @@ export default {
       truncateText,
       toggleMenu,
       editTrip,
-      deleteTrip,
       goToTrip,
       saveProfile,
       friends,
@@ -514,9 +570,12 @@ export default {
       goToUser,
       defaultAvatar,
       safeAvatar,
-      showConfirmDelete,
+      showConfirmDeleteFriend,
       openDeleteFriendConfirm,
-      confirmDeleteFriend
+      confirmDeleteFriend,
+      showConfirmDeleteTrip,
+      openDeleteTripConfirm,
+      confirmDeleteTrip
     }
   }
 }
@@ -711,12 +770,34 @@ export default {
     background: #f0f0f0;
   }
   
-  .trip-image {
+  .trip-image-container {
+    position: relative;
     width: 150px;
+    height: 100%;
+    flex-shrink: 0;
+  }
+
+  .trip-image {
+    width: 100%;
     height: 100%;
     border-radius: 12px 0 0 12px;
     object-fit: cover;
-    flex-shrink: 0;
+  }
+
+  .faded {
+    opacity: 0.7;
+  }
+
+  .draft-watermark {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: rgba(0, 0, 0, 0.5);
+    pointer-events: none;
+    white-space: nowrap;
   }
   
   .trip-info {

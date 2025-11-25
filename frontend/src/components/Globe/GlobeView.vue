@@ -280,7 +280,7 @@ onUnmounted(() => {
   window.removeEventListener('resize', handleResize)
   document.removeEventListener('click', handleDocumentClick)
   // stop watchers/listeners
-  try { watch.clear && watch.clear() } catch(e) {}
+  try { watch.clear && watch.clear() } catch(e) {console.error(e)}
   if (myGlobe) {
     myGlobe = null
   }
@@ -804,7 +804,7 @@ function rebuildGlobeData() {
     document.querySelectorAll('.trip-modal-overlay').forEach(n => n.remove())
     activePinTooltip = null
     activeTripPreview = null
-  } catch (e) {}
+  } catch (e) {console.error(e)}
 
   const arcs = convertTripsToArcs(filteredTrips.value)
   const stackedArcs = groupArcsByRoute(arcs)
@@ -1110,7 +1110,7 @@ function openFullTrip(tripId) {
     activePinTooltip = null
     activeTripPreview = null
   } catch (e) {
-    // ignore
+    console.error(e)
   }
 
   const trip = trips.value.find(t => t.id === tripId)
@@ -1175,7 +1175,7 @@ function openFullTrip(tripId) {
   document.body.appendChild(overlay)
 
   // still dispatch event for backward compatibility
-  try { window.dispatchEvent(new CustomEvent('open-full-trip', { detail: { tripId } })) } catch(e) {}
+  try { window.dispatchEvent(new CustomEvent('open-full-trip', { detail: { tripId } })) } catch(e) {console.error(e)}
 }
 
 function handleArcHover(hoverArc) {
