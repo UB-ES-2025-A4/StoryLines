@@ -270,7 +270,7 @@ export default {
       try {
         const { data: { session } } = await supabase.auth.getSession()
 
-        await fetch(`http://localhost:3000/api/delete-friend`, {
+        await fetch(`/api/delete-friend`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -373,7 +373,7 @@ export default {
         if (!uid) return
 
         const res = await fetch(
-          `http://localhost:3000/api/friends?userId=${uid}`
+          `/api/friends?userId=${uid}`
         )
         const body = await res.json()
 
