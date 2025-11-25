@@ -110,8 +110,12 @@
               <button class="menu-btn" @click.stop="toggleMenu(trip.id)">⋯</button>
 
               <div v-if="currentMenuTrip === trip.id" class="menu-dropdown">
-                <button @click.stop="editTrip(trip.id)">Editar</button>
-                <button @click.stop="openDeleteTripConfirm(trip.id)">Eliminar</button>
+                <button class="menu-item edit-item" @click.stop="editTrip(trip.id)">
+                  <i class="fa fa-pencil"></i> Editar
+                </button>
+                <button class="menu-item delete-item" @click.stop="openDeleteTripConfirm(trip.id)">
+                  <i class="fa fa-trash"></i> Eliminar
+                </button>
               </div>
             </div>
           </div>
@@ -865,11 +869,13 @@ export default {
   position: absolute;
   top: 10px;
   right: 10px;
-  background: none;
+  background: rgba(0, 0, 0, 0.1);
   border: none;
   font-size: 1.5rem;
   cursor: pointer;
   color: #0a0a0a;
+  padding: 0.2rem 0.6rem;
+  border-radius: 20px;
 }
 
 .menu-dropdown {
@@ -884,18 +890,30 @@ export default {
   z-index: 10;
 }
 
-.menu-dropdown button {
-  padding: 0.5rem 1rem;
+.menu-item {
+  padding: 0.7rem 1.2rem;
   border: none;
   background: none;
   cursor: pointer;
   text-align: left;
   width: 100%;
   color: #0a0a0a;
+  font-size: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
-.menu-dropdown button:hover {
+.menu-item:hover {
   background: #f0f0f0;
+}
+
+.edit-item {
+  color: #0a0a0a;
+}
+
+.delete-item {
+  color: #ff0000;
 }
 
 .trip-cards-wrapper {
