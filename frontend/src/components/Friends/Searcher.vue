@@ -26,9 +26,9 @@
         <div v-else-if="searchResults.length === 0 && searchQuery" class="empty">
           No se encontraron usuarios
         </div>
-        <div v-else-if="searchResults.length > 0">
+        <div v-else-if="searchResults.length > 0" class="results-list">
           <div 
-            v-for="user in searchResults" 
+            v-for="user in searchResults.slice(0, 10)" 
             :key="user.id" 
             class="result-item"
           >
@@ -272,14 +272,11 @@
   
   <style scoped>
 
-.searcher-panel {
-  background: #0a0a0a;
+.searcher-content {
   height: 100vh;
-  overflow-y: auto;
-  border-left: 1px solid #333;
   display: flex;
   flex-direction: column;
-  width: 100%;
+  background: #0a0a0a;
   border-left: 1px solid #333;
 }
 
@@ -348,8 +345,32 @@
   
   .results {
     flex: 1;
-    overflow-y: auto;
     padding: 0 24px 24px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .results-list {
+    flex: 1;
+    overflow-y: auto;
+  }
+
+  .results-list::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  .results-list::-webkit-scrollbar-track {
+    background: #0a0a0a;
+  }
+
+  .results-list::-webkit-scrollbar-thumb {
+    background: #0a0a0a;
+    border-radius: 4px;
+  }
+
+  .results-list::-webkit-scrollbar-thumb:hover {
+    background: #0a0a0a;
   }
   
   .loading, .empty {
