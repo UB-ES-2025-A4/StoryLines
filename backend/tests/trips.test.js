@@ -31,49 +31,6 @@ const VALID_STOP = {
   }
 };
 
-jest.mock("../src/config/supabase.js", () => ({
-  supabaseAdmin: {
-    from: (table) => {
-      if (table === "trips") {
-        return {
-          select: () => ({
-            eq: () => ({
-              then: undefined,
-              finally: undefined,
-              async then() {},
-              async catch() {},
-              data: [VALID_TRIP],
-              error: null
-            }),
-            data: [VALID_TRIP],
-            error: null
-          })
-        };
-      }
-
-      if (table === "trip_stops") {
-        return {
-          select: () => ({
-            then: undefined,
-            finally: undefined,
-            async then() {},
-            async catch() {},
-            data: [VALID_STOP],
-            error: null
-          })
-        };
-      }
-
-      return {
-        select: () => ({
-          data: [],
-          error: null
-        })
-      };
-    }
-  }
-}));
-
 describe("GET /api/trips", () => {
 
   it("should return 200 and a list of formatted trips", async () => {

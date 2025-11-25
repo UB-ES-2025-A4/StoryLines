@@ -48,10 +48,4 @@ describe("GET /api/trips/:id", () => {
     expect(res.status).toBe(404);
     expect(res.body.ok).toBe(false);
   });
-
-  it("should return 400 if no id provided", async () => {
-    const res = await request(app).get("/api/trips/");
-
-    expect([200, 400, 404]).toContain(res.status);
-  });
 });

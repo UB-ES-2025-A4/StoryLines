@@ -1,11 +1,7 @@
 export default {
   testEnvironment: "node",
-
-  moduleNameMapper: {
-    "^\\./config/supabase.js$": "<rootDir>/tests/__mocks__/config/supabase.js",
-    "^config/supabase.js$": "<rootDir>/tests/__mocks__/config/supabase.js",
-    "^src/config/supabase.js$": "<rootDir>/tests/__mocks__/config/supabase.js"
-  },
-
   transform: {},
+  moduleDirectories: ["node_modules", "src"],
+  // Si ya tienes jest.setup.js, lo dejamos pero vacío o sin lógica rara
+  setupFiles: ["<rootDir>/jest.setup.js"],
 };
