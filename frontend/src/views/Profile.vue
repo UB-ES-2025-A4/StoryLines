@@ -95,7 +95,10 @@
               :key="trip.id"
               @click="goToTrip(trip.id)"
             >
-              <img :src="trip.image" alt="Foto del viaje" class="trip-image" />
+              <div class="trip-image-container">
+                <img :src="trip.image" alt="Foto del viaje" class="trip-image" :class="{ faded: currentTab === 'drafts' }" />
+                <div v-if="currentTab === 'drafts'" class="draft-watermark">BORRADOR</div>
+              </div>
 
               <div class="trip-info">
                 <div class="trip-details">
@@ -767,12 +770,34 @@ export default {
     background: #f0f0f0;
   }
   
-  .trip-image {
+  .trip-image-container {
+    position: relative;
     width: 150px;
+    height: 100%;
+    flex-shrink: 0;
+  }
+
+  .trip-image {
+    width: 100%;
     height: 100%;
     border-radius: 12px 0 0 12px;
     object-fit: cover;
-    flex-shrink: 0;
+  }
+
+  .faded {
+    opacity: 0.7;
+  }
+
+  .draft-watermark {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: rgba(0, 0, 0, 0.5);
+    pointer-events: none;
+    white-space: nowrap;
   }
   
   .trip-info {
