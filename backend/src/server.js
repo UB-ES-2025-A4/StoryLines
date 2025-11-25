@@ -678,12 +678,31 @@ app.delete('/api/trips/:tripId/like/:userId', async (req, res) => {
       return res.status(500).json({ ok: false, error: deleteError.message });
     }
 
-    // 2) Decrementar en trips usando tu RPC
+    // 2) Obtener informacion del viaje
+    const { data: tripData, error: tripError } = await supabaseAdmin
+      .from("trips")
+      .select("user_id, trip_name")
+      .eq("id", tripId)
+      .single();
+
+    if (tripError) {
+      return res.status(500).json({ ok: false, error: "Viaje no encontrado." });
+    }
+
+    // 3) Borrar notificación previa de like (si existe)
+    await supabaseAdmin
+      .from("notifications")
+      .delete()
+      .eq("receptor_id", tripData.user_id)
+      .eq("sender_id", userId)
+      .eq("type", "trip-like");
+
+    // 4) Decrementar en trips usando tu RPC
     await supabaseAdmin.rpc("decrement_trip_likes", {
       trip_id_input: tripId,
     });
 
-    // 3) Likes actualizados
+    // 5) Likes actualizados
     const { count } = await supabaseAdmin
       .from("trip_likes")
       .select("*", { head: true, count: "exact" })
