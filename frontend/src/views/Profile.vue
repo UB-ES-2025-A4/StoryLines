@@ -8,21 +8,41 @@
     <div v-else class="profile-card">
       <!-- Cabecera del perfil -->
       <div class="profile-header">
-        <div class="avatar-container" @mouseenter="hovering = true" @mouseleave="hovering = false">
+        <div
+          class="avatar-container"
+          @mouseenter="hovering = true"
+          @mouseleave="hovering = false"
+        >
           <img
             class="avatar"
-            :src="profileData.avatar_url || 'https://upload.wikimedia.org/wikipedia/commons/a/ac/Default_pfp.jpg'"
+            :src="profileData.avatar_url && profileData.avatar_url.trim() !== '' 
+              ? profileData.avatar_url 
+              : defaultAvatar"
             alt="Foto de perfil"
           />
-          <div class="avatar-overlay" v-show="hovering" @click="showChangePicture = !showChangePicture">
+
+          <!-- Hover change picture -->
+          <div
+            class="avatar-overlay"
+            v-show="hovering"
+            @click="showChangePicture = !showChangePicture"
+          >
             <i class="fa fa-camera camera-icon"></i>
           </div>
         </div>
 
         <div class="profile-text">
-          <h2 class="username">{{ profileData.username || 'Nombre de usuario' }}</h2>
+          <div class="name-friends-row">
+            <h2 class="username">{{ profileData.username }}</h2>
+
+            <button class="friends-btn" @click="showFriends = true">
+              Amigos | {{ friends.length }}
+            </button>
+          </div>
+
           <h1 class="display-name">{{ profileData.display_name }}</h1>
           <p class="bio">{{ profileData.bio || 'Esta es mi biografía...' }}</p>
+
           <button class="edit-btn" @click="isEditing = !isEditing">
             {{ isEditing ? 'Cancelar' : 'Editar perfil' }}
           </button>
@@ -34,14 +54,16 @@
         <ChangePicture @image-updated="handleImageUpdated" />
       </div>
 
-      <!-- Formulario de edición -->
+      <!-- Formulario edición -->
       <div v-if="isEditing" class="edit-form">
         <input type="text" v-model="profileData.username" placeholder="Nombre de usuario" />
         <input type="text" v-model="profileData.display_name" placeholder="Nombre" />
         <textarea v-model="profileData.bio" placeholder="Biografía"></textarea>
+
         <button class="save-btn" @click="saveProfile" :disabled="saving">
           {{ saving ? 'Guardando...' : 'Guardar cambios' }}
         </button>
+
         <div v-if="error" class="alert alert-error">{{ error }}</div>
         <div v-if="success" class="alert alert-success">{{ success }}</div>
       </div>
@@ -50,43 +72,146 @@
       <div class="recent-trips-section">
         <div class="recent-trips-header">
           <div class="tabs">
-            <button 
-              :class="{ 'active': currentTab === 'published' }" 
-              @click="currentTab = 'published'"
-            >
+            <button :class="{ active: currentTab === 'published' }" @click="currentTab = 'published'">
               Viajes publicados
             </button>
+
             <span class="separator">|</span>
-            <button 
-              :class="{ 'active': currentTab === 'drafts' }" 
-              @click="currentTab = 'drafts'"
-            >
+
+            <button :class="{ active: currentTab === 'drafts' }" @click="currentTab = 'drafts'">
               Borradores
             </button>
+
             <span class="separator">|</span>
-            <button>
-              Viajes guardados
-            </button>
+            <button>Viajes guardados</button>
           </div>
         </div>
+
         <div class="trips-container">
           <div v-if="currentTrips.length > 0" class="trip-cards-wrapper">
-            <div class="trip-card" v-for="trip in currentTrips" :key="trip.id" @click="goToTrip(trip.id)">
-              <img :src="trip.image" alt="Foto del viaje" class="trip-image" />
+            <div
+              class="trip-card"
+              v-for="trip in currentTrips"
+              :key="trip.id"
+              @click="goToTrip(trip.id)"
+            >
+              <div class="trip-image-container">
+                <img :src="trip.image" alt="Foto del viaje" class="trip-image" :class="{ faded: currentTab === 'drafts' }" />
+                <div v-if="currentTab === 'drafts'" class="draft-watermark">BORRADOR</div>
+              </div>
+
               <div class="trip-info">
                 <div class="trip-details">
                   <h4>{{ trip.title }}</h4>
                   <p>{{ truncateText(trip.description, 120) }}</p>
                 </div>
               </div>
+
               <button class="menu-btn" @click.stop="toggleMenu(trip.id)">⋯</button>
+
               <div v-if="currentMenuTrip === trip.id" class="menu-dropdown">
-                <button @click.stop="editTrip(trip.id)">Editar</button>
-                <button @click.stop="deleteTrip(trip.id)">Eliminar</button>
+                <button class="menu-item edit-item" @click.stop="editTrip(trip.id)">
+                  <i class="fa fa-pencil"></i> Editar
+                </button>
+                <button class="menu-item delete-item" @click.stop="openDeleteTripConfirm(trip.id)">
+                  <i class="fa fa-trash"></i> Eliminar
+                </button>
               </div>
             </div>
           </div>
-          <div v-else class="no-trips-message">{{ noTripsMessage }}</div>
+
+          <div v-else class="no-trips-message">
+            {{ noTripsMessage }}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- =============================== -->
+    <!-- POPUP AMIGOS (SOLO ESTE)       -->
+    <!-- =============================== -->
+    <div
+      v-if="showFriends"
+      class="modal-overlay"
+      @click.self="showFriends = false"
+    >
+      <div class="modal-box">
+        <button class="modal-close-x" @click="showFriends = false">✕</button>
+        <h2 class="modal-title">Amigos</h2>
+
+        <div v-if="friends.length === 0" class="no-friends">
+          No tienes amigos todavía.
+        </div>
+
+        <div class="friends-list-scroll">
+          <div 
+            v-for="f in friends" 
+            :key="f.id" 
+            class="friend-item"
+          >
+            <div class="friend-click-zone" @click="goToUser(f.id)">
+              <img :src="safeAvatar(f.avatar_url)" class="friend-avatar" />
+              <span class="friend-username">{{ f.username }}</span>
+            </div>
+
+            <button
+              class="delete-friend-btn"
+              @click.stop="openDeleteFriendConfirm(f.id)"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ============================================= -->
+    <!-- POPUP CONFIRMAR ELIMINAR AMIGO -->
+    <!-- ============================================= -->
+    <div
+      v-if="showConfirmDeleteFriend"
+      class="modal-overlay"
+      @click.self="showConfirmDeleteFriend = false"
+    >
+      <div class="modal-box">
+        <button class="modal-close-x" @click="showConfirmDeleteFriend = false">✕</button>
+        <h2 class="modal-title">Eliminar amigo</h2>
+
+        <p>¿Seguro que quieres eliminar a este amigo?</p>
+
+        <div class="modal-actions">
+          <button class="btn-secondary" @click="showConfirmDeleteFriend = false">
+            Cancelar
+          </button>
+          <button class="btn-danger" @click="confirmDeleteFriend">
+            Eliminar
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================= -->
+    <!-- POPUP CONFIRMAR ELIMINAR VIAJE -->
+    <!-- ============================================= -->
+    <div
+      v-if="showConfirmDeleteTrip"
+      class="modal-overlay"
+      @click.self="showConfirmDeleteTrip = false"
+    >
+      <div class="modal-box">
+        <button class="modal-close-x" @click="showConfirmDeleteTrip = false">✕</button>
+        <h2 class="modal-title">Eliminar viaje</h2>
+
+        <p>¿Seguro que quieres eliminar este viaje?</p>
+
+        <div class="modal-actions">
+          <button class="btn-secondary" @click="showConfirmDeleteTrip = false">
+            Cancelar
+          </button>
+          <button class="btn-danger" @click="confirmDeleteTrip">
+            Eliminar
+          </button>
         </div>
       </div>
     </div>
@@ -98,7 +223,7 @@ import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { supabase } from '@/config/supabase'
 import { useRouter } from 'vue-router'
 import ChangePicture from '@/components/Profile/ChangePicture.vue'
-import Sidebar from '@/components/Sidebar.vue' 
+import Sidebar from '@/components/Sidebar.vue'
 
 export default {
   name: 'Profile',
@@ -107,7 +232,12 @@ export default {
     const router = useRouter()
     const showChangePicture = ref(false)
     const user = ref(null)
-    const profileData = ref({ username: '', display_name: '', bio: '', avatar_url: '' })
+    const profileData = ref({
+      username: '',
+      display_name: '',
+      bio: '',
+      avatar_url: ''
+    })
     const originalData = ref({})
     const isEditing = ref(false)
     const loading = ref(true)
@@ -119,15 +249,98 @@ export default {
     const trips = ref([])
     const drafts = ref([])
     const currentTab = ref('published')
+    const friends = ref([])
+    const showFriends = ref(false)
 
-    const currentTrips = computed(() => currentTab.value === 'published' ? trips.value : drafts.value)
-    const noTripsMessage = computed(() => currentTab.value === 'published' ? 'No hay viajes publicados' : 'No hay borradores')
+    const defaultAvatar =
+      'https://upload.wikimedia.org/wikipedia/commons/a/ac/Default_pfp.jpg'
+
+    const showConfirmDeleteFriend = ref(false)
+    const friendToDelete = ref(null)
+
+    const showConfirmDeleteTrip = ref(false)
+    const tripToDelete = ref(null)
+
+    const openDeleteFriendConfirm = (id) => {
+      showConfirmDeleteFriend.value = true
+      friendToDelete.value = id
+    }
+
+    const confirmDeleteFriend = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession()
+
+        await fetch(`http://localhost:3000/api/delete-friend`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            user_id: session.user.id,
+            friend_id: friendToDelete.value
+          })
+        })
+
+        // Actualiza la lista
+        await loadFriends()
+
+      } catch (e) {
+        console.error("Error eliminando amigo:", e)
+      }
+
+      showConfirmDeleteFriend.value = false
+    }
+
+    const openDeleteTripConfirm = (id) => {
+      showConfirmDeleteTrip.value = true
+      tripToDelete.value = id
+    }
+
+    const confirmDeleteTrip = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession()
+        if (!session?.user) return
+
+        const { error: deleteError } = await supabase
+          .from('trips')
+          .delete()
+          .eq('id', tripToDelete.value)
+          .eq('user_id', session.user.id) // Seguridad extra
+
+        if (deleteError) throw deleteError
+
+        // Recargar listas
+        await loadTrips()
+        await loadDrafts()
+      } catch (e) {
+        console.error("Error eliminando viaje:", e)
+      }
+
+      showConfirmDeleteTrip.value = false
+      currentMenuTrip.value = null
+    }
+
+    const safeAvatar = (url) => {
+      if (!url || url === 'undefined' || url.trim() === '') {
+        return defaultAvatar
+      }
+      return url
+    }
+
+    const currentTrips = computed(() =>
+      currentTab.value === 'published' ? trips.value : drafts.value
+    )
+    const noTripsMessage = computed(() =>
+      currentTab.value === 'published'
+        ? 'No hay viajes publicados'
+        : 'No hay borradores'
+    )
 
     // === Cargar perfil ===
     const loadProfile = async () => {
       loading.value = true
       try {
-        const { data: { session } } = await supabase.auth.getSession()
+        const {
+          data: { session }
+        } = await supabase.auth.getSession()
         user.value = session?.user
         if (!user.value) return
 
@@ -150,6 +363,34 @@ export default {
       }
     }
 
+    // === Cargar amigos ===
+    const loadFriends = async () => {
+      try {
+        const {
+          data: { session }
+        } = await supabase.auth.getSession()
+        const uid = session?.user?.id
+        if (!uid) return
+
+        const res = await fetch(
+          `http://localhost:3000/api/friends?userId=${uid}`
+        )
+        const body = await res.json()
+
+        if (body.ok) {
+          friends.value = body.friends.map((f) => ({
+            id: f.friend.id,
+            username: f.friend.username,
+            avatar_url: f.friend.avatar_url
+          }))
+        } else {
+          friends.value = []
+        }
+      } catch {
+        friends.value = []
+      }
+    }
+
     // === Guardar perfil ===
     const API_URL = ''
     const saveProfile = async () => {
@@ -157,7 +398,9 @@ export default {
       success.value = ''
       saving.value = true
       try {
-        const { data: { session } } = await supabase.auth.getSession()
+        const {
+          data: { session }
+        } = await supabase.auth.getSession()
         const token = session?.access_token
 
         const payload = {
@@ -185,7 +428,8 @@ export default {
         }
 
         if (!res.ok) throw new Error(body.error || `Error ${res.status}`)
-        success.value = body.message || 'Perfil actualizado correctamente ✅'
+        success.value =
+          body.message || 'Perfil actualizado correctamente ✅'
         originalData.value = { ...profileData.value }
         isEditing.value = false
       } catch (err) {
@@ -199,7 +443,9 @@ export default {
     // === Cargar viajes publicados ===
     const loadTrips = async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession()
+        const {
+          data: { session }
+        } = await supabase.auth.getSession()
         user.value = session?.user
         if (!user.value) return
 
@@ -212,11 +458,13 @@ export default {
 
         if (tripsError) throw tripsError
 
-        trips.value = (data || []).map(trip => ({
+        trips.value = (data || []).map((trip) => ({
           id: trip.id,
           title: trip.trip_name || 'Sin título',
           description: trip.description || 'Sin descripción',
-          image: trip.cover_image || 'https://jkfenner.com/wp-content/uploads/2019/11/default-450x450.jpg'
+          image:
+            trip.cover_image ||
+            'https://jkfenner.com/wp-content/uploads/2019/11/default-450x450.jpg'
         }))
       } catch (err) {
         console.error('Error cargando viajes:', err)
@@ -226,7 +474,9 @@ export default {
     // === Cargar borradores ===
     const loadDrafts = async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession()
+        const {
+          data: { session }
+        } = await supabase.auth.getSession()
         user.value = session?.user
         if (!user.value) return
 
@@ -239,25 +489,36 @@ export default {
 
         if (draftsError) throw draftsError
 
-        drafts.value = (data || []).map(trip => ({
+        drafts.value = (data || []).map((trip) => ({
           id: trip.id,
           title: trip.trip_name || 'Sin título',
           description: trip.description || 'Sin descripción',
-          image: trip.cover_image || 'https://jkfenner.com/wp-content/uploads/2019/11/default-450x450.jpg'
+          image:
+            trip.cover_image ||
+            'https://jkfenner.com/wp-content/uploads/2019/11/default-450x450.jpg'
         }))
       } catch (err) {
         console.error('Error cargando borradores:', err)
       }
     }
 
-    const truncateText = (text, limit) => (text?.length > limit ? text.slice(0, limit) + '...' : text || '')
+    const truncateText = (text, limit) =>
+      text?.length > limit ? text.slice(0, limit) + '...' : text || ''
+
     const goToTrip = (tripId) => router.push(`/post/${tripId}`)
-    const toggleMenu = (tripId) => {
-      currentMenuTrip.value = currentMenuTrip.value === tripId ? null : tripId
+
+    const goToUser = (id) => {
+      showFriends.value = false
+      router.push(`/user/${id}`)
     }
 
-    const editTrip = (tripId) => console.log('TODO editar viaje:', tripId)
-    const deleteTrip = (tripId) => console.log('TODO eliminar viaje:', tripId)
+    const toggleMenu = (tripId) => {
+      currentMenuTrip.value =
+        currentMenuTrip.value === tripId ? null : tripId
+    }
+
+    const editTrip = (tripId) =>
+      router.push(`/createtrip/${tripId}`)
 
     const handleImageUpdated = (newUrl) => {
       profileData.value.avatar_url = newUrl
@@ -276,6 +537,7 @@ export default {
 
     onMounted(async () => {
       await loadProfile()
+      await loadFriends()
       await loadTrips()
       await loadDrafts()
       document.addEventListener('click', handleClickOutside)
@@ -305,9 +567,19 @@ export default {
       truncateText,
       toggleMenu,
       editTrip,
-      deleteTrip,
       goToTrip,
-      saveProfile
+      saveProfile,
+      friends,
+      showFriends,
+      goToUser,
+      defaultAvatar,
+      safeAvatar,
+      showConfirmDeleteFriend,
+      openDeleteFriendConfirm,
+      confirmDeleteFriend,
+      showConfirmDeleteTrip,
+      openDeleteTripConfirm,
+      confirmDeleteTrip
     }
   }
 }
@@ -502,12 +774,34 @@ export default {
     background: #f0f0f0;
   }
   
-  .trip-image {
+  .trip-image-container {
+    position: relative;
     width: 150px;
+    height: 100%;
+    flex-shrink: 0;
+  }
+
+  .trip-image {
+    width: 100%;
     height: 100%;
     border-radius: 12px 0 0 12px;
     object-fit: cover;
-    flex-shrink: 0;
+  }
+
+  .faded {
+    opacity: 0.7;
+  }
+
+  .draft-watermark {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: rgba(0, 0, 0, 0.5);
+    pointer-events: none;
+    white-space: nowrap;
   }
   
   .trip-info {
@@ -575,11 +869,13 @@ export default {
   position: absolute;
   top: 10px;
   right: 10px;
-  background: none;
+  background: rgba(0, 0, 0, 0.1);
   border: none;
   font-size: 1.5rem;
   cursor: pointer;
   color: #0a0a0a;
+  padding: 0.2rem 0.6rem;
+  border-radius: 20px;
 }
 
 .menu-dropdown {
@@ -594,18 +890,30 @@ export default {
   z-index: 10;
 }
 
-.menu-dropdown button {
-  padding: 0.5rem 1rem;
+.menu-item {
+  padding: 0.7rem 1.2rem;
   border: none;
   background: none;
   cursor: pointer;
   text-align: left;
   width: 100%;
   color: #0a0a0a;
+  font-size: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
-.menu-dropdown button:hover {
+.menu-item:hover {
   background: #f0f0f0;
+}
+
+.edit-item {
+  color: #0a0a0a;
+}
+
+.delete-item {
+  color: #ff0000;
 }
 
 .trip-cards-wrapper {
@@ -613,4 +921,205 @@ export default {
   flex-direction: column;
   gap: 2rem;
 }
+
+.name-friends-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.friends-btn {
+  background: white;
+  color: #111;
+  padding: 0.4rem 1rem;
+  border-radius: 10px;
+  border: none;
+  font-weight: 500;
+  cursor: pointer;
+  transition: 0.2s;
+  font-size: 0.9rem;
+}
+.friends-btn:hover {
+  background: #e0e0e0;
+}
+
+/* === Modal === */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+}
+
+.modal-box {
+  background: #112233;
+  padding: 2rem;
+  border-radius: 20px;
+  width: 90%;
+  max-width: 400px;
+  color: white;
+  position: relative;
+}
+
+.modal-title {
+  text-align: center;
+  margin-bottom: 1rem;
+  font-size: 1.5rem;
+}
+
+.modal-close-x {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: none;
+  border: none;
+  font-size: 1.8rem;
+  cursor: pointer;
+  color: white;
+  opacity: 0.8;
+}
+
+.friend-item {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.8rem 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  cursor: pointer;
+}
+
+
+.friend-avatar {
+  width: 50px;
+  height: 50px;
+  object-fit: cover;
+  border-radius: 50%;
+  border: 2px solid white;
+}
+
+.friend-username {
+  font-size: 1.1rem;
+}
+
+.no-friends {
+  text-align: center;
+  padding: 1rem 0;
+  opacity: 0.8;
+}
+.friend-click-zone {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-grow: 1;           
+  cursor: pointer;
+  padding-right: 1rem;
+}
+
+
+.friend-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.8rem 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  cursor: default; /* ⬅ ELIMINA EL CLICK GENERAL */
+}
+
+.friend-info {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  cursor: pointer; /* SOLO ESTA PARTE ES CLICABLE */
+}
+
+.delete-friend-btn {
+  background: none;
+  border: none;
+  font-size: 1.4rem;
+  color: #ff6b6b;
+  cursor: pointer;
+  padding: 0 0.5rem;
+}
+
+.delete-friend-btn:hover {
+  color: #ff3b3b;
+}
+
+/* Contenedor de acciones */
+.modal-actions {
+  margin-top: 1.8rem;
+  display: flex;
+  justify-content: center;
+  gap: 1.2rem;        /* más separación */
+}
+
+/* Botón cancelar */
+.btn-secondary {
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  padding: 0.55rem 1.4rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 1rem;
+  transition: 0.2s;
+}
+
+/* Botón eliminar */
+.btn-danger {
+  background: #ff4b4b;
+  color: #fff;
+  padding: 0.55rem 1.4rem;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  font-size: 1rem;
+  font-weight: 600;
+  transition: 0.2s;
+}
+
+.btn-danger:hover {
+  background: #e03b3b;
+}
+
+/* Botón X de cerrar—más bonito */
+.modal-close-x {
+  top: 15px;
+  right: 15px;
+  width: 34px;
+  height: 34px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border-radius: 50%;
+  backdrop-filter: blur(4px);
+  transition: 0.2s;
+}
+
+/* Scroll para lista de amigos (máx. 5 amigos visibles) */
+.friends-list-scroll {
+  max-height: 320px;      /* ≈ 5 amigos (5 × ~60px) */
+  overflow-y: auto;
+  padding-right: 0.5rem;
+}
+
+/* Barra de scroll bonita */
+.friends-list-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+
+.friends-list-scroll::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 4px;
+}
+
+.friends-list-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.5);
+}
+
+
 </style>

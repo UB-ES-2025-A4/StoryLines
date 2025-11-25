@@ -6,8 +6,9 @@ import Home from '@/views/Home.vue'
 import Login from '@/views/Login.vue'
 import Register from '@/views/Register.vue'
 import Profile from '@/views/Profile.vue'
-import CreatePost from '@/views/CreateTrip.vue'
 import Post from '@/views/Post.vue' 
+import VisitProfile from '@/views/VisitProfile.vue'
+import CreateTrip from '@/views/CreateTrip.vue'
 
 const routes = [
   {
@@ -19,7 +20,7 @@ const routes = [
     path: '/login',
     name: 'Login',
     component: Login,
-    meta: { requiresGuest: true } // Solo para usuarios no autenticados
+    meta: { requiresGuest: true }
   },
   {
     path: '/register',
@@ -27,27 +28,40 @@ const routes = [
     component: Register,
     meta: { requiresGuest: true }
   },
+  {
+    path: '/profile',
+    name: 'Profile',
+    component: Profile,
+    meta: { requiresAuth: true }
+  },
 
   {
-     path: '/profile',
-     name: 'Profile',
-     component: Profile,
-     meta: { requiresAuth: true } // Solo para usuarios autenticados
-   },
+    path: '/user/:id',
+    name: 'VisitProfile',
+    component: VisitProfile
+  },
 
   {
     path: '/createtrip',
     name: 'CreateTrip',
-    component: CreatePost,
-    meta: { requiresAuth: true }   // <- IMPORTANTE
+    component: CreateTrip,
+    meta: { requiresAuth: true }
   },
 
   {
-    path: '/post/:id',    // ✅ ruta dinámica
+    path: '/post/:id',
     name: 'Post',
     component: Post
   },
+
+  {
+    path: '/createtrip/:id?',
+    name: 'CreateTrip',
+    component: CreateTrip,
+    meta: { requiresAuth: true }
+  }
 ]
+
 
 const router = createRouter({
   history: createWebHistory(),
