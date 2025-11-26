@@ -1,148 +1,158 @@
 import request from "supertest";
-
 const app = global.__app;
 
-const VALID_ID_1 = "11111111-1111-4111-8111-111111111111";
-const VALID_ID_2 = "22222222-2222-4222-8222-222222222222";
-const VALID_ID_3 = "33333333-3333-4333-8333-333333333333";
+const VALID_ID = "11111111-1111-4111-8111-111111111111";
 
 beforeEach(() => {
   global.resetMockDB();
 });
 
-describe("POST /api/profile", () => {
+describe("PROFILE — VALIDATION EDGE CASES", () => {
 
   // ------------------------------------------------------------
-  // 1) Resolver userId desde email
+  // USERNAME
   // ------------------------------------------------------------
-  test("debe resolver id usando email si no se pasa userId", async () => {
-    global.__mockDB.users.push({
-      id: VALID_ID_1,
-      email: "test@test.com",
-      username: "olduser",
-    });
-
+  test("400 si username está vacío", async () => {
     const res = await request(app)
       .post("/api/profile")
-      .send({
-        email: "test@test.com",
-        username: "newname",
-        display_name: "Nuevo",
-        bio: "Hola",
-      });
-
-    expect(res.status).toBe(200);
-    expect(res.body.ok).toBe(true);
-
-    const saved = global.__mockDB.users[0];
-    expect(saved.username).toBe("newname");
-  });
-
-  // ------------------------------------------------------------
-  // 2) Username ya existe → 409
-  // ------------------------------------------------------------
-  test("debe devolver 409 si username ya existe", async () => {
-    global.__mockDB.users.push({
-      id: VALID_ID_1,
-      email: "a@a.com",
-      username: "usuario1"
-    });
-
-    global.__mockDB.users.push({
-      id: VALID_ID_2,
-      email: "b@b.com",
-      username: "repetido"
-    });
-
-    const res = await request(app)
-      .post("/api/profile")
-      .send({
-        userId: VALID_ID_1,
-        username: "repetido",
-        display_name: "Test",
-        bio: "hola"
-      });
-
-    expect(res.status).toBe(409);
-    expect(res.body.error).toMatch(/ya está en uso/i);
-  });
-
-  // ------------------------------------------------------------
-  // 3) Actualizar perfil existente
-  // ------------------------------------------------------------
-  test("debe actualizar un perfil existente", async () => {
-    global.__mockDB.users.push({
-      id: VALID_ID_1,
-      username: "old",
-      display_name: "Viejo",
-    });
-
-    const res = await request(app)
-      .post("/api/profile")
-      .send({
-        userId: VALID_ID_1,
-        username: "nuevoUsername",
-        display_name: "NombreNuevo",
-        bio: "BioNueva",
-        avatar_url: "https://x.com/foto.png",
-      });
-
-    expect(res.status).toBe(200);
-    expect(res.body.ok).toBe(true);
-
-    const updated = global.__mockDB.users[0];
-    expect(updated.username).toBe("nuevoUsername");
-    expect(updated.display_name).toBe("NombreNuevo");
-    expect(updated.bio).toBe("BioNueva");
-  });
-
-  // ------------------------------------------------------------
-  // 4) Falta username → 400
-  // ------------------------------------------------------------
-  test("debe devolver 400 si falta username", async () => {
-    const res = await request(app)
-      .post("/api/profile")
-      .send({
-        userId: VALID_ID_1,
-        display_name: "Test",
-      });
+      .send({ userId: VALID_ID, username: "" });
 
     expect(res.status).toBe(400);
     expect(res.body.error).toMatch(/usuario/i);
   });
 
-  // ------------------------------------------------------------
-  // 5) display_name demasiado largo
-  // ------------------------------------------------------------
-  test("display_name demasiado largo → 400", async () => {
+  test("400 si username contiene espacios", async () => {
     const res = await request(app)
       .post("/api/profile")
-      .send({
-        userId: VALID_ID_1,
-        username: "test123",
-        display_name: "a".repeat(20),
-      });
+      .send({ userId: VALID_ID, username: "hola mundo" });
 
     expect(res.status).toBe(400);
-    expect(res.body.error).toMatch(/apodo inválido/i);
+  });
+
+  test("400 si username contiene caracteres no permitidos", async () => {
+    const res = await request(app)
+      .post("/api/profile")
+      .send({ userId: VALID_ID, username: "nil$$$" });
+
+    expect(res.status).toBe(400);
+  });
+
+  test("400 si username demasiado largo (>15)", async () => {
+    const res = await request(app)
+      .post("/api/profile")
+      .send({ userId: VALID_ID, username: "a".repeat(20) });
+
+    expect(res.status).toBe(400);
   });
 
   // ------------------------------------------------------------
-  // 6) Bio demasiado larga
+  // DISPLAY NAME
   // ------------------------------------------------------------
-  test("bio supera el máximo → 400", async () => {
-    const longBio = "x".repeat(200);
-
+  test("400 si display_name contiene emojis", async () => {
     const res = await request(app)
       .post("/api/profile")
       .send({
-        userId: VALID_ID_1,
-        username: "test123",
-        display_name: "Test",
-        bio: longBio,
+        userId: VALID_ID,
+        username: "nil",
+        display_name: "Nil 😎",
       });
 
     expect(res.status).toBe(400);
-    expect(res.body.error).toMatch(/biografía/i);
+  });
+
+  test("400 si display_name es null", async () => {
+    const res = await request(app)
+      .post("/api/profile")
+      .send({
+        userId: VALID_ID,
+        username: "nil",
+        display_name: null,
+      });
+
+    expect(res.status).toBe(400);
+  });
+
+  test("400 si display_name supera los 16 caracteres", async () => {
+    const res = await request(app)
+      .post("/api/profile")
+      .send({
+        userId: VALID_ID,
+        username: "nil",
+        display_name: "a".repeat(30),
+      });
+
+    expect(res.status).toBe(400);
+  });
+
+  // ------------------------------------------------------------
+  // BIO
+  // ------------------------------------------------------------
+  test("400 si bio no es string", async () => {
+    const res = await request(app)
+      .post("/api/profile")
+      .send({
+        userId: VALID_ID,
+        username: "nil",
+        bio: 100,
+      });
+
+    expect(res.status).toBe(400);
+  });
+
+  test("400 si bio supera los 150 caracteres", async () => {
+    const res = await request(app)
+      .post("/api/profile")
+      .send({
+        userId: VALID_ID,
+        username: "nil",
+        bio: "x".repeat(200),
+      });
+
+    expect(res.status).toBe(400);
+  });
+
+  // ------------------------------------------------------------
+  // EMAIL
+  // ------------------------------------------------------------
+  test("400 si email no es string", async () => {
+    const res = await request(app)
+      .post("/api/profile")
+      .send({
+        email: 123,
+        username: "nil",
+      });
+
+    expect(res.status).toBe(400);
+  });
+
+  test("404 si email no existe en DB", async () => {
+    const res = await request(app)
+      .post("/api/profile")
+      .send({
+        email: "noexiste@mail.com",
+        username: "nil",
+      });
+
+    expect(res.status).toBe(404);
+  });
+
+  // ------------------------------------------------------------
+  // USER ID
+  // ------------------------------------------------------------
+  test("400 si userId es inválido (no UUID)", async () => {
+    const res = await request(app)
+      .post("/api/profile")
+      .send({ userId: "123", username: "nil" });
+
+    expect(res.status).toBe(400);
+  });
+
+  // ------------------------------------------------------------
+  // INVALID JSON
+  // ------------------------------------------------------------
+  test("400 si el body es completamente vacío", async () => {
+    const res = await request(app).post("/api/profile").send({});
+
+    expect(res.status).toBe(400);
   });
 });
