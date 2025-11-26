@@ -10,7 +10,8 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint . --ext .js,.vue",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "echo \"No test specified\" && exit 0"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.76.1",
