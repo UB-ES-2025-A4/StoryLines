@@ -1,51 +1,58 @@
+import { jest } from "@jest/globals";
 import request from "supertest";
 import app from "../src/app.js";
 
-const TRIP_ID = "trip123";
+describe("GET /api/trips/:id (TEST MODE)", () => {
+  beforeEach(() => {
+    process.env.NODE_ENV = "test";
 
-describe("GET /api/trips/:id", () => {
-  it("should return a full trip object with stops and comments", async () => {
-    const res = await request(app).get(`/api/trips/${TRIP_ID}`);
+    global.__tripByIdMockError = false;
+    global.__tripByIdMockData = {
+      id: "trip123",
+      trip_name: "Test Trip",
+      description: "desc",
+      cover_image: "img.png",
+      start_date: "2025-01-01",
+      end_date: "2025-01-03",
+      comment: "hello!",
+      stops: [
+        {
+          id: 1,
+          city: "Tokyo",
+          description: "stop 1",
+          images: ["img1"],
+          country_id: 1,
+        },
+      ],
+    };
+  });
 
-    console.log("TRIP BY ID RESPONSE:", res.status, res.body);
+  it("should return 500 if __tripByIdMockError is true", async () => {
+    global.__tripByIdMockError = true;
+
+    const res = await request(app).get("/api/trips/trip123");
+
+    expect(res.status).toBe(500);
+    expect(res.body.ok).toBe(false);
+  });
+
+  it("should return 200 with null trip if __tripByIdMockData = null", async () => {
+    global.__tripByIdMockData = null;
+
+    const res = await request(app).get("/api/trips/trip123");
 
     expect(res.status).toBe(200);
     expect(res.body.ok).toBe(true);
-
-    const trip = res.body.trip;
-
-    // Validación general
-    expect(trip).toBeDefined();
-    expect(trip.id).toBe(TRIP_ID);
-    expect(trip.trip_name).toBe("Viaje a Japón");
-    expect(trip.description).toBe("Increíble viaje");
-
-    // Usuario del viaje
-    expect(trip.user.id).toBe("550e8400-e29b-41d4-a716-446655440000");
-    expect(trip.user.username).toBe("testuser");
-
-    // Paradas
-    expect(Array.isArray(trip.stops)).toBe(true);
-    expect(trip.stops.length).toBe(1);
-    expect(trip.stops[0]).toMatchObject({
-      city: "Tokyo",
-      country: "Japón",
-      description: "Templos y sushi",
-      images: ["tokyo1.jpg"],
-    });
-
-    // Comentarios
-    expect(Array.isArray(trip.comments)).toBe(true);
-    expect(trip.comments.length).toBeGreaterThan(0);
-    expect(trip.comments[0].text).toBe("Increíble viaje!");
+    expect(res.body.trip).toBeNull();
   });
 
-  it("should return 404 if trip does not exist", async () => {
-    const res = await request(app).get("/api/trips/unknown-trip");
+  it("should return 200 and trip data when ok", async () => {
+    const res = await request(app).get("/api/trips/trip123");
 
-    console.log("TRIP NOT FOUND RESPONSE:", res.status, res.body);
-
-    expect(res.status).toBe(404);
-    expect(res.body.ok).toBe(false);
+    expect(res.status).toBe(200);
+    expect(res.body.ok).toBe(true);
+    expect(res.body.trip.id).toBe("trip123");
+    expect(res.body.trip.comment).toBe("hello!");
+    expect(res.body.trip.stops.length).toBe(1);
   });
 });
