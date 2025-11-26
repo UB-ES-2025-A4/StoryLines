@@ -117,7 +117,8 @@ watch(() => props.isVisible, (newValue) => {
   width: 350px;
   background: #0a0a0a;
   height: 100vh;
-  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
   border-left: 1px solid #333;
 }
 
@@ -144,7 +145,26 @@ watch(() => props.isVisible, (newValue) => {
 }
 
 .notifications-list {
+  flex: 1;
   padding: 1rem;
+  overflow-y: auto;
+}
+
+.notifications-list::-webkit-scrollbar {
+  width: 8px;
+}
+
+.notifications-list::-webkit-scrollbar-track {
+  background: #0a0a0a;
+}
+
+.notifications-list::-webkit-scrollbar-thumb {
+  background: #0a0a0a;
+  border-radius: 4px;
+}
+
+.notifications-list::-webkit-scrollbar-thumb:hover {
+  background: #0a0a0a;
 }
 
 .notification-card {

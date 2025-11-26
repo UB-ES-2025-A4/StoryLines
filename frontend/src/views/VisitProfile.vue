@@ -170,8 +170,8 @@ const defaultImg =
 ================================ */
 const loadProfile = async () => {
   try {
-    const res = await fetch(`${API_BASE}/api/profile-data?userId=${userId.value}`)
-    if (!res.ok) throw new Error('Error HTTP')
+    const res = await fetch(`${API_BASE}/api/profile/data?userId=${userId.value}`)
+  if (!res.ok) throw new Error('Error HTTP')
 
     const body = await res.json()
     if (body.ok) {
