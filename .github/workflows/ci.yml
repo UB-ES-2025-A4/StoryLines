@@ -1,0 +1,63 @@
+name: CI Pipeline
+
+on:
+  push:
+    branches: [ "main", "dev" ]
+  pull_request:
+
+jobs:
+
+  # -----------------------
+  # BACKEND TESTS (NODE + JEST)
+  # -----------------------
+  backend-tests:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install backend dependencies
+        run: npm install
+
+      - name: Create dummy env
+        run: |
+          echo "SUPABASE_URL=http://localhost" > .env
+          echo "SUPABASE_ANON_KEY=anon" >> .env
+          echo "SUPABASE_SERVICE_ROLE_KEY=service" >> .env
+
+      - name: Run backend tests
+        run: npm test
+
+
+  # -----------------------
+  # FRONTEND TESTS (VUE)
+  # -----------------------
+  frontend-tests:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install frontend dependencies
+        run: npm install
+
+      - name: Run frontend tests
+        run: npm test
