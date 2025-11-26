@@ -1,55 +1,93 @@
 <template>
-  <div class="sidebar">
-    <img src="@/assets/LogoBlanco.png" alt="StoryLines Logo" class="logo" />
-    <nav>
-      <router-link to="/" class="nav-item" :class="{ 'active': $route.path === '/' }">
-        <svg class="icon" v-html="homeIcon"></svg>
-        <span>Home</span>
-      </router-link>
+  <div class="sidebar-container">
+    <div class="sidebar">
+      <img src="@/assets/LogoBlanco.png" alt="StoryLines Logo" class="logo" />
+      <nav>
+        <router-link to="/" class="nav-item" :class="{ 'active': $route.path === '/' }">
+          <svg class="icon" v-html="homeIcon"></svg>
+          <span>Home</span>
+        </router-link>
 
-      <div class="nav-item">
-        <svg class="icon" v-html="searchIcon"></svg>
-        <span>Buscar</span>
-      </div>
+        <div 
+          class="nav-item" 
+          :class="{ 'active': showSearcher }"
+          @click="toggleSearcher"
+        >
+          <svg class="icon" v-html="searchIcon"></svg>
+          <span>Buscar</span>
+        </div>
 
-      <div class="nav-item">
-        <svg class="icon" v-html="notificationsIcon"></svg>
-        <span>Notificaciones</span>
-      </div>
+        <div 
+          class="nav-item" 
+          :class="{ 'active': showNotifications }"
+          @click="toggleNotifications"
+        >
+          <svg class="icon" v-html="notificationsIcon"></svg>
+          <span>Notificaciones</span>
+        </div>
 
-      <router-link to="/createtrip" class="nav-item" :class="{ 'active': $route.path === '/create' }">
-        <svg class="icon" v-html="createIcon"></svg>
-        <span>Crear viaje</span>
-      </router-link>
+        <router-link to="/createtrip" class="nav-item" :class="{ 'active': $route.path === '/create' }">
+          <svg class="icon" v-html="createIcon"></svg>
+          <span>Crear viaje</span>
+        </router-link>
 
-      <div class="nav-item">
-        <svg class="icon" v-html="storeIcon"></svg>
-        <span>Tienda</span>
-      </div>
+        <div class="nav-item">
+          <svg class="icon" v-html="storeIcon"></svg>
+          <span>Tienda</span>
+        </div>
 
-      <div class="nav-item">
-        <svg class="icon" v-html="messagesIcon"></svg>
-        <span>Mensajes</span>
-      </div>
+        <div class="nav-item">
+          <svg class="icon" v-html="messagesIcon"></svg>
+          <span>Mensajes</span>
+        </div>
 
-      <router-link to="/profile" class="nav-item" :class="{ 'active': $route.path === '/profile' }">
-        <svg class="icon" v-html="profileIcon"></svg>
-        <span>Perfil</span>
-      </router-link>
+        <router-link to="/profile" class="nav-item" :class="{ 'active': $route.path === '/profile' }">
+          <svg class="icon" v-html="profileIcon"></svg>
+          <span>Perfil</span>
+        </router-link>
 
-      <div class="nav-item">
-        <svg class="icon" v-html="settingsIcon"></svg>
-        <span>Configuración</span>
-      </div>
-    </nav>
+        <div class="nav-item">
+          <svg class="icon" v-html="settingsIcon"></svg>
+          <span>Configuración</span>
+        </div>
+      </nav>
+    </div>
+
+    <div class="notification-panel" :class="{ 'show': showNotifications }">
+    <Notifications :isVisible="showNotifications" @close="showNotifications = false" />
+    </div>
+    <div class="searcher-panel" :class="{ 'show': showSearcher }">
+      <Searcher :isOpen="showSearcher" @close="showSearcher = false" />
+
+    </div>
   </div>
 </template>
 
 <script setup>
+import { ref } from 'vue'
 import { useRoute } from 'vue-router'
+import Searcher from '@/components/Friends/Searcher.vue'
+import Notifications from './Friends/Notifications.vue'
 
-// ICONOS
 const route = useRoute()
+const showNotifications = ref(false)
+const showSearcher = ref(false)
+
+const toggleNotifications = () => {
+  showNotifications.value = !showNotifications.value
+  if (showNotifications.value) {
+    showSearcher.value = false
+  }
+}
+
+const toggleSearcher = () => {
+  showSearcher.value = !showSearcher.value
+  if (showSearcher.value) {
+    showNotifications.value = false
+  }
+}
+
+// ICONOS (mantener los mismos)
 const homeIcon = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 9L12 2L21 9V20C21 21.1 20.1 22 19 22H5C3.9 22 3 21.1 3 20V9Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`
 const createIcon = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 4V20M4 12H20" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`
 const profileIcon = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="7" r="4.5" stroke="currentColor" stroke-width="2"/><path d="M20 21V19C20 15.134 16.866 12 13 12H11C7.134 12 4 15.134 4 19V21" stroke="currentColor" stroke-width="2"/></svg>`
@@ -61,6 +99,14 @@ const settingsIcon = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none
 </script>
 
 <style scoped>
+.sidebar-container {
+  display: flex;
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 100;
+}
+
 .sidebar {
   width: 250px;
   background: #0a0a0a;
@@ -68,15 +114,29 @@ const settingsIcon = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none
   display: flex;
   flex-direction: column;
   height: 100vh;
-  position: fixed;
-  top: 0;
-  left: 0;
   overflow-y: auto;
-  z-index: 100;
-  resize: horizontal;
-  min-width: 200px;
-  max-width: 300px;
-  transition: width 0.2s, padding 0.2s;
+}
+
+.notification-panel {
+  width: 0;
+  overflow: hidden;
+  transition: width 0.3s ease;
+}
+
+.notification-panel.show {
+  width: 350px;
+}
+
+.searcher-panel {
+  width: 0;
+  overflow: hidden;
+  transition: width 0.3s ease;
+  background: #0a0a0a;
+  border-left: 1px solid #333;
+}
+
+.searcher-panel.show {
+  width: 350px;
 }
 
 .logo {
@@ -106,11 +166,12 @@ const settingsIcon = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none
   transition: background 0.2s;
   position: relative;
   min-height: 40px;
+  cursor: pointer;
 }
 
-.nav-item:hover {
+.nav-item:hover, .nav-item.active {
   color: #fff;
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(0, 0, 0, 0.1);
 }
 
 .icon {
@@ -119,7 +180,7 @@ const settingsIcon = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none
   flex-shrink: 0;
   display: flex;
   align-items: center;
-  justify-content: center; /* Keeps SVG centered within its container */
+  justify-content: center;
 }
 
 .icon svg {

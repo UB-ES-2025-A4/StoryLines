@@ -17,18 +17,9 @@
             <div class="input-container">
               <div class="image-upload">
                 <label>Foto de portada</label>
-                <img
-                  :src="coverPreview || 'https://jkfenner.com/wp-content/uploads/2019/11/default-450x450.jpg'"
-                  class="preview"
-                  alt="Portada del viaje"
-                />
-                <input
-                  type="file"
-                  ref="coverInput"
-                  accept="image/*"
-                  style="display:none"
-                  @change="handleCoverUpload"
-                />
+                <img :src="coverPreview || 'https://jkfenner.com/wp-content/uploads/2019/11/default-450x450.jpg'"
+                  class="preview" alt="Portada del viaje" />
+                <input type="file" ref="coverInput" accept="image/*" style="display:none" @change="handleCoverUpload" />
                 <button @click="$refs.coverInput.click()" class="upload-btn">Seleccionar imagen</button>
               </div>
               <div class="form-fields">
@@ -44,7 +35,7 @@
                     <input type="date" v-model="trip.end_date" />
                   </div>
                 </div>
-                <label>Descripción (opcional)</label>
+                <label>Descripción</label>
                 <textarea v-model="trip.description" rows="3"></textarea>
               </div>
             </div>
@@ -59,88 +50,100 @@
         <div v-if="currentStep === 2">
           <h2 class="section-title">Paradas</h2>
           <div class="section-card">
-  <button class="back-btn" @click="goToCover">
-    <svg class="arrow-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M15 18L9 12L15 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-    </svg> Volver
-  </button>
-  <div class="stops-route">
-    <div v-for="(stop, index) in trip.stops" :key="index" class="stop-card-wrapper">
-      <h3 v-if="index === 0" class="stop-origin-title">Origen del viaje</h3>
-      <div class="input-container stop-card">
-        <div class="image-upload">
-          <label>Fotos (opcional)</label>
-          <div class="stop-images">
-            <button class="nav-arrow left" @click="changeStopImage(stop, -1)" :disabled="stop.currentImageIndex === 0 || stop.images.length <= 1">
-              <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M15 18L9 12L15 6" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
+            <button class="back-btn" @click="goToCover">
+              <svg class="arrow-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M15 18L9 12L15 6" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                  stroke-linejoin="round" />
+              </svg> Volver
             </button>
-            <div class="preview-wrapper">
-              <img
-                :src="stop.images.length > 0 ? stop.images[stop.currentImageIndex] : 'https://jkfenner.com/wp-content/uploads/2019/11/default-450x450.jpg'"
-                class="stop-image"
-                alt="Foto parada"
-              />
-              <button v-if="stop.images.length > 0" class="remove-img-btn" @click="removeCurrentStopImage(index)">
-                <svg class="trash-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M3 6H5H21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                  <path d="M8 6V4C8 3.44772 8.44772 3 9 3H15C15.5523 3 16 3.44772 16 4V6M19 6V20C19 20.5523 18.5523 21 18 21H6C5.44772 21 5 20.5523 5 20V6H19Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-              </button>
+            <div class="stops-route">
+              <div v-for="(stop, index) in trip.stops" :key="stop.id || index" class="stop-card-wrapper">
+                <h3 v-if="index === 0" class="stop-origin-title">Origen del viaje</h3>
+                <div class="input-container stop-card">
+                  <div class="image-upload">
+                    <label>Fotos</label>
+                    <div class="stop-images">
+                      <button class="nav-arrow left" @click="changeStopImage(stop, -1)"
+                        :disabled="stop.currentImageIndex === 0 || stop.images.length <= 1">
+                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <path d="M15 18L9 12L15 6" stroke="#fff" stroke-width="2" stroke-linecap="round"
+                            stroke-linejoin="round" />
+                        </svg>
+                      </button>
+                      <div class="preview-wrapper">
+                        <img
+                          :src="stop.images.length > 0 ? stop.images[stop.currentImageIndex] : 'https://jkfenner.com/wp-content/uploads/2019/11/default-450x450.jpg'"
+                          class="stop-image" alt="Foto parada" />
+                        <button v-if="stop.images.length > 0" class="remove-img-btn"
+                          @click="removeCurrentStopImage(index)">
+                          <svg class="trash-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M3 6H5H21" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                              stroke-linejoin="round" />
+                            <path
+                              d="M8 6V4C8 3.44772 8.44772 3 9 3H15C15.5523 3 16 3.44772 16 4V6M19 6V20C19 20.5523 18.5523 21 18 21H6C5.44772 21 5 20.5523 5 20V6H19Z"
+                              stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                          </svg>
+                        </button>
+                      </div>
+                      <button class="nav-arrow right" @click="changeStopImage(stop, 1)"
+                        :disabled="stop.currentImageIndex === stop.images.length - 1 || stop.images.length <= 1">
+                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <path d="M9 6L15 12L9 18" stroke="#fff" stroke-width="2" stroke-linecap="round"
+                            stroke-linejoin="round" />
+                        </svg>
+                      </button>
+                    </div>
+                    <input type="file" :ref="el => stopFileInputs[index] = el" style="display:none" accept="image/*"
+                      multiple @change="e => handleStopImagesUpload(e, index)" />
+                    <button @click="openStopFile(index)" class="upload-btn">Seleccionar imágenes</button>
+                  </div>
+                  <div class="form-fields">
+                    <label>Ciudad</label>
+                    <input v-model="stop.city" type="text" placeholder="Ej: Tokio" />
+                    <label>País</label>
+                    <input v-model="stop.countrySearch" type="text" placeholder="Buscar país..."
+                      @focus="stop.countryOpen = true" @input="stop.countryOpen = true" />
+                    <ul v-show="stop.countryOpen" class="dropdown">
+                      <li v-for="c in filteredCountries(stop.countrySearch)" :key="c.id"
+                        @click="selectCountry(stop, c)">
+                        {{ c.name }}
+                      </li>
+                      <li v-if="filteredCountries(stop.countrySearch).length === 0" class="empty">
+                        No hay resultados
+                      </li>
+                    </ul>
+                    <label>Descripción</label>
+                    <textarea v-model="stop.description" rows="3"></textarea>
+                  </div>
+                  <button v-if="index > 0" class="remove-stop-btn" @click="removeStop(index)">X</button>
+                </div>
+                <div v-if="index < trip.stops.length - 1" class="route-line"></div>
+              </div>
             </div>
-            <button class="nav-arrow right" @click="changeStopImage(stop, 1)" :disabled="stop.currentImageIndex === stop.images.length - 1 || stop.images.length <= 1">
-              <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M9 6L15 12L9 18" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
-            </button>
+            <div class="add-stop-container">
+              <button class="add-stop-btn" @click="addStop">Añadir parada</button>
+            </div>
           </div>
-          <input
-            type="file"
-            :ref="el => stopFileInputs[index] = el"
-            style="display:none"
-            accept="image/*"
-            multiple
-            @change="e => handleStopImagesUpload(e, index)"
-          />
-          <button @click="openStopFile(index)" class="upload-btn">Seleccionar imágenes</button>
-        </div>
-        <div class="form-fields">
-          <label>Ciudad (opcional)</label>
-          <input v-model="stop.city" type="text" placeholder="Ej: Tokio"/>
-          <label>País</label>
-          <input v-model="stop.countrySearch" type="text" placeholder="Buscar país..." @focus="stop.countryOpen = true" @input="stop.countryOpen = true" />
-          <ul v-show="stop.countryOpen" class="dropdown">
-            <li v-for="c in filteredCountries(stop.countrySearch)" :key="c.id" @click="selectCountry(stop, c)">
-              {{ c.name }}
-            </li>
-            <li v-if="filteredCountries(stop.countrySearch).length === 0" class="empty">
-              No hay resultados
-            </li>
-          </ul>
-          <label>Descripción (opcional)</label>
-          <textarea v-model="stop.description" rows="3"></textarea>
-        </div>
-        <button v-if="index > 0" class="remove-stop-btn" @click="removeStop(index)">X</button>
-      </div>
-      <div v-if="index < trip.stops.length - 1" class="route-line"></div>
-    </div>
-  </div>
-  <div class="add-stop-container">
-    <button class="add-stop-btn" @click="addStop">Añadir parada</button>
-  </div>
-</div>
 
           <!-- Actions -->
           <div class="actions">
-            <button @click="publishTrip" :disabled="saving">
-              {{ saving ? 'Publicando...' : 'Publicar viaje' }}
-            </button>
-            <button class="save-draft" @click="saveDraft" :disabled="saving">
-              {{ saving ? 'Guardando...' : 'Guardar borrador' }}
-            </button>
-            <button class="cancel" @click="cancelTrip">Cancelar</button>
+            <template v-if="trip.status === 'published'">
+              <button class="save-draft" @click="saveChanges" :disabled="savingDraft">
+                {{ savingDraft ? 'Guardando...' : 'Guardar cambios' }}
+              </button>
+              <button class="cancel" @click="cancelTrip">Cancelar</button>
+            </template>
+            <template v-else>
+              <button @click="publishTrip" :disabled="savingPublish">
+                {{ savingPublish ? 'Publicando...' : 'Publicar viaje' }}
+              </button>
+              <button class="save-draft" @click="saveDraft" :disabled="savingDraft">
+                {{ savingDraft ? 'Guardando...' : 'Guardar borrador' }}
+              </button>
+              <button class="cancel" @click="cancelTrip">Cancelar</button>
+            </template>
           </div>
+
         </div>
 
         <!-- Messages -->
@@ -152,16 +155,17 @@
 </template>
 
 <script>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import { supabase } from '@/config/supabase'
-import { useRouter } from 'vue-router'
-import Sidebar from '@/components/Sidebar.vue' 
+import { useRouter, useRoute } from 'vue-router'
+import Sidebar from '@/components/Sidebar.vue'
 
 export default {
   name: 'CreateTrip',
   components: { Sidebar },
   setup() {
     const router = useRouter()
+    const route = useRoute()
 
     const user = ref(null)
     const loading = ref(false)
@@ -202,8 +206,46 @@ export default {
           images: [],
           currentImageIndex: 0
         }
-      ]
+      ],
+      status: ''
     })
+
+    const tripId = ref(route.params.id || null)
+
+    const resetTrip = () => {
+      trip.value = {
+        trip_name: '',
+        cover_image: '',
+        start_date: '',
+        end_date: '',
+        description: '',
+        stops: [
+          {
+            city: '',
+            country_id: '',
+            countrySearch: '',
+            countryOpen: false,
+            description: '',
+            images: [],
+            currentImageIndex: 0
+          },
+          {
+            city: '',
+            country_id: '',
+            countrySearch: '',
+            countryOpen: false,
+            description: '',
+            images: [],
+            currentImageIndex: 0
+          }
+        ],
+        status: ''
+      }
+      coverPreview.value = ''
+      error.value = ''
+      success.value = ''
+      currentStep.value = 1
+    }
 
     const loadUser = async () => {
       const { data: { session } } = await supabase.auth.getSession()
@@ -220,13 +262,95 @@ export default {
       countries.value = data || []
     }
 
-    onMounted(async () => {
+    const loadTrip = async () => {
+      if (!tripId.value) {
+        // Nuevo viaje
+        loading.value = false
+        return
+      }
+
       loading.value = true
+      error.value = ''
+
+      try {
+        // 1. Cargar viaje
+        const { data: tripData, error: tripErr } = await supabase
+          .from('trips')
+          .select('*')
+          .eq('id', tripId.value)
+          .single()
+
+        if (tripErr || !tripData) {
+          error.value = 'No se pudo cargar el viaje'
+          loading.value = false
+          return
+        }
+
+        // Mapear datos básicos
+        trip.value.trip_name = tripData.trip_name
+        trip.value.cover_image = tripData.cover_image
+        trip.value.start_date = tripData.start_date
+        trip.value.end_date = tripData.end_date
+        trip.value.description = tripData.description || ''
+        trip.value.status = tripData.status || 'draft'
+
+        coverPreview.value = tripData.cover_image || ''
+
+        // 2. Cargar paradas
+        const { data: stopsData, error: stopsErr } = await supabase
+          .from('trip_stops')
+          .select('*')
+          .eq('trip_id', tripId.value)
+          .order('id', { ascending: true })
+
+        if (stopsErr) {
+          error.value = 'No se pudieron cargar las paradas del viaje'
+          loading.value = false
+          return
+        }
+
+        console.log('Cargando stops del tripId:', tripId.value)
+
+        // Mapear paradas existentes
+        trip.value.stops = (stopsData || []).map(s => ({
+          id: s.id, // muy importante para edición y borrado
+          city: s.city || '',
+          country_id: s.country_id || '',
+          countrySearch: getCountryNameById(s.country_id) || '',
+          countryOpen: false,
+          description: s.description || '',
+          images: s.images || [],
+          currentImageIndex: 0
+        }))
+
+        // Inicializar refs de inputs de fotos por parada
+        stopFileInputs.value = new Array(trip.value.stops.length).fill(null)
+
+      } catch (err) {
+        error.value = 'Error cargando el viaje'
+        console.error(err)
+      } finally {
+        loading.value = false
+      }
+    }
+
+    watch(() => route.params.id, async (newId, oldId) => {
+      if (newId === oldId) return
+      loading.value = true
+      tripId.value = newId || null
+      resetTrip()
+      if (newId) {
+        await loadTrip()
+      }
+      loading.value = false
+      stopFileInputs.value = new Array(trip.value.stops.length).fill(null)
+    }, { immediate: false })
+
+    onMounted(async () => {
       await loadUser()
       await loadCountries()
-      loading.value = false
+      await loadTrip()
       window.addEventListener('click', closeAllDropdowns)
-      stopFileInputs.value = new Array(trip.value.stops.length).fill(null)
     })
 
     const closeAllDropdowns = (e) => {
@@ -300,48 +424,48 @@ export default {
     }
 
     const changeStopImage = (stop, delta) => {
-  const newIndex = stop.currentImageIndex + delta
-  if (newIndex >= 0 && newIndex < stop.images.length) {
-    stop.currentImageIndex = newIndex
-  }
-}
-
-const removeCurrentStopImage = (index) => {
-  const stop = trip.value.stops[index]
-  if (stop.images.length > 0) {
-    stop.images.splice(stop.currentImageIndex, 1)
-    if (stop.currentImageIndex > stop.images.length - 1) {
-      stop.currentImageIndex = Math.max(0, stop.images.length - 1)
+      const newIndex = stop.currentImageIndex + delta
+      if (newIndex >= 0 && newIndex < stop.images.length) {
+        stop.currentImageIndex = newIndex
+      }
     }
-  }
-}
+
+    const removeCurrentStopImage = (index) => {
+      const stop = trip.value.stops[index]
+      if (stop.images.length > 0) {
+        stop.images.splice(stop.currentImageIndex, 1)
+        if (stop.currentImageIndex > stop.images.length - 1) {
+          stop.currentImageIndex = Math.max(0, stop.images.length - 1)
+        }
+      }
+    }
 
     // Validaciones publicar
-const validateRequiredFields = () => {
-  for (const [i, s] of trip.value.stops.entries()) {
-    if (!s.country_id) {
-      error.value = `En la parada ${i + 1} el país es obligatorio.`;
-      return false;
-    }
-    if (!s.images || s.images.length === 0) {
-      error.value = `Debes subir al menos una foto en la parada ${i + 1}.`;
-      return false;
-    }
-  }
+    const validateRequiredFields = () => {
+      for (const [i, s] of trip.value.stops.entries()) {
+        if (!s.country_id) {
+          error.value = `En la parada ${i + 1} el país es obligatorio.`;
+          return false;
+        }
+        if (!s.images || s.images.length === 0) {
+          error.value = `Debes subir al menos una foto en la parada ${i + 1}.`;
+          return false;
+        }
+      }
 
-  if (trip.value.stops.length < 2) {
-    error.value = 'Debes añadir al menos 2 paradas para publicar.';
-    return false;
-  }
+      if (trip.value.stops.length < 2) {
+        error.value = 'Debes añadir al menos 2 paradas para publicar.';
+        return false;
+      }
 
-  if (!trip.value.cover_image) {
-    error.value = 'Debes añadir una foto de portada antes de publicar.';
-    return false;
-  }
+      if (!trip.value.cover_image) {
+        error.value = 'Debes añadir una foto de portada antes de publicar.';
+        return false;
+      }
 
-  error.value = '';
-  return true;
-};
+      error.value = '';
+      return true;
+    };
 
     // Validaciones para pasar a paradas
     const canProceedToStops = () => {
@@ -367,80 +491,242 @@ const validateRequiredFields = () => {
 
     // Paradas
     const addStop = () => {
-  trip.value.stops.push({ city: '', country_id: '', countrySearch: '', countryOpen: false, description: '', images: [], currentImageIndex: 0 })
-  stopFileInputs.value.push(null)
-}
+      trip.value.stops.push({ city: '', country_id: '', countrySearch: '', countryOpen: false, description: '', images: [], currentImageIndex: 0 })
+      stopFileInputs.value.push(null)
+    }
+
+    const removedStops = ref([])
+
     const removeStop = (i) => {
+      const stop = trip.value.stops[i];
+      if (stop.id) {
+        removedStops.value.push(stop.id);
+      }
       trip.value.stops.splice(i, 1)
       stopFileInputs.value.splice(i, 1)
     }
 
+
     const cancelTrip = () => { router.push('/') }
 
-    // Insert trip + stops
-    const insertTripWithStops = async (status) => {
-      const payload = {
-        user_id: user.value.id,
-        trip_name: trip.value.trip_name,
-        cover_image: trip.value.cover_image,
-        start_date: trip.value.start_date,
-        end_date: trip.value.end_date,
-        description: trip.value.description || null,
-        status
-      }
-      const { data: inserted, error: insertError } = await supabase.from('trips').insert(payload).select().single()
-      if (insertError) throw insertError
-      const tripId = inserted.id
 
-      for (const stop of trip.value.stops) {
-        const stopPayload = {
-          trip_id: tripId,
-          city: stop.city || null,
-          country_id: stop.country_id,
-          description: stop.description || null,
-          images: stop.images?.length ? stop.images : []
+    const savingDraft = ref(false)
+    const savingPublish = ref(false)
+
+    const saveTripWithStops = async (status) => {
+      let tripRecord = null;
+
+      try {
+        // ---------------------------
+        // 1) SI ES EDICIÓN
+        // ---------------------------
+        if (tripId.value) {
+
+          // 1. Actualizar datos del viaje
+          const { data, error: err } = await supabase
+            .from('trips')
+            .update({
+              trip_name: trip.value.trip_name,
+              cover_image: trip.value.cover_image,
+              start_date: trip.value.start_date,
+              end_date: trip.value.end_date,
+              description: trip.value.description || null,
+              status
+            })
+            .eq('id', tripId.value)
+
+          if (err) throw err;
+          tripRecord = data;
+
+          // --------------------------------------------
+          // 2. OBTENER IDs EXISTENTES EN BD
+          // --------------------------------------------
+          const { data: existingStopsData, error: eErr } = await supabase
+            .from('trip_stops')
+            .select('*')
+            .eq('trip_id', tripId.value);
+
+          if (eErr) throw eErr;
+
+          const existingStops = existingStopsData || [];
+          const existingIds = existingStops.map(s => s.id);
+
+          // --------------------------------------------
+          // 3. PROCESAR PARADAS ACTUALES DEL FRONTEND
+          // --------------------------------------------
+          const currentStops = trip.value.stops;
+
+          const stopsToUpdate = currentStops.filter(s => s.id);      // tienen id → ya existen
+          const stopsToInsert = currentStops.filter(s => !s.id);     // no tienen id → nuevas
+
+          // --------------------------------------------
+          // 4. ACTUALIZAR PARADAS EXISTENTES
+          // --------------------------------------------
+          for (const stop of stopsToUpdate) {
+            const { error: updateErr } = await supabase
+              .from('trip_stops')
+              .update({
+                city: stop.city || null,
+                country_id: stop.country_id || null,
+                description: stop.description || null,
+                images: stop.images || [] 
+              })
+              .eq('id', stop.id);
+
+            if (updateErr) throw updateErr;
+          }
+
+          // --------------------------------------------
+          // 5. INSERTAR PARADAS NUEVAS (SOLO SI NO ESTÁN VACÍAS)
+          // --------------------------------------------
+          for (const stop of stopsToInsert) {
+
+            const isEmpty =
+              (!stop.city || stop.city.trim() === "") &&
+              (!stop.country_id) &&
+              (!stop.description || stop.description.trim() === "") &&
+              (!stop.images || stop.images.length === 0);
+
+            if (isEmpty) continue; // evitar insertar “paradas fantasma”
+
+            const { data: newStop, error: insErr } = await supabase
+              .from('trip_stops')
+              .insert({
+                trip_id: tripId.value,
+                city: stop.city || null,
+                country_id: stop.country_id || null,
+                description: stop.description || null,
+                images: stop.images || []
+              })
+              .select()
+              .single();
+
+            if (insErr) throw insErr;
+
+            stop.id = newStop.id; // asignar id a la parada recién creada
+          }
+
+          // --------------------------------------------
+          // 6. ELIMINAR PARADAS BORRADAS POR EL USUARIO
+          // --------------------------------------------
+          if (removedStops.value.length > 0) {
+            const idsToDelete = removedStops.value.map(id => String(id));
+
+            console.log('Eliminando paradas con IDs:', idsToDelete);
+
+            const { data: delData, error: delErr } = await supabase
+              .from('trip_stops')
+              .delete()
+              .in('id', idsToDelete)
+              .select();
+
+            console.log('Paradas eliminadas:', delData);
+            
+            if (delErr) throw delErr;
+
+            removedStops.value = []; // limpiar lista de eliminados
+          }
+          
+
+        } else {
+          // ---------------------------
+          // 2) SI ES NUEVO VIAJE
+          // ---------------------------
+          const { data, error: tErr } = await supabase
+            .from('trips')
+            .insert({
+              user_id: user.value.id,
+              trip_name: trip.value.trip_name,
+              cover_image: trip.value.cover_image,
+              start_date: trip.value.start_date,
+              end_date: trip.value.end_date,
+              description: trip.value.description || null,
+              status
+            })
+            .select()
+            .single();
+
+          if (tErr) throw tErr;
+          tripRecord = data;
+          tripId.value = tripRecord.id;
+
+          // Insertar paradas
+          for (const stop of trip.value.stops) {
+            const isEmpty =
+              (!stop.city || stop.city.trim() === "") &&
+              (!stop.country_id) &&
+              (!stop.description || stop.description.trim() === "") &&
+              (!stop.images || stop.images.length === 0);
+
+            if (isEmpty) continue;
+
+            const { data: newStop, error: sErr } = await supabase
+              .from('trip_stops')
+              .insert({
+                trip_id: tripRecord.id,
+                city: stop.city || null,
+                country_id: stop.country_id || null,
+                description: stop.description || null,
+                images: stop.images || []
+              })
+              .select()
+              .single();
+
+            if (sErr) throw sErr;
+            stop.id = newStop.id;
+          }
         }
-        const { error: stopErr } = await supabase.from('trip_stops').insert(stopPayload)
-        if (stopErr) throw stopErr
+
+        success.value = "Cambios guardados correctamente";
+        error.value = "";
+
+      } catch (err) {
+        console.error(err);
+        error.value = "Error guardando el viaje";
       }
-    }
+    };
+
+
+
+
 
     // Acciones
     const saveDraft = async () => {
-      error.value = ''; success.value = ''; saving.value = true
+      error.value = ''; success.value = ''; savingDraft.value = true
       try {
-        if (!user.value) {
-          const { data: { session } } = await supabase.auth.getSession()
-          if (!session?.user) { error.value = 'Debes iniciar sesión'; saving.value = false; return }
-          user.value = session.user
-        }
-        await insertTripWithStops('draft')
+        await saveTripWithStops('draft')
         success.value = 'Borrador guardado correctamente'
-        router.push('/')
+        router.push('/profile')
       } catch (err) {
         error.value = err.message || 'Error al guardar borrador'
-      } finally { saving.value = false }
+      } finally { savingDraft.value = false }
+    }
+
+    const saveChanges = async () => {
+      error.value = ''; success.value = ''; savingDraft.value = true
+      try {
+        await saveTripWithStops('published')
+        success.value = 'Cambios guardados correctamente'
+        router.push('/profile')
+      } catch (err) {
+        error.value = err.message || 'Error al guardar cambios'
+      } finally { savingDraft.value = false }
     }
 
     const publishTrip = async () => {
-      error.value = ''; success.value = ''
-      if (!validateRequiredFields()) return
-      saving.value = true
+      error.value = ''; success.value = ''; savingPublish.value = true
+      if (!validateRequiredFields()) { savingPublish.value = false; return }
       try {
-        if (!user.value) {
-          const { data: { session } } = await supabase.auth.getSession()
-          if (!session?.user) { error.value = 'Debes iniciar sesión'; saving.value = false; return }
-          user.value = session.user
-        }
-        await insertTripWithStops('published')
+        await saveTripWithStops('published')
         success.value = 'Viaje publicado correctamente'
         router.push('/')
       } catch (err) {
         error.value = err.message || 'Error al publicar el viaje'
-      } finally { saving.value = false }
+      } finally { savingPublish.value = false }
     }
 
-    
+
+
 
     return {
       trip, error, success, coverPreview, countries,
@@ -448,7 +734,7 @@ const validateRequiredFields = () => {
       addStop, removeStop, changeStopImage, removeCurrentStopImage,
       stopFileInputs, openStopFile, handleStopImagesUpload,
       handleCoverUpload,
-      saveDraft, publishTrip, cancelTrip,
+      saveDraft, saveChanges, publishTrip, cancelTrip,
       loading, saving,
       currentStep, goToStops, goToCover, canProceedToStops
     }
@@ -753,7 +1039,7 @@ const validateRequiredFields = () => {
   margin-top: 2rem;
   margin-left: 2.5rem;
   margin-right: 2.5rem;
-  max-width:1100px;
+  max-width: 1100px;
   justify-content: center;
 }
 
