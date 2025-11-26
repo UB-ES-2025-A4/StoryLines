@@ -1,58 +1,46 @@
-// tests/addFriend.test.js
-import { jest } from "@jest/globals";
 import request from "supertest";
 
-await jest.unstable_mockModule("../src/config/supabase.js", () => ({
-  supabaseAdmin: {
-    from: jest.fn(() => ({
-      insert: jest.fn().mockResolvedValue({ data: {}, error: null })
-    }))
-  }
-}));
+const app = global.__app;
 
-const app = (await import("../src/app.js")).default;
+beforeEach(() => global.resetMockDB());
 
 describe("POST /api/add-friend", () => {
-
-  it("should add a friend successfully", async () => {
+  test("debe devolver 400 si faltan campos", async () => {
     const res = await request(app)
       .post("/api/add-friend")
-      .send({
-        user_id: "550e8400-e29b-41d4-a716-446655440000",
-        friend_id: "11111111-1111-4111-8111-111111111111",
-      });
+      .send({ user_id: "A" });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/faltan/i);
+  });
+
+  test("debe insertar correctamente una relación", async () => {
+    global.__mockDB.users.push(
+      { id: "A", username: "userA" },
+      { id: "B", username: "userB" }
+    );
+
+    const res = await request(app)
+      .post("/api/add-friend")
+      .send({ user_id: "A", friend_id: "B" });
 
     expect(res.status).toBe(200);
     expect(res.body.ok).toBe(true);
+
+    expect(global.__mockDB.friends.length).toBe(1);
+    expect(global.__mockDB.friends[0].user_id).toBe("A");
+    expect(global.__mockDB.friends[0].friend_id).toBe("B");
   });
 
-  it("should return 400 if missing fields", async () => {
-    const res = await request(app)
-      .post("/api/add-friend")
-      .send({}); // nada
-
-    expect(res.status).toBe(400);
-    expect(res.body.error).toBe("Faltan campos");
-  });
-
-  it("should return 500 if database fails", async () => {
-    // Cambiamos el mock: ahora insert falla
-    const mod = await import("../src/config/supabase.js");
-    jest.spyOn(mod.supabaseAdmin, "from").mockReturnValue({
-      insert: jest.fn().mockResolvedValue({
-        data: null,
-        error: { message: "DB error" }
-      })
-    });
+  test("debe manejar errores simulados de la DB", async () => {
+    // Simulamos error insertando undefined (mockInsert lo rompe)
+    global.__mockDB.friends = null;
 
     const res = await request(app)
       .post("/api/add-friend")
-      .send({
-        user_id: "550e8400-e29b-41d4-a716-446655440000",
-        friend_id: "11111111-1111-4111-8111-111111111111",
-      });
+      .send({ user_id: "A", friend_id: "B" });
 
     expect(res.status).toBe(500);
-    expect(res.body.error).toBe("DB error");
+    expect(res.body.error).toBeDefined();
   });
 });

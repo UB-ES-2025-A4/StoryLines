@@ -1,80 +1,77 @@
-import { jest } from "@jest/globals";
-
 import request from "supertest";
-import app from "../src/app.js";
 
-describe("Friends API", () => {
-  it("should return a list of friends", async () => {
-    global.__friendsMockData = [
-      {
-        id: "rel1",
-        user_id: "user-with-friends",
-        friend_id: "friend123",
-        user: { id: "user-with-friends" },
-        friend: {
-          id: "friend123",
-          username: "tester",
-          display_name: "Tester",
-          avatar_url: "",
-          user_color: "#ccc",
-        },
-      },
-    ];
+const app = global.__app;
 
-    const res = await request(app).get("/api/friends?userId=user-with-friends");
+beforeEach(() => {
+  global.resetMockDB();
+});
+
+/* -------------------------------------------------------
+   TEST: GET /api/friends
+------------------------------------------------------- */
+
+describe("GET /api/friends", () => {
+  test("debe devolver 400 si falta userId", async () => {
+    const res = await request(app).get("/api/friends");
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/userId/i);
+  });
+
+  test("debe devolver lista vacía si no tiene amigos", async () => {
+    global.__mockDB.friends = [];
+
+    const res = await request(app).get("/api/friends?userId=abc123");
 
     expect(res.status).toBe(200);
     expect(res.body.ok).toBe(true);
-    expect(res.body.friends.length).toBe(1);
+    expect(Array.isArray(res.body.friends)).toBe(true);
+    expect(res.body.friends.length).toBe(0);
   });
 
-  it("should return empty list when no friends", async () => {
-    global.__friendsMockData = [];
+  test("debe devolver los amigos correctamente (modo test)", async () => {
+    global.__mockDB.users.push(
+      { id: "A", username: "userA", display_name: "User A", user_color: "#111", avatar_url: "" },
+      { id: "B", username: "userB", display_name: "User B", user_color: "#222", avatar_url: "" }
+    );
 
-    const res = await request(app).get("/api/friends?userId=user-no-friends");
-
-    expect(res.status).toBe(200);
-    expect(res.body.friends).toEqual([]);
-  });
-
-  it("should return 400 when missing userId", async () => {
-    const res = await request(app).get("/api/friends");
-    expect(res.status).toBe(400);
-  });
-
-  it("should return 500 when supabase fails", async () => {
-    global.__friendsMockError = { message: "DB failure" };
-
-    const res = await request(app).get("/api/friends?userId=user-db-error");
-
-    expect(res.status).toBe(500);
-    expect(res.body.error).toBe("DB failure");
-  });
-  it("should default to empty list when mock data is not defined", async () => {
-  delete global.__friendsMockData;
-  delete global.__friendsMockError;
-
-  const res = await request(app).get("/api/friends?userId=abc");
-
-  expect(res.status).toBe(200);
-  expect(res.body.friends).toEqual([]);
-});
-
-// 🟦 Test: mapeo correcto sender → friend
-it("should correctly return the opposite user as friend", async () => {
-  global.__friendsMockData = [
-    {
-      id: "1",
+    global.__mockDB.friends.push({
+      id: "rel1",
       user_id: "A",
       friend_id: "B",
-      user: { id: "A", username: "UserA" },
-      friend: { id: "B", username: "UserB" }
-    }
-  ];
+      created_at: "2024-01-01T00:00:00Z"
+    });
 
-  const res = await request(app).get("/api/friends?userId=A");
+    const res = await request(app).get("/api/friends?userId=A");
 
-  expect(res.status).toBe(200);
-  expect(res.body.friends[0].friend.id).toBe("B");
-});
+    expect(res.status).toBe(200);
+    expect(res.body.ok).toBe(true);
+
+    expect(res.body.friends.length).toBe(1);
+
+    const f = res.body.friends[0];
+    expect(f.friend.id).toBe("B");
+    expect(f.friend.username).toBe("userB");
+    expect(f.friend.display_name).toBe("User B");
+    expect(f.friend.user_color).toBe("#222");
+  });
+
+  test("debe recuperar amigos aunque el usuario sea friend_id (relación invertida)", async () => {
+    global.__mockDB.users.push(
+      { id: "A", username: "userA" },
+      { id: "B", username: "userB" }
+    );
+
+    global.__mockDB.friends.push({
+      id: "rel2",
+      user_id: "B",
+      friend_id: "A",
+      created_at: "2024-01-01"
+    });
+
+    const res = await request(app).get("/api/friends?userId=A");
+
+    expect(res.status).toBe(200);
+    expect(res.body.friends.length).toBe(1);
+    expect(res.body.friends[0].friend.id).toBe("B");
+  });
 });

@@ -1,95 +1,19 @@
-// src/routes/trips.js
 import { Router } from "express";
 import { supabaseAdmin } from "../config/supabase.js";
 
 const router = Router();
 
 /* ============================================================
-   🔹 GET /api/trips
+   GET /api/trips — Lista de viajes publicados
 ============================================================ */
 router.get("/", async (_req, res) => {
-
-  /* ------------------------------------------------------
-     🧪 1) MODO PRODUCCIÓN SIMULADO (TESTS)
-     NODE_ENV = "production" && FORCE_TRIPS_MOCK = "1"
-  ------------------------------------------------------- */
-  if (process.env.NODE_ENV === "production" && process.env.FORCE_TRIPS_MOCK === "1") {
-
-    // Error en trips
-    if (global.__tripsMockError || global.__mockError.trips) {
-      return res.status(500).json({ ok: false, error: "Trips error" });
-    }
-
-    const trips = global.__mockData.trips || [];
-
-    // Error en stops
-    if (global.__mockError.trip_stops) {
-      return res.status(500).json({ ok: false, error: "Stops error" });
-    }
-
-    const stops = global.__mockData.trip_stops || [];
-
-    // Agrupar stops por trip_id
-    const grouped = {};
-    stops.forEach(stop => {
-      if (!grouped[stop.trip_id]) grouped[stop.trip_id] = [];
-      grouped[stop.trip_id].push({
-        city: stop.city,
-        images: stop.images || [],
-        country: stop.country?.name || "",
-        lat: stop.country?.latitude,
-        lng: stop.country?.longitude
-      });
-    });
-
-    // Igual formato que producción real
-    const formatted = trips.map(t => ({
-      id: t.id,
-      userId: t.user_id,
-      userName: t.users?.display_name || t.users?.username || "",
-      userColor: t.users?.user_color || "rgba(192,192,192,1)",
-      tripName: t.trip_name,
-      coverImage: t.cover_image,
-      startDate: t.start_date,
-      endDate: t.end_date,
-      description: t.description,
-      stops: grouped[t.id] || []
-    }));
-
-    return res.json({ ok: true, trips: formatted });
-  }
-
-  /* ------------------------------------------------------
-     🧪 2) MODO TEST NORMAL
-  ------------------------------------------------------- */
-  if (process.env.NODE_ENV === "test") {
-    if (global.__tripsMockError) {
-      return res.status(500).json({
-        ok: false,
-        error: "Error interno obteniendo viajes (test)",
-      });
-    }
-
-    const trips = Array.isArray(global.__tripsMockData)
-      ? global.__tripsMockData
-      : [];
-
-    return res.json({ ok: true, trips });
-  }
-
-  /* ------------------------------------------------------
-     🔹 3) PRODUCCIÓN REAL
-  ------------------------------------------------------- */
   try {
     const { data: trips, error: tripsError } = await supabaseAdmin
       .from("trips")
-      .select("*, users:user_id(id, username, display_name, user_color)")
+      .select("*, users:user_id(id, username, display_name, user_color, avatar_url)")
       .eq("status", "published");
 
-    if (tripsError) {
-      console.error("[GET TRIPS ERROR]", tripsError);
-      return res.status(500).json({ error: tripsError.message });
-    }
+    if (tripsError) return res.status(500).json({ error: tripsError.message });
 
     const { data: stops, error: stopsError } = await supabaseAdmin
       .from("trip_stops")
@@ -98,157 +22,168 @@ router.get("/", async (_req, res) => {
         country:countries!trip_stops_country_id_fkey(id, name, latitude, longitude)
       `);
 
-    if (stopsError) {
-      console.error("[GET TRIPS ERROR]", stopsError);
-      return res.status(500).json({ error: stopsError.message });
-    }
+    if (stopsError) return res.status(500).json({ error: stopsError.message });
 
     const grouped = {};
-    (stops || []).forEach(stop => {
-      if (!grouped[stop.trip_id]) grouped[stop.trip_id] = [];
-      grouped[stop.trip_id].push({
-        country: stop.country?.name || "",
-        city: stop.city,
-        lat: stop.country?.latitude,
-        lng: stop.country?.longitude,
-        images: stop.images || [],
+    (stops || []).forEach((s) => {
+      if (!grouped[s.trip_id]) grouped[s.trip_id] = [];
+      grouped[s.trip_id].push({
+        country: s.country?.name || "",
+        city: s.city,
+        lat: s.country?.latitude,
+        lng: s.country?.longitude,
+        images: s.images || [],
       });
     });
 
-    const formatted = trips.map(t => ({
+    const formatted = trips.map((t) => ({
       id: t.id,
       userId: t.user_id,
-      userName: t.users?.display_name || t.users?.username || "",
-      userColor: t.users?.user_color || "rgba(192,192,192,1)",
+      userName: t.users?.display_name || t.users?.username,
+      userAvatar: t.users?.avatar_url,
+      userColor: t.users?.user_color,
       tripName: t.trip_name,
       coverImage: t.cover_image,
-      stops: grouped[t.id] || [],
+      description: t.description,
       startDate: t.start_date,
       endDate: t.end_date,
-      description: t.description,
+      stops: grouped[t.id] || [],
     }));
 
     return res.json({ ok: true, trips: formatted });
   } catch (e) {
     console.error("[GET TRIPS ERROR]", e);
-    return res.status(500).json({
-      ok: false,
-      error: "Error interno obteniendo viajes",
-    });
+    return res.status(500).json({ error: "Error interno" });
   }
 });
 
 /* ============================================================
-   🔹 GET /api/trips/:id
+   GET /api/trips/:id — Viaje completo con comentarios y likes
 ============================================================ */
 router.get("/:id", async (req, res) => {
-
-  // MODO PRODUCCIÓN SIMULADO
-  if (process.env.NODE_ENV === "production" && process.env.FORCE_TRIPS_MOCK === "1") {
-    if (global.__tripByIdMockError) {
-      return res.status(500).json({ ok: false });
-    }
-    return res.json({
-      ok: true,
-      trip: global.__tripByIdMockData || null,
-    });
-  }
-
-  // MODO TEST
-  if (process.env.NODE_ENV === "test") {
-    if (global.__tripByIdMockError) {
-      return res.status(500).json({
-        ok: false,
-        error: "Error interno obteniendo viaje (test)",
-      });
-    }
-    return res.json({
-      ok: true,
-      trip: global.__tripByIdMockData || null,
-    });
-  }
-
-  // PRODUCCIÓN REAL
-  const { id } = req.params;
-
   try {
+    const tripId = req.params.id;
+
     const { data: trip, error: tripError } = await supabaseAdmin
       .from("trips")
-      .select(`
-        id, user_id, trip_name, description, cover_image,
-        start_date, end_date, status, comment,
-        users:user_id(id, username, display_name, user_color)
-      `)
-      .eq("id", id)
+      .select("*, users:user_id(id, username, display_name, user_color, avatar_url)")
+      .eq("id", tripId)
       .single();
 
-    if (tripError) throw tripError;
-    if (!trip)
+    if (tripError || !trip)
       return res.status(404).json({ ok: false, error: "Viaje no encontrado" });
 
-    const { data: stops, error: stopError } = await supabaseAdmin
+    const { data: stops } = await supabaseAdmin
       .from("trip_stops")
       .select(`
         id, city, description, images,
         country:countries!trip_stops_country_id_fkey(id, name, latitude, longitude)
       `)
-      .eq("trip_id", id);
+      .eq("trip_id", tripId);
 
-    if (stopError) throw stopError;
+    const formattedStops = stops.map((stop) => ({
+      title: stop.city || "Stop",
+      city: stop.city,
+      country: stop.country?.name,
+      description: stop.description,
+      images: stop.images || [],
+      lat: stop.country?.latitude,
+      lng: stop.country?.longitude,
+      currentImageIndex: 0,
+    }));
+
+    const { data: commentsData } = await supabaseAdmin
+      .from("trip_comments")
+      .select(`
+        id, text, created_at,
+        user:users(id, username, display_name, avatar_url, user_color)
+      `)
+      .eq("trip_id", tripId)
+      .order("created_at", { ascending: true });
+
+    const formattedComments = commentsData.map((c) => ({
+      id: c.id,
+      text: c.text,
+      createdAt: c.created_at,
+      user: {
+        id: c.user.id,
+        username: c.user.username,
+        displayName: c.user.display_name,
+        avatarUrl: c.user.avatar_url,
+        color: c.user.user_color,
+      },
+    }));
+
+    const { count: commentsCount } = await supabaseAdmin
+      .from("trip_comments")
+      .select("*", { head: true, count: "exact" })
+      .eq("trip_id", tripId);
+
+    const { count: likesCount } = await supabaseAdmin
+      .from("trip_likes")
+      .select("*", { head: true, count: "exact" })
+      .eq("trip_id", tripId);
+
+    let likedByCurrentUser = false;
+    if (req.query.userId) {
+      const { data: liked } = await supabaseAdmin
+        .from("trip_likes")
+        .select("id")
+        .eq("trip_id", tripId)
+        .eq("user_id", req.query.userId);
+
+      likedByCurrentUser = liked.length > 0;
+    }
+
+    await supabaseAdmin.rpc("increment_trip_views", {
+      trip_id_input: tripId,
+    });
 
     return res.json({
       ok: true,
       trip: {
-        ...trip,
-        stops: stops || [],
+        id: trip.id,
+        trip_name: trip.trip_name,
+        description: trip.description,
+        cover_image: trip.cover_image,
+        start_date: trip.start_date,
+        end_date: trip.end_date,
+        user: {
+          id: trip.users.id,
+          username: trip.users.username,
+          display_name: trip.users.display_name,
+          color: trip.users.user_color,
+        },
+        stops: formattedStops,
+        likes: likesCount,
+        userLiked: likedByCurrentUser,
+        views: trip.views,
+        commentsCount,
+        comments: formattedComments,
       },
     });
   } catch (e) {
     console.error("[GET TRIP BY ID ERROR]", e);
-    res
-      .status(500)
-      .json({ ok: false, error: "Error interno obteniendo el viaje" });
+    return res.status(500).json({ error: "Error interno" });
   }
 });
 
 /* ============================================================
-   🔹 POST /api/trips
+   POST /api/trips — Crear viaje + paradas
 ============================================================ */
 router.post("/", async (req, res) => {
-  const {
-    user_id,
-    trip_name,
-    cover_image,
-    start_date,
-    end_date,
-    description,
-    status,
-    stops,
-  } = req.body;
-
   try {
-    if (!user_id)
-      return res.status(400).json({ ok: false, error: "Falta user_id" });
-    if (!trip_name)
-      return res.status(400).json({ ok: false, error: "Falta trip_name" });
-    if (!start_date || !end_date)
-      return res.status(400).json({ ok: false, error: "Faltan fechas" });
-    if (!status)
-      return res.status(400).json({ ok: false, error: "Falta status" });
-    if (!Array.isArray(stops))
-      return res.status(400).json({ ok: false, error: "Faltan paradas" });
+    const { user_id, trip_name, start_date, end_date, status, stops } = req.body;
+
+    if (!user_id) return res.status(400).json({ error: "Falta user_id" });
+    if (!trip_name) return res.status(400).json({ error: "Falta trip_name" });
+    if (!start_date || !end_date) return res.status(400).json({ error: "Faltan fechas" });
+    if (!status) return res.status(400).json({ error: "Falta status" });
+    if (!Array.isArray(stops)) return res.status(400).json({ error: "Faltan paradas" });
 
     const { data: trip, error: tripError } = await supabaseAdmin
       .from("trips")
-      .insert({
-        user_id,
-        trip_name,
-        cover_image: cover_image || null,
-        start_date,
-        end_date,
-        description: description || null,
-        status,
-      })
+      .insert(req.body)
       .select()
       .single();
 
@@ -257,27 +192,145 @@ router.post("/", async (req, res) => {
     const tripId = trip.id;
 
     for (const stop of stops) {
-      const payload = {
+      await supabaseAdmin.from("trip_stops").insert({
         trip_id: tripId,
-        city: stop.city || null,
+        city: stop.city,
         country_id: stop.country_id,
+        images: stop.images || [],
         description: stop.description || null,
-        images: stop.images?.length ? stop.images : [],
-      };
-
-      const { error: stopErr } = await supabaseAdmin
-        .from("trip_stops")
-        .insert(payload);
-
-      if (stopErr) throw stopErr;
+      });
     }
 
     return res.json({ ok: true, tripId });
   } catch (e) {
     console.error("[CREATE TRIP ERROR]", e);
-    res
-      .status(500)
-      .json({ ok: false, error: "Error interno creando viaje" });
+    return res.status(500).json({ error: "Error interno creando viaje" });
+  }
+});
+
+/* ============================================================
+   Likes / Unlike
+============================================================ */
+router.post("/:tripId/like", async (req, res) => {
+  try {
+    const { tripId } = req.params;
+    const { userId } = req.body;
+
+    if (!tripId || !userId)
+      return res.status(400).json({ error: "Faltan datos" });
+
+    const { data: existing } = await supabaseAdmin
+      .from("trip_likes")
+      .select("id")
+      .eq("trip_id", tripId)
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    if (!existing) {
+      const { error: likeError } = await supabaseAdmin
+        .from("trip_likes")
+        .insert({ trip_id: tripId, user_id: userId });
+
+      if (likeError && likeError.code !== "23505")
+        return res.status(500).json({ error: likeError.message });
+
+      await supabaseAdmin.rpc("increment_trip_likes", {
+        trip_id_input: tripId,
+      });
+    }
+
+    const { count } = await supabaseAdmin
+      .from("trip_likes")
+      .select("*", { head: true, count: "exact" })
+      .eq("trip_id", tripId);
+
+    return res.json({ ok: true, userLiked: true, likes: count });
+  } catch (e) {
+    console.error("[LIKE ERROR]", e);
+    return res.status(500).json({ error: "Error interno" });
+  }
+});
+
+router.delete("/:tripId/like/:userId", async (req, res) => {
+  try {
+    const { tripId, userId } = req.params;
+
+    await supabaseAdmin
+      .from("trip_likes")
+      .delete()
+      .eq("trip_id", tripId)
+      .eq("user_id", userId);
+
+    await supabaseAdmin.rpc("decrement_trip_likes", {
+      trip_id_input: tripId,
+    });
+
+    const { count } = await supabaseAdmin
+      .from("trip_likes")
+      .select("*", { head: true, count: "exact" })
+      .eq("trip_id", tripId);
+
+    return res.json({ ok: true, userLiked: false, likes: count });
+  } catch (e) {
+    console.error("[UNLIKE ERROR]", e);
+    return res.status(500).json({ error: "Error interno" });
+  }
+});
+
+/* ============================================================
+   Comentarios / eliminar comentario
+============================================================ */
+router.post("/:tripId/comments", async (req, res) => {
+  try {
+    const { tripId } = req.params;
+    const { userId, text } = req.body;
+
+    if (!tripId || !userId || !text)
+      return res.status(400).json({ error: "Faltan datos" });
+
+    await supabaseAdmin
+      .from("trip_comments")
+      .insert({ trip_id: tripId, user_id: userId, text });
+
+    await supabaseAdmin.rpc("increment_trip_comments", {
+      trip_id_input: tripId,
+    });
+
+    const { count } = await supabaseAdmin
+      .from("trip_comments")
+      .select("*", { head: true, count: "exact" })
+      .eq("trip_id", tripId);
+
+    return res.json({ ok: true, commentsCount: count });
+  } catch (e) {
+    console.error("[COMMENT ERROR]", e);
+    return res.status(500).json({ error: "Error interno" });
+  }
+});
+
+router.delete("/:tripId/comments/:commentId/:userId", async (req, res) => {
+  try {
+    const { tripId, commentId, userId } = req.params;
+
+    await supabaseAdmin
+      .from("trip_comments")
+      .delete()
+      .eq("id", commentId)
+      .eq("trip_id", tripId);
+
+    await supabaseAdmin.rpc("decrement_trip_comments", {
+      trip_id_input: tripId,
+    });
+
+    const { count } = await supabaseAdmin
+      .from("trip_comments")
+      .select("*", { head: true, count: "exact" })
+      .eq("trip_id", tripId);
+
+    return res.json({ ok: true, commentsCount: count });
+  } catch (e) {
+    console.error("[DELETE COMMENT ERROR]", e);
+    return res.status(500).json({ error: "Error interno" });
   }
 });
 

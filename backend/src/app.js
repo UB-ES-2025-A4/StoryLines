@@ -1,45 +1,64 @@
+// ============================================================
+// Load environment variables first
+// ============================================================
 import "dotenv/config";
 import express from "express";
 import cors from "cors";
 import path from "path";
 import { fileURLToPath } from "url";
 
-import healthRoutes from "./routes/health.js";
-import profileRoutes from "./routes/profile.js";
-import avatarRoutes from "./routes/avatar.js";
-import tripsRoutes from "./routes/trips.js";
-import friendsRoutes from "./routes/friends.js";
-import addFriendRoutes from "./routes/addFriend.js";
-
+// ============================================================
+// Express App
+// ============================================================
 const app = express();
+
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: "10mb" }));
+app.use(express.urlencoded({ extended: true }));
 
-// ---------------------------
-// Rutas API
-// ---------------------------
-app.use("/health", healthRoutes);
-app.use("/api/profile", profileRoutes);
-app.use("/api/avatar", avatarRoutes);
-app.use("/api/trips", tripsRoutes);
-app.use("/api/friends", friendsRoutes);
-app.use("/api/add-friend", addFriendRoutes);
-
-// ---------------------------
-// Frontend (solo fuera de test)
-// ---------------------------
-
+// For local path resolution
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+// ============================================================
+// ROUTES IMPORTS (MODULAR)
+// ============================================================
+import healthRouter from "./routes/health.js";
+import profileRouter from "./routes/profile.js";
+import friendsRouter from "./routes/friends.js";
+import addFriendRouter from "./routes/addFriend.js";
+import deleteFriendRouter from "./routes/deleteFriend.js";
+import notificationsRouter from "./routes/notifications.js";
+import searchRouter from "./routes/search.js";
+import tripsRouter from "./routes/trips.js";
+
+// ============================================================
+// ROUTES MOUNTING
+// ============================================================
+app.use("/api/health", healthRouter);
+app.use("/api/profile", profileRouter);
+
+app.use("/api/friends", friendsRouter);
+app.use("/api/add-friend", addFriendRouter);
+app.use("/api/delete-friend", deleteFriendRouter);
+
+app.use("/api/notifications", notificationsRouter);
+app.use("/api/search", searchRouter);
+
+app.use("/api/trips", tripsRouter);
+
+// ============================================================
+// FRONTEND STATIC FILES
+// ============================================================
 const frontendPath = path.join(__dirname, "../../frontend/dist");
+app.use(express.static(frontendPath));
 
-// 👉 Esto es LO ÚNICO que cambia
-if (process.env.NODE_ENV !== "test") {
-  app.use(express.static(frontendPath));
+// All non-API routes → return frontend
+app.get("/*", (_req, res) => {
+  res.sendFile(path.join(frontendPath, "index.html"));
+});
 
-  app.get("/*", (req, res) => {
-    res.sendFile(path.join(frontendPath, "index.html"));
-  });
-}
-
+// ============================================================
+// EXPORT APP (server.js inicia el servidor)
+// ============================================================
 export default app;

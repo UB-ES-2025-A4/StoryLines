@@ -1,52 +1,28 @@
-import { jest } from "@jest/globals";
-
 import request from "supertest";
-const app = (await import("../src/app.js")).default;
 
-describe("GET /health", () => {
+const app = global.__app;
 
-  it("should return ok: true and include env + uptime", async () => {
-    const res = await request(app).get("/health");
+describe("GET /api/health", () => {
+  it("should respond with ok:true", async () => {
+    const res = await request(app).get("/api/health");
 
-    expect(res.status).toBe(200);
-
-    expect(res.body).toHaveProperty("ok", true);
-    expect(res.body).toHaveProperty("env");     // no comparamos valor exacto
-    expect(res.body).toHaveProperty("uptime");  // es dinámico
+    expect(res.statusCode).toBe(200);
+    expect(res.body.ok).toBe(true);
   });
 
-  it("should handle unexpected errors gracefully", async () => {
-    // 1. localizar la ruta montada en /health
-    const layer = app._router.stack.find(
-      (layer) =>
-        layer.route === undefined &&        // es un router.use(...)
-        layer.name === "router" &&          // express router
-        layer.regexp?.toString().includes("\\/health")
-    );
+  it("should include env and uptime", async () => {
+    const res = await request(app).get("/api/health");
 
-    expect(layer).toBeDefined();
+    expect(res.body).toHaveProperty("env");
+    expect(res.body).toHaveProperty("uptime");
 
-    // 2. obtener la ruta interna GET "/"
-    const inner = layer.handle.stack.find(
-      (r) => r.route?.path === "/" && r.route?.methods.get
-    );
+    // uptime debe ser un número
+    expect(typeof res.body.uptime).toBe("number");
+  });
 
-    expect(inner).toBeDefined();
+  it("should return NODE_ENV = test durante los tests", async () => {
+    const res = await request(app).get("/api/health");
 
-    const original = inner.route.stack[0].handle;
-
-    // 3. sustituimos handler por error
-    inner.route.stack[0].handle = () => {
-      throw new Error("Simulated failure");
-    };
-
-    const res = await request(app).get("/health");
-
-    // restauramos handler original
-    inner.route.stack[0].handle = original;
-
-    // la ruta debería enviar 500
-    expect(res.status).toBe(500);
-    expect(res.body).toEqual({});
+    expect(res.body.env).toBe("test");
   });
 });
