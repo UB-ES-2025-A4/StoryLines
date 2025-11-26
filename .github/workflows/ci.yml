@@ -31,7 +31,7 @@ jobs:
         fi
 
     - name: Run backend tests
-      run: pytest
+      run: npm test
 
 
   # -----------------------
