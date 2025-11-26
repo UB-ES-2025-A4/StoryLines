@@ -41,16 +41,18 @@
     <div v-if="noFriendsModal" class="floating-box-wrapper">
       <div class="floating-box">
         <h2>
-          {{ friends.length === 0
+          {{ !hasAcceptedFriends
             ? 'No tienes amigos todavía'
             : 'Ya tienes amigos ¿quieres añadir más?' }}
         </h2>
 
+
         <p v-if="suggestedUsers.length > 0">
-          {{ friends.length === 0
+          {{ !hasAcceptedFriends
             ? 'Aquí tienes algunas sugerencias para empezar:'
             : 'Aquí tienes algunas sugerencias de nuevos amigos:' }}
         </p>
+
 
         <p v-else class="no-more-users">
           Ya no hay más usuarios que sugerir.
@@ -63,7 +65,15 @@
             class="suggested-user"
           >
             <div class="user-info">
-              <img :src="user.avatar_url" alt="avatar" />
+              <img
+                :src="
+                  user.avatar_url && user.avatar_url.trim() !== ''
+                    ? user.avatar_url
+                    : defaultAvatar
+                "
+                alt="avatar"
+              />
+
               <span>{{ user.username }}</span>
             </div>
             <button
@@ -110,7 +120,7 @@ const noFriendsModal = ref(false)
 const suggestedUsers = ref([]) 
 const allSuggestedUsers = ref([])
 
-
+const defaultAvatar = '/default-avatar.png'
 
 const friendUserIds = computed(() => {
   return friends.value
@@ -118,22 +128,41 @@ const friendUserIds = computed(() => {
     .filter(Boolean) // elimina undefined/null
 })
 
+// 🔹 Comprueba si hay ALGÚN amigo con estado 'accepted'
+const hasAcceptedFriends = computed(() =>
+  friends.value.some(f => f.status === 'accepted')
+)
+
 
 const currentUserId = ref(null)
 const filteredTrips = computed(() => {
-  if (mode.value === 'discovery') return trips.value
+  if (mode.value === 'discovery') {
+    // Mezclar aleatoriamente todos los viajes
+    const shuffled = [...trips.value]
+      .sort(() => Math.random() - 0.5)
+
+    // Elegir SOLO 20
+    return shuffled.slice(0, 20)
+  }
 
   const myUserId = currentUserId.value
   if (!myUserId) return []
 
-  // Combinar tus viajes + los de tus amigos
-  const visibleUserIds = [...friendUserIds.value, myUserId].map(String)
+  // IDs de TODOS tus amigos (unidireccional en cualquier dirección)
+  const allFriendIds = friends.value
+    .map(f => f.friend?.id)
+    .filter(Boolean)
+    .map(String)
 
-  // Mostrar viajes cuyo user_id o userId esté en la lista
-  return trips.value.filter(t => {
-    const tripOwnerId = String(t.userId || t.user_id || '').trim()
-    return visibleUserIds.includes(tripOwnerId)
-  })
+  // Mostrar tus propios viajes + todos los de tus amigos
+  const visibleUserIds = new Set([
+    String(myUserId),
+    ...allFriendIds
+  ])
+
+  return trips.value.filter(t => 
+    visibleUserIds.has(String(t.userId || t.user_id))
+  )
 })
 
 const showAuthModal = ref(false)
@@ -251,7 +280,7 @@ onUnmounted(() => {
   window.removeEventListener('resize', handleResize)
   document.removeEventListener('click', handleDocumentClick)
   // stop watchers/listeners
-  try { watch.clear && watch.clear() } catch(e) {}
+  try { watch.clear && watch.clear() } catch(e) {console.error(e)}
   if (myGlobe) {
     myGlobe = null
   }
@@ -280,16 +309,18 @@ async function setMode(newMode) {
   mode.value = newMode
 
   if (newMode === "friends") {
-    if (!currentUserId.value) {
-      showAuthModal.value = true
-      return
-    }
-    if (friends.value.length === 0) {
-      await fetchSuggestedUsers()
-      noFriendsModal.value = true
-      return
-    }
+  if (!currentUserId.value) {
+    showAuthModal.value = true
+    return
   }
+  // 🔹 Mostrar popup si NO hay amigos aceptados
+  if (!hasAcceptedFriends.value) {
+    await fetchSuggestedUsers()
+    noFriendsModal.value = true
+    return
+  }
+}
+
 
   rebuildGlobeData()
 }
@@ -458,7 +489,7 @@ function createTooltipContent(destination) {
       tripsByUser[trip.userId] = {
         userName: trip.userName,
         userColor: trip.userColor,
-        userAvatar: `https://i.pravatar.cc/150?u=${trip.userName}`,
+        userAvatar: trip.userAvatar || '/default-avatar.png',
         trips: []
       }
     }
@@ -773,7 +804,7 @@ function rebuildGlobeData() {
     document.querySelectorAll('.trip-modal-overlay').forEach(n => n.remove())
     activePinTooltip = null
     activeTripPreview = null
-  } catch (e) {}
+  } catch (e) {console.error(e)}
 
   const arcs = convertTripsToArcs(filteredTrips.value)
   const stackedArcs = groupArcsByRoute(arcs)
@@ -1079,7 +1110,7 @@ function openFullTrip(tripId) {
     activePinTooltip = null
     activeTripPreview = null
   } catch (e) {
-    // ignore
+    console.error(e)
   }
 
   const trip = trips.value.find(t => t.id === tripId)
@@ -1144,7 +1175,7 @@ function openFullTrip(tripId) {
   document.body.appendChild(overlay)
 
   // still dispatch event for backward compatibility
-  try { window.dispatchEvent(new CustomEvent('open-full-trip', { detail: { tripId } })) } catch(e) {}
+  try { window.dispatchEvent(new CustomEvent('open-full-trip', { detail: { tripId } })) } catch(e) {console.error(e)}
 }
 
 function handleArcHover(hoverArc) {
