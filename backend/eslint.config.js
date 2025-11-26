@@ -18,7 +18,6 @@ export default defineConfig([
       ecmaVersion: "latest",
       sourceType: "module", // Tu backend usa import/export
       globals: {
-        ...globals.jest,
         ...globals.node
       }
     },
