@@ -139,7 +139,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { supabase } from '@/config/supabase'
 import Sidebar from '@/components/Sidebar.vue'
 
-const API_BASE = 'http://localhost:3000'
+const API_BASE = ''
 
 const route = useRoute()
 const router = useRouter()
