@@ -19,16 +19,13 @@ jobs:
     steps:
     - uses: actions/checkout@v3
 
-    - name: Configure Python
-      uses: actions/setup-python@v4
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
       with:
-        python-version: "3.11"
+        node-version: "18"
 
     - name: Install backend dependencies
-      run: |
-        if [ -f requirements.txt ]; then
-          pip install -r requirements.txt;
-        fi
+      run: npm install
 
     - name: Run backend tests
       run: npm test
