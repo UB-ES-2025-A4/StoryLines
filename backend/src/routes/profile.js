@@ -52,12 +52,6 @@ router.post("/", async (req, res) => {
     if (username !== undefined && typeof username !== "string")
       return res.status(400).json({ error: "username debe ser string" });
 
-    if (display_name !== undefined && typeof display_name !== "string")
-      return res.status(400).json({ error: "display_name debe ser string" });
-
-    if (bio !== undefined && typeof bio !== "string")
-      return res.status(400).json({ error: "bio debe ser string" });
-
     if (email !== undefined && typeof email !== "string")
       return res.status(400).json({ error: "email debe ser string" });
 
