@@ -83,9 +83,11 @@ export default {
         if (rememberMe.value) {
           localStorage.setItem('rememberedEmail', email.value)
           localStorage.setItem('rememberedPassword', password.value)
+          localStorage.setItem('rememberMe', 'true')
         } else {
           localStorage.removeItem('rememberedEmail')
           localStorage.removeItem('rememberedPassword')
+          localStorage.removeItem('rememberMe')
         }
 
         router.push('/')
