@@ -41,7 +41,7 @@
           </div>
 
           <h1 class="display-name">{{ profileData.display_name }}</h1>
-          <p class="bio">{{ profileData.bio || 'Esta es mi biografía...' }}</p>
+          <p class="bio">{{ profileData.bio }}</p>
 
           <button class="edit-btn" @click="isEditing = !isEditing; if (isEditing) showChangePicture = false">
             {{ isEditing ? 'Cancelar' : 'Editar perfil' }}
