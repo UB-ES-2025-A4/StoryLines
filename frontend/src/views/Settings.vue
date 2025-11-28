@@ -15,7 +15,7 @@
                     Personalización
                 </button>
 
-                <button class="primary-btn">
+                <button class="secondary-btn" @click="showLogoutModal = true">
                     Cerrar sesión
                 </button>
             </div>
@@ -146,6 +146,18 @@
                 </div>
             </div>
 
+            <div v-if="showLogoutModal" class="modal-overlay">
+                <div class="modal-card">
+                    <h2>Confirmar cierre de sesión</h2>
+                    <p>¿Estás seguro de que deseas cerrar sesión?</p>
+                    <button class="primary-btn" @click="handleLogout">
+                        Confirmar
+                    </button>
+                    <button class="primary-btn" @click="showLogoutModal = false">
+                        Cancelar
+                    </button>
+                </div>
+            </div>
 
         </div>
     </div>
@@ -192,6 +204,14 @@ supabase.auth.onAuthStateChange((event, session) => {
     user.value = session?.user || null
 })
 
+const showLogoutModal = ref(false)
+
+// Cerrar sesión
+const handleLogout = async () => {
+  await supabase.auth.signOut()
+  router.push('/')
+}
+
 // Cambiar email
 async function changeEmail(email) {
     return await supabase.auth.updateUser({ email })
@@ -219,6 +239,11 @@ async function checkEmailConfirmed(showAlert = true) {
 
         user.value = session.user
         screen.value = "account"
+
+        if(localStorage.getItem('rememberedEmail')) {
+            localStorage.setItem('rememberedEmail', newEmail.value)
+        }
+        
     } else {
         if (showAlert) alert("Tu email aún no está confirmado. Revisa tu correo.")
     }
@@ -273,6 +298,9 @@ async function submitPasswordChange() {
         console.error("Error updating password:", updateError.message)
     } else {
         alert("Contraseña actualizada correctamente.")
+        if(localStorage.getItem('rememberedPassword')) {
+            localStorage.setItem('rememberedPassword', newPassword.value)
+        }
         screen.value = "account"
         resetPasswordFields()
     }
@@ -308,7 +336,9 @@ async function deleteAccount() {
     }
 
     await supabase.auth.signOut()
-    
+
+    localStorage.clear()
+
     const res = await fetch(`/api/users/${session.user.id}`, {
         method: 'DELETE',
     })
