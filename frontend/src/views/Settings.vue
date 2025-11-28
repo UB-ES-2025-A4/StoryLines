@@ -191,9 +191,6 @@ onMounted(async () => {
         username.value = data?.username || 'No disponible'
     }
 
-    const savedEmail = localStorage.getItem('rememberedEmail')
-    const savedPassword = localStorage.getItem('rememberedPassword')
-
     // Chequear automáticamente si el email se confirma cada 5s
     setInterval(async () => {
         if (screen.value === "waitingEmailConfirmation") {
@@ -340,10 +337,7 @@ async function deleteAccount() {
 
     await supabase.auth.signOut()
 
-    if(localStorage.getItem('rememberedEmail') && localStorage.getItem('rememberedPassword')) {
-        localStorage.removeItem('rememberedEmail')
-        localStorage.removeItem('rememberedPassword')
-    }
+    localStorage.clear()
 
     const res = await fetch(`/api/users/${session.user.id}`, {
         method: 'DELETE',
