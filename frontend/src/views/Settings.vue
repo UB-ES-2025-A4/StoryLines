@@ -1,4 +1,4 @@
-<template> 
+<template>
     <div class="settings-page">
         <Sidebar />
 
@@ -33,7 +33,7 @@
                     Cambiar email
                 </button>
 
-                <button class="primary-btn">
+                <button class="primary-btn" @click="screen = 'changePassword'">
                     Cambiar contraseña
                 </button>
 
@@ -50,19 +50,9 @@
             <div v-else-if="screen === 'changeEmail'" class="section-card">
                 <h2 class="section-title">Cambiar email</h2>
 
-                <input
-                    v-model="newEmail"
-                    type="email"
-                    placeholder="Nuevo email"
-                    class="primary-input"
-                />
+                <input v-model="newEmail" type="email" placeholder="Nuevo email" class="primary-input" />
 
-                <input
-                    v-model="confirmEmail"
-                    type="email"
-                    placeholder="Confirmar nuevo email"
-                    class="primary-input"
-                />
+                <input v-model="confirmEmail" type="email" placeholder="Confirmar nuevo email" class="primary-input" />
 
                 <button class="primary-btn" @click="submitEmailChange">
                     Guardar
@@ -78,7 +68,7 @@
                 <h2 class="section-title">Confirma tu nuevo email</h2>
 
                 <p>
-                    Hemos enviado un correo de verificación a:  
+                    Hemos enviado un correo de verificación a:
                     <strong>{{ newEmail }}</strong>
                 </p>
 
@@ -92,6 +82,53 @@
                     Cancelar
                 </button>
             </div>
+
+
+            <!-- Cambiar contraseña -->
+            <div v-else-if="screen === 'changePassword'" class="section-card">
+                <h2 class="section-title">Cambiar contraseña</h2>
+
+                <div class="password-container">
+                    <input v-model="oldPassword" :type="showOldPassword ? 'text' : 'password'"
+                        autocomplete="new-password" placeholder="Contraseña actual"
+                        class="primary-input" />
+
+                    <button @click="showOldPassword = !showOldPassword" class="toggle-btn"
+                        v-html="showOldPassword ? eyeSlashIcon : eyeIcon">
+                    </button>
+                </div>
+
+                <div class="password-container">
+                    <input v-model="newPassword" :type="showNewPassword ? 'text' : 'password'"
+                        autocomplete="new-password" placeholder="Nueva contraseña"
+                        class="primary-input" />
+
+                    <button @click="showNewPassword = !showNewPassword" class="toggle-btn"
+                        v-html="showNewPassword ? eyeSlashIcon : eyeIcon">
+                    </button>
+                </div>
+
+
+                <div class="password-container">
+                    <input v-model="confirmPassword" :type="showConfirmPassword ? 'text' : 'password'"
+                        autocomplete="new-password" placeholder="Confirmar nueva contraseña"
+                        class="primary-input" />
+
+                    <button @click="showConfirmPassword = !showConfirmPassword" class="toggle-btn"
+                        v-html="showConfirmPassword ? eyeSlashIcon : eyeIcon">
+                    </button>
+                </div>
+
+
+                <button class="primary-btn" @click="submitPasswordChange">
+                    Confirmar cambio
+                </button>
+
+                <button class="secondary-btn mt-4" @click="resetPasswordFields(); screen = 'account'">
+                    Cancelar
+                </button>
+            </div>
+
         </div>
     </div>
 </template>
@@ -113,7 +150,7 @@ onMounted(async () => {
     user.value = session?.user || null
 
     if (user.value) {
-        const { data, error } = await supabase
+        const { data } = await supabase
             .from('users')
             .select('username')
             .eq('id', user.value.id)
@@ -166,6 +203,83 @@ async function checkEmailConfirmed(showAlert = true) {
         if (showAlert) alert("Tu email aún no está confirmado. Revisa tu correo.")
     }
 }
+
+const oldPassword = ref('')
+const newPassword = ref('')
+const confirmPassword = ref('')
+const showOldPassword = ref(false)
+const showNewPassword = ref(false)
+const showConfirmPassword = ref(false)
+
+// Cambiar contraseña
+async function submitPasswordChange() {
+    if (!oldPassword.value || !newPassword.value || !confirmPassword.value) {
+        alert("Por favor, completa todos los campos.")
+        return
+    }
+
+    if (newPassword.value !== confirmPassword.value) {
+        alert("La nueva contraseña y su confirmación no coinciden.")
+        return
+    }
+
+    if (newPassword.value === oldPassword.value) {
+        alert("La nueva contraseña debe ser diferente a la actual.")
+        return
+    }
+
+    if (newPassword.value.length < 6) {
+        alert("La nueva contraseña debe tener al menos 6 caracteres.")
+        return
+    }
+
+
+    const { data: { session } } = await supabase.auth.getSession()
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: session.user.email,
+        password: oldPassword.value
+    })
+
+    if (signInError) {
+        console.error("Error re-authenticating:", signInError.message)
+        return
+    }
+
+    const { error: updateError } = await supabase.auth.updateUser({
+        password: newPassword.value
+    })
+
+    if (updateError) {
+        console.error("Error updating password:", updateError.message)
+    } else {
+        alert("Contraseña actualizada correctamente.")
+        screen.value = "account"
+        resetPasswordFields()
+    }
+}
+
+function resetPasswordFields() {
+    oldPassword.value = ""
+    newPassword.value = ""
+    confirmPassword.value = ""
+}
+
+
+const eyeIcon = `
+<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+    <circle cx="12" cy="12" r="3"/>
+</svg>
+`
+
+const eyeSlashIcon = `
+<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">     
+    <path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>     
+    <path d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>     
+    <line x1="3" y1="3" x2="21" y2="21"/> </svg>
+`
+
+
 </script>
 
 <style scoped>
@@ -249,4 +363,36 @@ async function checkEmailConfirmed(showAlert = true) {
 .mt-4 {
     margin-top: 1rem;
 }
+
+.password-container {
+    position: relative;
+    width: 100%;
+}
+
+.toggle-btn {
+    position: absolute;
+    right: 0.8rem;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: #777b7e;
+    padding: 0;
+    width: 18px;
+    height: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.toggle-btn:hover {
+    color: #bebdb8;
+}
+
+.icon {
+    width: 18px;
+    height: 18px;
+}
+
 </style>
