@@ -25,7 +25,7 @@
           <div
             class="avatar-overlay"
             v-show="hovering"
-            @click="showChangePicture = !showChangePicture"
+            @click="showChangePicture = !showChangePicture; if (showChangePicture) isEditing = false"
           >
             <i class="fa fa-camera camera-icon"></i>
           </div>
@@ -43,7 +43,7 @@
           <h1 class="display-name">{{ profileData.display_name }}</h1>
           <p class="bio">{{ profileData.bio || 'Esta es mi biografía...' }}</p>
 
-          <button class="edit-btn" @click="isEditing = !isEditing">
+          <button class="edit-btn" @click="isEditing = !isEditing; if (isEditing) showChangePicture = false">
             {{ isEditing ? 'Cancelar' : 'Editar perfil' }}
           </button>
         </div>
