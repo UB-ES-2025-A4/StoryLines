@@ -9,6 +9,7 @@ import Profile from '@/views/Profile.vue'
 import Post from '@/views/Post.vue' 
 import VisitProfile from '@/views/VisitProfile.vue'
 import CreateTrip from '@/views/CreateTrip.vue'
+import Settings from '@/views/Settings.vue'
 
 const routes = [
   {
@@ -58,6 +59,13 @@ const routes = [
     path: '/createtrip/:id?',
     name: 'CreateTrip',
     component: CreateTrip,
+    meta: { requiresAuth: true }
+  },
+
+  {
+    path: '/settings',
+    name: 'Settings',
+    component: Settings,
     meta: { requiresAuth: true }
   }
 ]
