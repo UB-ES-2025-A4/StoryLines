@@ -37,7 +37,7 @@
                     Cambiar contraseña
                 </button>
 
-                <button class="primary-btn">
+                <button class="delete-btn" @click="showDeleteModal = true">
                     Eliminar cuenta
                 </button>
 
@@ -129,15 +129,35 @@
                 </button>
             </div>
 
+            <div v-if="showDeleteModal" class="modal-overlay">
+                <div class="modal-card">
+                    <h2>Confirmar eliminación de cuenta</h2>
+                    <p>Introduce tu contraseña.</p>
+                    <input v-model="deletePassword" type="password" placeholder="Ingresa tu contraseña" autocomplete="new-password" class="primary-input" />
+
+
+                    <h4>Estás seguro de que deseas eliminar tu cuenta? Esta acción es irreversible.</h4>
+                    <button class="delete-btn" @click="deleteAccount">
+                        Confirmar
+                    </button>
+                    <button class="primary-btn" @click="showDeleteModal = false">
+                        Cancelar
+                    </button>
+                </div>
+            </div>
+
+
         </div>
     </div>
 </template>
 
 <script setup>
 import { onMounted, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { supabase } from '@/config/supabase'
 import Sidebar from '@/components/Sidebar.vue'
 
+const router = useRouter()
 const screen = ref('main')
 const user = ref(null)
 const username = ref('')
@@ -264,6 +284,46 @@ function resetPasswordFields() {
     confirmPassword.value = ""
 }
 
+const showDeleteModal = ref(false)
+const deletePassword = ref('')
+
+// Eliminar cuenta
+async function deleteAccount() {
+
+    if (!deletePassword.value) {
+        alert("Por favor, ingresa tu contraseña para confirmar.")
+        return
+    }
+
+    const { data: { session } } = await supabase.auth.getSession()
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: session.user.email,
+        password: deletePassword.value
+    })
+
+    if (signInError) {
+        console.error("Contraseña incorrecta:", signInError.message)
+        deletePassword.value = ""
+        return
+    }
+
+    await supabase.auth.signOut()
+    
+    const res = await fetch(`/api/users/${session.user.id}`, {
+        method: 'DELETE',
+    })
+    const data = await res.json()
+
+    if (data.success) {
+        alert("Cuenta eliminada correctamente.")
+    } else {
+        console.error("Error deleting account:", data.message)
+    }
+
+    router.push('/')
+
+}
+
 
 const eyeIcon = `
 <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -351,6 +411,19 @@ const eyeSlashIcon = `
     cursor: pointer;
 }
 
+.delete-btn {
+    background: #b91c1c;
+    color: white;
+    padding: 0.75rem 1.5rem;
+    border-radius: 0.375rem;
+    border: none;
+    cursor: pointer;
+}
+
+.delete-btn:hover {
+    background: #991b1b;
+}
+
 .primary-input {
     background: #1a1a1a;
     color: white;
@@ -386,6 +459,7 @@ const eyeSlashIcon = `
     justify-content: center;
 }
 
+
 .toggle-btn:hover {
     color: #bebdb8;
 }
@@ -394,5 +468,28 @@ const eyeSlashIcon = `
     width: 18px;
     height: 18px;
 }
+
+.modal-overlay {
+  position: fixed;
+  top:0; left:0;
+  width: 100%; height: 100%;
+  background: rgba(0,0,0,0.6);
+  backdrop-filter: blur(4px);
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  z-index: 1000;
+}
+
+.modal-card {
+  background:#1a1a1a;
+  padding:2rem;
+  border-radius:12px;
+  border: 1px solid #fff;
+  max-width:400px;
+  text-align:center;
+  color:white;
+}
+
 
 </style>
