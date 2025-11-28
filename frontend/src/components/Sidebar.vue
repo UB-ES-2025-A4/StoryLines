@@ -46,10 +46,10 @@
           <span>Perfil</span>
         </router-link>
 
-        <div class="nav-item">
+        <router-link to="/settings" class="nav-item" :class="{ 'active': $route.path === '/settings' }">
           <svg class="icon" v-html="settingsIcon"></svg>
           <span>Configuración</span>
-        </div>
+        </router-link>
       </nav>
     </div>
 
