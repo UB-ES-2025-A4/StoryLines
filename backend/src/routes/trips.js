@@ -135,9 +135,16 @@ router.get("/:id", async (req, res) => {
       likedByCurrentUser = liked.length > 0;
     }
 
-    await supabaseAdmin.rpc("increment_trip_views", {
-      trip_id_input: tripId,
-    });
+    let savedByCurrentUser = false;
+    if (req.query.userId) {
+      const { data: saved } = await supabaseAdmin
+        .from("trip_saves")
+        .select("id")
+        .eq("trip_id", tripId)
+        .eq("user_id", req.query.userId);
+
+    savedByCurrentUser = saved.length > 0;
+    }
 
     return res.json({
       ok: true,
@@ -157,6 +164,7 @@ router.get("/:id", async (req, res) => {
         stops: formattedStops,
         likes: likesCount,
         userLiked: likedByCurrentUser,
+        userSaved: savedByCurrentUser,
         views: trip.views,
         commentsCount,
         comments: formattedComments,
@@ -167,6 +175,7 @@ router.get("/:id", async (req, res) => {
     return res.status(500).json({ error: "Error interno" });
   }
 });
+
 
 /* ============================================================
    POST /api/trips — Crear viaje + paradas
@@ -330,6 +339,74 @@ router.delete("/:tripId/comments/:commentId/:userId", async (req, res) => {
     return res.json({ ok: true, commentsCount: count });
   } catch (e) {
     console.error("[DELETE COMMENT ERROR]", e);
+    return res.status(500).json({ error: "Error interno" });
+  }
+});
+
+/* ============================================================
+   Guardar / Eliminar viaje guardado
+============================================================ */
+router.post("/:tripId/save", async (req, res) => {
+  try {
+    const { tripId } = req.params;
+    const { userId } = req.body;
+
+    if (!tripId || !userId)
+      return res.status(400).json({ error: "Faltan datos" }); 
+
+    // Comprobar si ya está guardado
+    const { data: existing } = await supabaseAdmin
+      .from("trip_saves")
+      .select("id")
+      .eq("trip_id", tripId)
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    if (!existing) {
+      const { error: saveError } = await supabaseAdmin
+        .from("trip_saves")
+        .insert({ trip_id: tripId, user_id: userId });
+
+      if (saveError && saveError.code !== "23505")
+        return res.status(500).json({ error: saveError.message });
+    }
+
+    return res.json({ ok: true, saved: true });
+  } catch (e) {
+    console.error("[SAVE TRIP ERROR]", e);
+    return res.status(500).json({ error: "Error interno" });
+  }
+});
+
+router.delete("/:tripId/save/:userId", async (req, res) => {
+  try {
+    const { tripId, userId } = req.params;
+
+    await supabaseAdmin
+      .from("trip_saves")
+      .delete()
+      .eq("trip_id", tripId)
+      .eq("user_id", userId);
+
+    return res.json({ ok: true, saved: false });
+  } catch (e) {
+    console.error("[UNSAVE TRIP ERROR]", e);
+    return res.status(500).json({ error: "Error interno" });
+  }
+});
+
+/* ============================================================
+   Incrementar vistas
+============================================================ */
+router.post("/:tripId/view", async (req, res) => {
+  try {
+    const { tripId } = req.params;
+    await supabaseAdmin.rpc("increment_trip_views", {
+      trip_id_input: tripId,
+    });
+    return res.json({ ok: true });
+  } catch (e) {
+    console.error("[INCREMENT VIEWS ERROR]", e);
     return res.status(500).json({ error: "Error interno" });
   }
 });
