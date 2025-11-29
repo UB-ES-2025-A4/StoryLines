@@ -179,7 +179,7 @@
           <label>Biografía:</label>
           <textarea v-model="editBio" placeholder="Biografía"></textarea>
 
-          <button class="save-btn" @click="saveProfile" :disabled="saving">
+          <button class="save-btn" @click="saveProfileAndClose" :disabled="saving">
             {{ saving ? 'Guardando...' : 'Guardar cambios' }}
           </button>
 
@@ -450,7 +450,13 @@ export default {
         error.value = err.message || 'Error al guardar el perfil'
       } finally {
         saving.value = false
-        toggleEditModal()
+      }
+    }
+
+    const saveProfileAndClose = async () => {
+      await saveProfile()
+      if (!error.value) {
+        showEditModal.value = false
       }
     }
 
@@ -559,6 +565,7 @@ export default {
     const handleImageUpdated = async (newUrl) => {
       profileData.value.avatar_url = newUrl
       showPictureModal.value = false
+      localStorage.setItem('profile_avatar_url', newUrl)
       await saveProfile()
     }
 
