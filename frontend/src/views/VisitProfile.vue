@@ -11,58 +11,44 @@
       <!-- CABECERA -->
       <div class="profile-header">
         <div class="avatar-container">
-          <img
-            class="avatar"
-            :src="profile.avatar_url || defaultAvatar"
-            alt="Foto de perfil"
-          />
+          <img class="avatar" :src="profile.avatar_url || defaultAvatar" alt="Foto de perfil" />
         </div>
 
         <div class="profile-text">
           <!-- NOMBRE + BOTÓN AMIGOS -->
           <div class="name-friends-row">
             <h2 class="username">{{ profile.username }}</h2>
-
-            <button class="friends-btn" @click="showFriends = true">
-              Amigos | {{ friends.length }} 
-            </button>
           </div>
 
           <h1 class="display-name">{{ profile.display_name }}</h1>
           <p class="bio">{{ profile.bio }}</p>
 
-          <!-- NUEVO BOTÓN DE ESTADO DE AMISTAD -->
-          <button
-            v-if="currentUserId && !isOwnProfile"
-            class="friend-action-btn"
-            :disabled="friendActionLoading"
-            @click="onFriendButtonClick"
-          >
-            {{ friendButtonLabel }}
-          </button>
+          <div class="button-row">
+            <button class="friends-btn" @click="showFriends = true">
+              Amigos ({{ formatFriendCount(friends.length) }})
+            </button>
+
+
+            <!-- NUEVO BOTÓN DE ESTADO DE AMISTAD -->
+            <button v-if="currentUserId && !isOwnProfile" class="friend-action-btn" :disabled="friendActionLoading"
+              @click="onFriendButtonClick">
+              {{ friendButtonLabel }}
+            </button>
+          </div>
         </div>
       </div>
 
       <!-- VIAJES PUBLICADOS -->
       <div class="recent-trips-section">
         <div class="recent-trips-header">
-          <h2 style="text-align:center; color:white">Viajes publicados</h2>
+          <h2 style="text-align:center; color:white; font-size: 1.3rem;">Viajes publicados</h2>
         </div>
 
         <div class="trips-container">
           <!-- Tarjetas como en Profile.vue (SIN menú) -->
           <div v-if="trips.length > 0" class="trip-cards-wrapper">
-            <div
-              class="trip-card"
-              v-for="trip in trips"
-              :key="trip.id"
-              @click="goToTrip(trip.id)"
-            >
-              <img
-                :src="trip.coverImage || trip.cover_image || defaultImg"
-                alt="Foto del viaje"
-                class="trip-image"
-              />
+            <div class="trip-card" v-for="trip in trips" :key="trip.id" @click="goToTrip(trip.id)">
+              <img :src="trip.coverImage || trip.cover_image || defaultImg" alt="Foto del viaje" class="trip-image" />
               <div class="trip-info">
                 <div class="trip-details">
                   <h4>{{ trip.tripName || trip.trip_name || 'Sin título' }}</h4>
@@ -80,11 +66,7 @@
     </div>
 
     <!-- POPUP AMIGOS -->
-    <div
-      v-if="showFriends"
-      class="modal-overlay"
-      @click.self="showFriends = false"
-    >
+    <div v-if="showFriends" class="modal-overlay" @click.self="showFriends = false">
       <div class="modal-box">
         <button class="modal-close-x" @click="showFriends = false">✕</button>
         <h2 class="modal-title">Amigos</h2>
@@ -94,26 +76,17 @@
         </div>
 
         <div class="friends-list-scroll">
-        <div
-          v-for="f in friends"
-          :key="f.id"
-          class="friend-item"
-          @click="goToUser(f.id)"
-        >
-          <img :src="f.avatar_url || defaultAvatar" class="friend-avatar" />
-          <span class="friend-username">{{ f.username }}</span>
+          <div v-for="f in friends" :key="f.id" class="friend-item" @click="goToUser(f.id)">
+            <img :src="f.avatar_url || defaultAvatar" class="friend-avatar" />
+            <span class="friend-username">{{ f.username }}</span>
+          </div>
         </div>
-      </div>
 
       </div>
     </div>
 
     <!-- POPUP CONFIRMAR ELIMINAR AMIGO -->
-    <div
-      v-if="showConfirmUnfriend"
-      class="modal-overlay"
-      @click.self="showConfirmUnfriend = false"
-    >
+    <div v-if="showConfirmUnfriend" class="modal-overlay" @click.self="showConfirmUnfriend = false">
       <div class="modal-box">
         <button class="modal-close-x" @click="showConfirmUnfriend = false">
           ✕
@@ -171,7 +144,7 @@ const defaultImg =
 const loadProfile = async () => {
   try {
     const res = await fetch(`${API_BASE}/api/profile/data?userId=${userId.value}`)
-  if (!res.ok) throw new Error('Error HTTP')
+    if (!res.ok) throw new Error('Error HTTP')
 
     const body = await res.json()
     if (body.ok) {
@@ -398,6 +371,22 @@ const goToUser = (id) => {
   }
 }
 
+    const formatFriendCount = (count) => {
+      if (count < 1000) return count.toString()
+      if (count < 1000000) {
+        if (count % 1000 === 0) {
+          return (count / 1000).toFixed(0) + 'K'
+        } else {
+          return (count / 1000).toFixed(1) + 'K'
+        }
+      } else {
+        if (count % 1000000 === 0) {
+          return (count / 1000000).toFixed(0) + 'M'
+        } else {
+          return (count / 1000000).toFixed(1) + 'M'
+        }
+      }
+    }
 
 /* ===============================
    LOAD
@@ -430,8 +419,7 @@ watch(
 /* === Layout General === */
 .profile-page {
   min-height: 100vh;
-  background: url('https://images.unsplash.com/photo-1604608672516-f1b9b1d37076')
-    center/cover no-repeat;
+  background: url('https://images.unsplash.com/photo-1604608672516-f1b9b1d37076') center/cover no-repeat;
   display: flex;
   justify-content: center;
   align-items: flex-start;
@@ -445,27 +433,28 @@ watch(
 
 /* Tarjeta central */
 .profile-card {
-  background: linear-gradient(
-    to bottom,
-    rgba(11, 47, 74, 0.6),
-    rgba(39, 45, 45, 0.6)
-  );
+  background: linear-gradient(to bottom, rgba(11, 47, 74, 0.6), rgba(39, 45, 45, 0.6));
   backdrop-filter: blur(14px);
   width: 100%;
   max-width: 700px;
+  border-radius: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   padding: 3rem 1rem;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
   min-height: 100vh;
 }
 
 /* === Header === */
 .profile-header {
-    display: flex;
-    align-items: center;
-    text-align: left;
-    gap: 2rem;
-    margin-bottom: 2rem;
-    justify-content: flex-start;
-    margin-left: 80px; /* mueve TODO hacia la derecha */
+  display: flex;
+  align-items: center;
+  text-align: left;
+  gap: 2rem;
+  margin-bottom: 2rem;
+  justify-content: flex-start;
+  /* mueve TODO hacia la derecha */
 }
 
 .avatar {
@@ -476,11 +465,14 @@ watch(
   object-fit: cover;
 }
 
- .profile-text {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-  }
+.profile-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  max-width: 300px;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
 
 
 
@@ -513,6 +505,7 @@ watch(
   cursor: pointer;
   transition: 0.2s;
   font-size: 0.9rem;
+  width: 150px;
 }
 
 .friends-btn:hover {
@@ -531,6 +524,7 @@ watch(
   cursor: pointer;
   transition: 0.2s;
   font-size: 0.9rem;
+  width: 150px;
 }
 
 .friend-action-btn[disabled] {
@@ -545,8 +539,12 @@ watch(
 /* === Trips === */
 .recent-trips-section {
   width: 100%;
-  max-width: 750px;   /* MISMA ANCHURA QUE PROFILE */
-  margin: 0 auto;     /* CENTRAR */
+  max-width: 750px;
+  /* MISMA ANCHURA QUE PROFILE */
+  margin: 0 auto;
+  /* CENTRAR */
+  padding-top: 1rem;
+  padding-bottom: 2rem;
 }
 
 
@@ -718,7 +716,8 @@ watch(
 
 /* Scroll para lista de amigos (máx. 5 amigos visibles) */
 .friends-list-scroll {
-  max-height: 320px;      /* ≈ 5 amigos (5 × ~60px) */
+  max-height: 320px;
+  /* ≈ 5 amigos (5 × ~60px) */
   overflow-y: auto;
   padding-right: 0.5rem;
 }
@@ -735,6 +734,12 @@ watch(
 
 .friends-list-scroll::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.5);
+}
+
+.button-row {
+  display: flex;
+  gap: 1rem;     /* separación entre botones */
+  align-items: center;
 }
 
 </style>
