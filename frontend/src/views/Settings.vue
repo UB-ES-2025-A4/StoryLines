@@ -209,6 +209,7 @@ const showLogoutModal = ref(false)
 // Cerrar sesión
 const handleLogout = async () => {
   await supabase.auth.signOut()
+  localStorage.removeItem('user_avatar_url')
   router.push('/')
 }
 
