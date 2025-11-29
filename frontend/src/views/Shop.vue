@@ -100,7 +100,7 @@ function handleFilterChange(filterId) {
 
 // Balance event handler
 function handleRecharge(amount) {
-  showNotification(`Recargaste ${amount}€`, 'success')
+  showNotification(`Recargaste ${amount} créditos`, 'success')
 }
 
 function purchaseItem(item) {

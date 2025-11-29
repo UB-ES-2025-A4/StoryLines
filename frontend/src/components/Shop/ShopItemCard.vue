@@ -14,7 +14,9 @@
           <h3>{{ item.name }}</h3>
           <p class="item-description">{{ item.description }}</p>
           <div class="item-footer">
-            <span class="item-price">{{ item.price }} €</span>
+            <span class="item-price">
+              {{ item.price }} <img src="@/assets/credtis.png" alt="créditos" class="price-icon" />
+            </span>
             <button 
               v-if="!isPurchased" 
               @click="$emit('purchase', item)"
@@ -166,6 +168,16 @@ function getTypeName(type) {
   font-size: 18px;
   font-weight: 700;
   color: #fbbf24;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.price-icon {
+  width: 1.2rem;
+  height: 1.2rem;
+  object-fit: contain;
+  filter: brightness(0) saturate(100%) invert(84%) sepia(35%) saturate(846%) hue-rotate(358deg) brightness(103%) contrast(98%);
 }
 
 .buy-button {

@@ -61,9 +61,9 @@ export function useBalance() {
     return balance.value >= amount
   }
 
-  // Balance formateado con separador de miles
+  // Balance formateado con separador de miles (sin símbolo, se usa imagen)
   const formattedBalance = computed(() => {
-    return balance.value.toLocaleString('es-ES') + ' €'
+    return balance.value.toLocaleString('es-ES')
   })
 
   // Inicializar al usar el composable

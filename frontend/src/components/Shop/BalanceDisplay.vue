@@ -1,6 +1,6 @@
 <template>
   <div class="balance-display" @click="$emit('click')">
-    <span class="balance-icon">💰</span>
+    <img src="@/assets/credtis.png" alt="Créditos" class="balance-icon" />
     <span class="balance-amount">{{ formattedBalance }}</span>
   </div>
 </template>
@@ -34,7 +34,10 @@ const { formattedBalance } = useBalance()
 }
 
 .balance-icon {
-  font-size: 1.5rem;
+  width: 1.5rem;
+  height: 1.5rem;
+  object-fit: contain;
+  filter: brightness(0) invert(1);
   animation: pulse 2s ease-in-out infinite;
 }
 

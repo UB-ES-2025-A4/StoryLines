@@ -9,13 +9,13 @@
         
         <div class="recharge-options">
           <button @click="recharge(500)" class="btn-recharge">
-            <span class="amount">+500€</span>
+            <span class="amount">+500 <img src="@/assets/credtis.png" alt="créditos" class="credit-icon" /></span>
           </button>
           <button @click="recharge(1000)" class="btn-recharge">
-            <span class="amount">+1.000€</span>
+            <span class="amount">+1.000 <img src="@/assets/credtis.png" alt="créditos" class="credit-icon" /></span>
           </button>
           <button @click="recharge(5000)" class="btn-recharge">
-            <span class="amount">+5.000€</span>
+            <span class="amount">+5.000 <img src="@/assets/credtis.png" alt="créditos" class="credit-icon" /></span>
           </button>
         </div>
 
@@ -259,5 +259,14 @@ function closeModal() {
 .btn-close:hover {
   background: #444;
   transform: translateY(-2px);
+}
+
+.credit-icon {
+  width: 1rem;
+  height: 1rem;
+  object-fit: contain;
+  filter: brightness(0) invert(1);
+  vertical-align: middle;
+  margin-left: 4px;
 }
 </style>
