@@ -105,6 +105,8 @@ import Globe from 'globe.gl'
 import {  convertTripsToArcs, processDestinationsFromTrips } from '@/data/dummyTrips.js'
 import { supabase } from '@/config/supabase.js'
 import { useRouter } from 'vue-router'
+import { useCustomization } from '@/composables/useCustomization'
+import { getItemById } from '@/data/shopThemes'
 
 
 const globeEl = ref(null)
@@ -694,9 +696,20 @@ function initializeGlobe() {
   const stackedArcs = groupArcsByRoute(arcs)
   const destinations = processDestinationsFromTrips(filteredTrips.value)
   
+  // Obtener textura equipada del globo
+  const { getEquippedItem } = useCustomization()
+  const equippedGlobeId = getEquippedItem('globe')
+  const globeItem = equippedGlobeId ? getItemById(equippedGlobeId) : null
+  const globeTexture = globeItem?.textureUrl || '//unpkg.com/three-globe/example/img/earth-night.jpg'
+  
+  // Obtener fondo equipado del home
+  const equippedHomeBgId = getEquippedItem('homeBg')
+  const homeBgItem = equippedHomeBgId ? getItemById(equippedHomeBgId) : null
+  const homeBackground = homeBgItem?.bgUrl || '//unpkg.com/three-globe/example/img/night-sky.png'
+  
   myGlobe = Globe()(globeEl.value)
-    .globeImageUrl('//unpkg.com/three-globe/example/img/earth-night.jpg')
-    .backgroundColor('rgba(0, 0, 0, 1)')
+    .globeImageUrl(globeTexture)
+    .backgroundImageUrl(homeBackground)
     .width(window.innerWidth)
     .height(window.innerHeight)
     
