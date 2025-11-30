@@ -1,125 +1,78 @@
-import { ref, computed } from 'vue'
-import { useBalance } from './useBalance'
-import { DEFAULT_ITEMS } from '@/data/shopThemes'
+import { ref, computed } from "vue";
+import { useBalance } from "./useBalance";
+import { DEFAULT_ITEMS } from "@/data/shopThemes";
+import { supabase } from "@/config/supabase";
 
-const STORAGE_KEY = 'purchased_items'
-const purchasedItems = ref([])
-let initialized = false
-
-function initialize() {
-  if (!initialized) {
-    loadPurchasedItems()
-    initialized = true
-  }
-}
-
-function loadPurchasedItems() {
-  const saved = localStorage.getItem(STORAGE_KEY)
-  const defaultItemIds = Object.values(DEFAULT_ITEMS)
-  
-  if (saved) {
-    const existing = JSON.parse(saved)
-    // Asegurar que los items por defecto SIEMPRE estén en la lista
-    const merged = new Set([...defaultItemIds, ...existing])
-    purchasedItems.value = Array.from(merged)
-    savePurchasedItems()
-  } else {
-    // Inicializar con items por defecto ya comprados
-    purchasedItems.value = defaultItemIds
-    savePurchasedItems()
-  }
-}
-
-function savePurchasedItems() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(purchasedItems.value))
-}
+const purchasedItems = ref([]);
+let initialized = false;
 
 export function usePurchases() {
-  initialize()
-  const { hasEnoughBalance, deductBalance } = useBalance()
+  const { deductBalance, hasEnoughBalance, loadBalance } = useBalance();
 
-  function getPurchasedItems() {
-    return purchasedItems.value
-  }
+
+  async function initialize(userId) {
+  // 🔥 SIEMPRE reiniciar compras al entrar con otro usuario
+  initialized = false;
+  purchasedItems.value = [];
+
+  // cargar items del backend
+  const res = await fetch(`/api/purchases/${userId}`);
+  const data = await res.json();
+
+  const backendItems = data.items || [];
+
+  // defaults siempre
+  const defaults = Object.values(DEFAULT_ITEMS);
+
+  purchasedItems.value = [...new Set([...backendItems, ...defaults])];
+
+  initialized = true;  // se marca aquí
+}
 
   function isPurchased(itemId) {
-    return purchasedItems.value.includes(itemId)
+    return purchasedItems.value.includes(itemId);
   }
 
-  function purchaseItem(item) {
+  async function purchaseItem(item, userId) {
     if (isPurchased(item.id)) {
-      return {
-        success: false,
-        message: 'Ya has comprado este item',
-        type: 'error'
-      }
+      return { success: false, message: "Ya comprado", type: "error" };
     }
 
     if (!hasEnoughBalance(item.price)) {
-      return {
-        success: false,
-        message: 'Saldo insuficiente',
-        type: 'error'
-      }
+      return { success: false, message: "Saldo insuficiente", type: "error" };
     }
 
-    deductBalance(item.price)
-    purchasedItems.value.push(item.id)
-    savePurchasedItems()
+    // Llamada al backend
+    const res = await fetch(`/api/purchases/buy`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId, itemId: item.id }),
+    });
+
+    const data = await res.json();
+
+    if (!data.ok) {
+      return { success: false, message: data.error, type: "error" };
+    }
+
+    // 1️⃣ Añade el item a la lista
+    purchasedItems.value.push(item.id);
+
+    // 2️⃣ Recarga el balance desde Supabase (NO RESTAR LOCALMENTE)
+    await loadBalance();
 
     return {
       success: true,
       message: `Compraste ${item.name}`,
-      type: 'success',
-      amount: item.price
-    }
+      type: "success",
+    };
   }
 
-  function purchaseTheme(theme, themeItems) {
-    const unpurchasedItems = themeItems.filter(item => !isPurchased(item.id))
-
-    if (unpurchasedItems.length === 0) {
-      return {
-        success: false,
-        message: 'Ya tienes este theme completo',
-        type: 'error'
-      }
-    }
-
-    const totalPrice = unpurchasedItems.length === themeItems.length
-      ? theme.price
-      : unpurchasedItems.reduce((sum, item) => sum + item.price, 0)
-
-    if (!hasEnoughBalance(totalPrice)) {
-      return {
-        success: false,
-        message: 'Saldo insuficiente',
-        type: 'error'
-      }
-    }
-
-    deductBalance(totalPrice)
-    unpurchasedItems.forEach(item => {
-      purchasedItems.value.push(item.id)
-    })
-    savePurchasedItems()
-
-    return {
-      success: true,
-      message: `Compraste el theme ${theme.name}`,
-      type: 'success',
-      amount: totalPrice
-    }
-  }
-
-  const purchasedCount = computed(() => purchasedItems.value.length)
 
   return {
-    purchasedItems: computed(() => purchasedItems.value),
-    purchasedCount,
-    getPurchasedItems,
+    purchasedItems,
     isPurchased,
     purchaseItem,
-    purchaseTheme
-  }
+    initialize,
+  };
 }

@@ -61,9 +61,11 @@ import TextureTester from '@/components/Shop/TextureTester.vue'
 import { useBalance } from '@/composables/useBalance'
 import { usePurchases } from '@/composables/usePurchases'
 import { getItems, getFeaturedTheme, getItemsByTheme } from '@/data/shopThemes.js'
+import { supabase } from '@/config/supabase'
 
 // Balance system
-const { balance } = useBalance()
+const { balance, loadBalance } = useBalance()
+const { initialize } = usePurchases();
 const showRechargeModal = ref(false)
 
 // Purchase system
@@ -92,20 +94,28 @@ const filteredItems = computed(() => {
 
 onMounted(async () => {
   try {
-    const items = await getItems()
+    // 1️⃣ Obtener usuario logueado
+    const { data: { user } } = await supabase.auth.getUser();
 
-    console.log("ITEMS RECIBIDOS DESDE BACKEND:", items)
-    console.log("TIPO:", typeof items)
-    console.log("ES ARRAY?", Array.isArray(items))
-    console.log("VALOR EXACTO:", JSON.stringify(items, null, 2))
+    if (user) {
+      // 2️⃣ Inicializar las compras del usuario
+      await initialize(user.id);
+      await loadBalance();
+      console.log("Compras cargadas para:", user.id);
+    }
 
-    allItems.value = items
+    // 3️⃣ Cargar items de tienda
+    const items = await getItems();
+
+    console.log("ITEMS RECIBIDOS DESDE BACKEND:", items);
+    allItems.value = items;
 
   } catch (err) {
-    console.error("Error cargando items", err)
-    allItems.value = []
+    console.error("Error cargando items", err);
+    allItems.value = [];
   }
-})
+});
+
 
 
 
@@ -118,14 +128,23 @@ function handleRecharge(amount) {
   showNotification(`Recargaste ${amount} créditos`, 'success')
 }
 
-function purchaseItem(item) {
-  const result = makePurchase(item)
-  showNotification(result.message, result.type)
-  
+async function purchaseItem(item) {
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) {
+    showNotification("Necesitas iniciar sesión", "error");
+    return;
+  }
+
+  const result = await makePurchase(item, user.id);
+
+  showNotification(result.message, result.type);
+
   if (result.success) {
-    triggerCelebration()
+    triggerCelebration();
   }
 }
+
 
 function triggerCelebration() {
   const celebration = document.createElement('div')
