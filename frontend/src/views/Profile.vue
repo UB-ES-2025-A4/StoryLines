@@ -36,7 +36,11 @@
             <h2 class="username">{{ profileData.username }}</h2>
 
             <button class="friends-btn" @click="showFriends = true">
-              Amigos | {{ friends.length }}
+              Amigos ({{ formatCount(friends.length) }})
+            </button>
+
+            <button class="edit-btn" @click="toggleEditModal">
+              Editar perfil
             </button>
           </div>
 
@@ -103,7 +107,7 @@
               </div>
 
               <div class="trip-info">
-                <div class="trip-details" v-if="currentTab === 'saved'">
+                <div class="trip-details" style="margin-top: 1rem" v-if="currentTab === 'saved'">
                   <h4>{{ truncateText(trip.title, 20) }}</h4>
                   <p>{{ truncateText(trip.description, 30) }}</p>
                 </div>
@@ -113,11 +117,20 @@
                   <p>{{ truncateText(trip.description, 45) }}</p>
                 </div>
 
+                <p class="trip-views" style="margin-top: 0.5rem;" v-if="currentTab !== 'saved' && currentTab !== 'drafts'">
+                  <span v-html="viewsIcon"></span> {{ formatCount(trip.views) }}
+                </p>
+
                 <div class="trip-author" v-if="currentTab === 'saved' && trip.author">
+                  <p class="trip-views" style="margin-bottom: 0.5rem;" v-if="currentTab === 'saved'">
+                    <span v-html="viewsIcon"></span> {{ formatCount(trip.views) }} 
+                  </p>
                   <span class="published-by">Published by</span>
-                  <div class="author-info">
+                  <div class="author-info" @click.stop="goToUser(trip.author.id)"
+                    style="cursor: pointer; display:flex; align-items:center;">
                     <div class="avatar-container" style="width:30px; height:30px; margin-right:8px;">
-                      <img :src="safeAvatar(trip.author.avatar_url)" alt="Avatar del autor" class="avatar" style="width:30px; height:30px; border-radius:50%; object-fit:cover;" />
+                      <img :src="safeAvatar(trip.author.avatar_url)" alt="Avatar del autor" class="avatar"
+                        style="width:30px; height:30px; border-radius:50%; object-fit:cover;" />
                     </div>
                     <span>{{ truncateText(trip.author.username, 10)}}</span>
                   </div>
@@ -130,7 +143,8 @@
                 <button class="menu-item edit-item" @click.stop="editTrip(trip.id)">
                   <i class="fa fa-pencil"></i> Editar
                 </button>
-                <button class="menu-item delete-item" v-if="currentTab !== 'saved'" @click.stop="openDeleteTripConfirm(trip.id)">
+                <button class="menu-item delete-item" v-if="currentTab !== 'saved'"
+                  @click.stop="openDeleteTripConfirm(trip.id)">
                   <i class="fa fa-trash"></i> Eliminar
                 </button>
               </div>
@@ -503,8 +517,38 @@ export default {
         }
       } catch {
         friends.value = []
-      }
+      }const formatCount = (count) => {
+  if (count < 1000) return count.toString();
+
+  if (count < 1_000_000) {
+    const k = count / 1000;
+    return (Number.isInteger(k) ? k.toString() : k.toFixed(1)) + 'K';
+  }
+
+  const m = count / 1_000_000;
+  return (Number.isInteger(m) ? m.toString() : m.toFixed(1)) + 'M';
+};
+
     }
+
+    const formatCount = (count) => {
+      if (count < 1000) return count;
+      if (count < 1000000){
+        if (count % 1000 < 100){
+          return (count / 1000).toFixed(0) + 'K';
+        } else {
+          return (count / 1000).toFixed(1) + 'K';
+        }
+      }
+      if (count < 1000000000){
+        if (count % 1000000 < 100000){
+          return (count / 1000000).toFixed(0) + 'M';
+        } else {
+          return (count / 1000000).toFixed(1) + 'M';
+        }
+      }
+    };
+
 
     // === Guardar perfil ===
     const API_URL = ''
@@ -578,7 +622,7 @@ export default {
 
         const { data, error: tripsError } = await supabase
           .from('trips')
-          .select('id, trip_name, description, cover_image, status, start_date')
+          .select('*')
           .eq('user_id', user.value.id)
           .eq('status', 'published')
           .order('start_date', { ascending: false })
@@ -591,7 +635,8 @@ export default {
           description: trip.description || 'Sin descripción',
           image:
             trip.cover_image ||
-            'https://jkfenner.com/wp-content/uploads/2019/11/default-450x450.jpg'
+            'https://jkfenner.com/wp-content/uploads/2019/11/default-450x450.jpg',
+          views: trip.views || 0
         }))
       } catch (err) {
         console.error('Error cargando viajes:', err)
@@ -623,9 +668,11 @@ export default {
           image: t.coverImage ||
             "https://jkfenner.com/wp-content/uploads/2019/11/default-450x450.jpg",
           author: {
+            id: t.userId,
             username: t.userName,
             avatar_url: t.userAvatar
-          }
+          },
+          views: t.views || 0
         }))
 
       } catch (err) {
@@ -714,6 +761,8 @@ export default {
       document.removeEventListener('click', handleClickOutside)
     })
 
+    const viewsIcon = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 15a3 3 0 100-6 3 3 0 000 6z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+
     return {
       user,
       profileData,
@@ -755,8 +804,9 @@ export default {
       showPictureModal,
       togglePictureModal,
       handleImageUpdated,
-      formatFriendCount,
-      saveProfileAndClose
+      formatCount,
+      saveProfileAndClose,
+      viewsIcon,
     }
   }
 }
@@ -1435,6 +1485,15 @@ export default {
 .trip-author .avatar {
   box-shadow: none;
   border: 1px solid rgba(0, 0, 0, 0.2);
+}
+
+.trip-views {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  margin-left: 0.8rem;
+  font-size: 0.85rem;
+  color: #555;
 }
 
 </style>

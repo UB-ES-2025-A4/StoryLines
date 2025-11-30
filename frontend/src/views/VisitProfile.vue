@@ -25,7 +25,7 @@
 
           <div class="button-row">
             <button class="friends-btn" @click="showFriends = true">
-              Amigos ({{ formatFriendCount(friends.length) }})
+              Amigos ({{ formatCount(friends.length) }})
             </button>
 
 
@@ -41,7 +41,7 @@
       <!-- VIAJES PUBLICADOS -->
       <div class="recent-trips-section">
         <div class="recent-trips-header">
-          <h2 style="text-align:center; color:white; font-size: 1.3rem;">Viajes publicados</h2>
+          <h2 style="text-align:center; color:white; font-size: 1.3rem; font-weight: 300;">Viajes publicados</h2>
         </div>
 
         <div class="trips-container">
@@ -54,6 +54,10 @@
                   <h4>{{ trip.tripName || trip.trip_name || 'Sin título' }}</h4>
                   <p>{{ truncateText(trip.description, 120) }}</p>
                 </div>
+
+                <p class="trip-views" style="margin-top: 0.5rem;">
+                  <span v-html="viewsIcon"></span> {{ formatCount(trip.views) }}
+                </p>
               </div>
             </div>
           </div>
@@ -371,22 +375,24 @@ const goToUser = (id) => {
   }
 }
 
-    const formatFriendCount = (count) => {
-      if (count < 1000) return count.toString()
-      if (count < 1000000) {
-        if (count % 1000 === 0) {
-          return (count / 1000).toFixed(0) + 'K'
+
+    const formatCount = (count) => {
+      if (count < 1000) return count;
+      if (count < 1000000){
+        if (count % 1000 < 100){
+          return (count / 1000).toFixed(0) + 'K';
         } else {
-          return (count / 1000).toFixed(1) + 'K'
-        }
-      } else {
-        if (count % 1000000 === 0) {
-          return (count / 1000000).toFixed(0) + 'M'
-        } else {
-          return (count / 1000000).toFixed(1) + 'M'
+          return (count / 1000).toFixed(1) + 'K';
         }
       }
-    }
+      if (count < 1000000000){
+        if (count % 1000000 < 100000){
+          return (count / 1000000).toFixed(0) + 'M';
+        } else {
+          return (count / 1000000).toFixed(1) + 'M';
+        }
+      }
+    };
 
 /* ===============================
    LOAD
@@ -538,17 +544,15 @@ watch(
 
 /* === Trips === */
 .recent-trips-section {
-  width: 100%;
-  max-width: 750px;
-  /* MISMA ANCHURA QUE PROFILE */
+  width: 95%;
   margin: 0 auto;
-  /* CENTRAR */
   padding-top: 1rem;
   padding-bottom: 2rem;
 }
 
 
 .recent-trips-header {
+  text-align: center;
   padding: 1rem 2rem;
   background: linear-gradient(135deg, #02a18f, #375689);
 }
@@ -740,6 +744,15 @@ watch(
   display: flex;
   gap: 1rem;     /* separación entre botones */
   align-items: center;
+}
+
+.trip-views {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  margin-left: 0.8rem;
+  font-size: 0.85rem;
+  color: #555;
 }
 
 </style>

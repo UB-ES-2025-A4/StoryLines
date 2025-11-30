@@ -48,6 +48,7 @@ router.get("/", async (_req, res) => {
       startDate: t.start_date,
       endDate: t.end_date,
       stops: grouped[t.id] || [],
+      views: t.views || 0,
     }));
 
     return res.json({ ok: true, trips: formatted });
@@ -67,7 +68,7 @@ router.get("/saved/:userId", async (req, res) => {
     // Get saved trips id
     const { data: savedTrips, error: savedError } = await supabaseAdmin
       .from("trip_saves")
-      .select("trip_id")
+      .select("trip_id, created_at")
       .eq("user_id", userId);
 
     if (savedError) return res.status(500).json({ error: savedError.message });
@@ -112,12 +113,17 @@ router.get("/saved/:userId", async (req, res) => {
       userAvatar: t.users?.avatar_url,
       userColor: t.users?.user_color,
       tripName: t.trip_name,
+      savedBy: savedTrips.find(s => s.trip_id === t.id)?.created_at || null,
       coverImage: t.cover_image,
       description: t.description,
       startDate: t.start_date,
       endDate: t.end_date,
       stops: grouped[t.id] || [],
+      views: t.views || 0,
     }));
+
+    // Sort by saved date descending
+    formatted.sort((a, b) => new Date(b.savedBy) - new Date(a.savedBy));
 
     return res.json({ ok: true, trips: formatted });
   } catch (e) {
@@ -183,6 +189,9 @@ router.get("/:id", async (req, res) => {
       },
     }));
 
+    // sort comments by createdAt ascending
+    formattedComments.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+
     const { count: commentsCount } = await supabaseAdmin
       .from("trip_comments")
       .select("*", { head: true, count: "exact" })
@@ -229,6 +238,7 @@ router.get("/:id", async (req, res) => {
           username: trip.users.username,
           display_name: trip.users.display_name,
           color: trip.users.user_color,
+          avatarUrl: trip.users.avatar_url,
         },
         stops: formattedStops,
         likes: likesCount,
