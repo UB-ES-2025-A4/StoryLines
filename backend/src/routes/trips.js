@@ -58,6 +58,75 @@ router.get("/", async (_req, res) => {
 });
 
 /* ============================================================
+   GET /api/trips — Lista de viajes guardados por usuario
+============================================================ */
+router.get("/saved/:userId", async (req, res) => {
+  try {
+    const userId = req.params.userId;
+
+    // Get saved trips id
+    const { data: savedTrips, error: savedError } = await supabaseAdmin
+      .from("trip_saves")
+      .select("trip_id")
+      .eq("user_id", userId);
+
+    if (savedError) return res.status(500).json({ error: savedError.message });
+
+    // Get saved trip details
+    const tripIds = savedTrips.map((s) => s.trip_id);
+
+    const { data: trips, error: tripsError } = await supabaseAdmin
+      .from("trips")
+      .select("*, users:user_id(id, username, display_name, user_color, avatar_url)")
+      .in("id", tripIds)
+      .eq("status", "published");
+
+    if (tripsError) return res.status(500).json({ error: tripsError.message });
+
+    const {data : stops, error: stopsError } = await supabaseAdmin
+      .from("trip_stops")
+      .select(`
+        *,
+        country:countries!trip_stops_country_id_fkey(id, name, latitude, longitude)
+      `)
+      .in("trip_id", tripIds);
+
+    if (stopsError) return res.status(500).json({ error: stopsError.message });
+    
+    const grouped = {};
+    (stops || []).forEach((s) => {
+      if (!grouped[s.trip_id]) grouped[s.trip_id] = [];
+      grouped[s.trip_id].push({
+        country: s.country?.name || "",
+        city: s.city,
+        lat: s.country?.latitude,
+        lng: s.country?.longitude,
+        images: s.images || [],
+      });
+    });
+
+    const formatted = trips.map((t) => ({
+      id: t.id,
+      userId: t.user_id,
+      userName: t.users?.username,
+      userAvatar: t.users?.avatar_url,
+      userColor: t.users?.user_color,
+      tripName: t.trip_name,
+      coverImage: t.cover_image,
+      description: t.description,
+      startDate: t.start_date,
+      endDate: t.end_date,
+      stops: grouped[t.id] || [],
+    }));
+
+    return res.json({ ok: true, trips: formatted });
+  } catch (e) {
+    console.error("[GET SAVED TRIPS ERROR]", e);
+    return res.status(500).json({ error: "Error interno" });
+  }
+});
+
+/* ============================================================
    GET /api/trips/:id — Viaje completo con comentarios y likes
 ============================================================ */
 router.get("/:id", async (req, res) => {

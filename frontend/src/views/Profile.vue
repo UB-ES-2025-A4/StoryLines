@@ -51,7 +51,9 @@
             </button>
 
             <span class="separator">|</span>
-            <button>Viajes guardados</button>
+            <button :class="{ active: currentTab === 'saved' }" @click="currentTab = 'saved'">
+              Viajes guardados
+            </button>
           </div>
         </div>
 
@@ -65,19 +67,34 @@
               </div>
 
               <div class="trip-info">
-                <div class="trip-details">
-                  <h4>{{ trip.title }}</h4>
-                  <p>{{ truncateText(trip.description, 120) }}</p>
+                <div class="trip-details" v-if="currentTab === 'saved'">
+                  <h4>{{ truncateText(trip.title, 20) }}</h4>
+                  <p>{{ truncateText(trip.description, 30) }}</p>
+                </div>
+
+                <div class="trip-details" v-if="currentTab !== 'saved'">
+                  <h4>{{ truncateText(trip.title, 30) }}</h4>
+                  <p>{{ truncateText(trip.description, 45) }}</p>
+                </div>
+
+                <div class="trip-author" v-if="currentTab === 'saved' && trip.author">
+                  <span class="published-by">Published by</span>
+                  <div class="author-info">
+                    <div class="avatar-container" style="width:30px; height:30px; margin-right:8px;">
+                      <img :src="safeAvatar(trip.author.avatar_url)" alt="Avatar del autor" class="avatar" style="width:30px; height:30px; border-radius:50%; object-fit:cover;" />
+                    </div>
+                    <span>{{ truncateText(trip.author.username, 10)}}</span>
+                  </div>
                 </div>
               </div>
 
-              <button class="menu-btn" @click.stop="toggleMenu(trip.id)">⋯</button>
+              <button class="menu-btn" v-if="currentTab !== 'saved'" @click.stop="toggleMenu(trip.id)">⋯</button>
 
-              <div v-if="currentMenuTrip === trip.id" class="menu-dropdown">
+              <div v-if="currentMenuTrip === trip.id && currentTab !== 'saved'" class="menu-dropdown">
                 <button class="menu-item edit-item" @click.stop="editTrip(trip.id)">
                   <i class="fa fa-pencil"></i> Editar
                 </button>
-                <button class="menu-item delete-item" @click.stop="openDeleteTripConfirm(trip.id)">
+                <button class="menu-item delete-item" v-if="currentTab !== 'saved'" @click.stop="openDeleteTripConfirm(trip.id)">
                   <i class="fa fa-trash"></i> Eliminar
                 </button>
               </div>
@@ -241,6 +258,7 @@ export default {
     const hovering = ref(false)
     const currentMenuTrip = ref(null)
     const trips = ref([])
+    const savedTrips = ref([])
     const drafts = ref([])
     const currentTab = ref('published')
     const friends = ref([])
@@ -304,6 +322,7 @@ export default {
         // Recargar listas
         await loadTrips()
         await loadDrafts()
+        
       } catch (e) {
         console.error("Error eliminando viaje:", e)
       }
@@ -319,13 +338,28 @@ export default {
       return url
     }
 
-    const currentTrips = computed(() =>
-      currentTab.value === 'published' ? trips.value : drafts.value
-    )
-    const noTripsMessage = computed(() =>
-      currentTab.value === 'published'
-        ? 'No hay viajes publicados'
-        : 'No hay borradores'
+    const currentTrips = computed(() => {
+      if (currentTab.value === 'published') {
+        return trips.value
+      } else if (currentTab.value === 'drafts') {
+        return drafts.value
+      } else if (currentTab.value === 'saved') {
+        return savedTrips.value
+      }
+      return []
+    })
+
+    const noTripsMessage = computed(() => {
+      if (currentTab.value === 'published') {
+        return 'No hay viajes publicados.'
+      } else if (currentTab.value === 'drafts') {
+        return 'No hay borradores.'
+      } else if (currentTab.value === 'saved') {
+        return 'No hay viajes guardados.'
+      }
+      return ''
+    }
+  
     )
 
     // === Cargar perfil ===
@@ -422,6 +456,11 @@ export default {
           avatar_url: profileData.value.avatar_url
         }
 
+        // check if username contains spaces
+        if (/\s/.test(payload.username)) {
+          throw new Error('El nombre de usuario no puede contener espacios')
+        }
+
         const res = await fetch(`${API_URL}/api/profile`, {
           method: 'POST',
           headers: {
@@ -490,6 +529,43 @@ export default {
         console.error('Error cargando viajes:', err)
       }
     }
+
+    // === Cargar viajes guardados ===
+    const loadSavedTrips = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession()
+        const userId = session?.user?.id
+        if (!userId) return
+
+
+        const res = await fetch(`/api/trips/saved/${userId}`)
+        const body = await res.json()
+
+        if (!body.ok || !body.trips) {
+          savedTrips.value = []
+          return
+        }
+
+        const trips = body.trips
+
+        savedTrips.value = trips.map(t => ({
+          id: t.id,
+          title: t.tripName || "Sin título",
+          description: t.description || "Sin descripción",
+          image: t.coverImage ||
+            "https://jkfenner.com/wp-content/uploads/2019/11/default-450x450.jpg",
+          author: {
+            username: t.userName,
+            avatar_url: t.userAvatar
+          }
+        }))
+
+      } catch (err) {
+        console.error("Error cargando viajes guardados:", err)
+        savedTrips.value = []
+      }
+    }
+
 
     // === Cargar borradores ===
     const loadDrafts = async () => {
@@ -584,6 +660,7 @@ export default {
       await loadFriends()
       await loadTrips()
       await loadDrafts()
+      await loadSavedTrips()
       document.addEventListener('click', handleClickOutside)
     })
 
@@ -629,7 +706,8 @@ export default {
       showPictureModal,
       togglePictureModal,
       handleImageUpdated,
-      formatFriendCount
+      formatFriendCount,
+      saveProfileAndClose
     }
   }
 }
@@ -877,6 +955,8 @@ export default {
   display: flex;
   justify-content: space-between;
   width: 100%;
+  align-items: flex-start;
+  padding: 1rem;
 }
 
 .trip-details {
@@ -1210,6 +1290,33 @@ export default {
   display: flex;
   gap: 1rem;     /* separación entre botones */
   align-items: center;
+}
+
+.trip-author {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  text-align: right;
+  color: #0a0a0a;
+  font-size: 0.9rem;
+  margin-left: 1rem;
+  margin-right: 1rem;
+}
+
+.published-by {
+  font-size: 0.85rem;
+  opacity: 0.8;
+}
+
+.author-info {
+  display: flex;
+  align-items: center;
+  margin-top: 0.3rem;
+}
+
+.trip-author .avatar {
+  box-shadow: none;
+  border: 1px solid rgba(0, 0, 0, 0.2);
 }
 
 </style>
