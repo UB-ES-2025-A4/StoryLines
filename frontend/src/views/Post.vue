@@ -63,7 +63,9 @@
                 </div>
 
                 <div class="stop-details">
-                  <h3 class="stop-title">{{ stop.country }}</h3>
+                  <h3 class="stop-title">
+                    {{  index === 0 ? 'Origen: ' + stop.country : stop.country }}
+                  </h3>
                   <div class="stop-info">
                     <p><strong>Ciudad:</strong> {{ stop.city || '—' }}</p>
                     <p><strong>Descripción:</strong> {{ stop.description || 'Sin descripción' }}</p>
@@ -322,7 +324,11 @@ export default {
 
     const goToProfile = (userId) => {
       if (!userId) return;
-      router.push(`/user/${userId}`)   
+      if (userId === userId) {
+        router.push('/profile');
+      } else {
+        router.push(`/user/${userId}`);
+      }
     };
 
     // Action icons
@@ -386,7 +392,7 @@ export default {
   flex-direction: row;
   align-items: flex-start;
   justify-content: center;
-  width: 800px;
+  width: 900px;
   max-width: none;
   margin: 0 auto;
   gap: 2rem;
@@ -561,6 +567,7 @@ export default {
   display: flex;
   align-items: center;
   justify-content: center;
+  margin: 0 10px;
 }
 
 .nav-arrow:hover {
@@ -577,7 +584,8 @@ export default {
   padding-left: 1.5rem;
   text-align: left;
   margin-top: 1rem;
-  max-width: 400px
+  margin: 0 30px;
+  max-width: 700px
 }
 
 .stop-title {
@@ -606,7 +614,7 @@ export default {
   flex: 0 0 300px;
   position: fixed;
   height: 100vh;
-  right: 320px;
+  right: 260px;
   top: 0;
   width: 300px;
   background: #0a0a0a;

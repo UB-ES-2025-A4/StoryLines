@@ -624,12 +624,27 @@ function createTripPreviewTooltip(arc) {
       
       <div style="padding: 16px;">
         <div style="
-          font-weight: bold; 
-          font-size: 18px; 
-          color: white;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
           margin-bottom: 8px;
         ">
-          ${trip.tripName}
+          <div style="
+            font-weight: bold; 
+            font-size: 18px; 
+            color: white;
+          ">
+            ${trip.tripName}
+          </div>
+          <div style="
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            color: #aaa;
+            font-size: 12px;
+          ">
+            ${viewsIcon} ${formatCount(trip.views)}
+          </div>
         </div>
         
         <div style="
@@ -687,8 +702,6 @@ function createTripPreviewTooltip(arc) {
     </div>
   `
 }
-
-
 function initializeGlobe() {
   const arcs = convertTripsToArcs(filteredTrips.value)
   const stackedArcs = groupArcsByRoute(arcs)
@@ -1199,6 +1212,29 @@ function handleResize() {
       .height(window.innerHeight)
   }
 }
+
+
+const formatCount = (count) => {
+  if (count < 1000) return count;
+  if (count < 1000000) {
+    if (count % 1000 < 100) {
+      return (count / 1000).toFixed(0) + 'K';
+    } else {
+      return (count / 1000).toFixed(1) + 'K';
+    }
+  }
+  if (count < 1000000000) {
+    if (count % 1000000 < 100000) {
+      return (count / 1000000).toFixed(0) + 'M';
+    } else {
+      return (count / 1000000).toFixed(1) + 'M';
+    }
+  }
+};
+
+const viewsIcon = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 15a3 3 0 100-6 3 3 0 000 6z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+
+
 </script>
 
 <style scoped>

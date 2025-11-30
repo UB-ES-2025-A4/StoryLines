@@ -48,6 +48,7 @@ router.get("/", async (_req, res) => {
       startDate: t.start_date,
       endDate: t.end_date,
       stops: grouped[t.id] || [],
+      views: t.views || 0,
     }));
 
     return res.json({ ok: true, trips: formatted });

@@ -35,7 +35,7 @@
                     <input type="date" v-model="trip.end_date" />
                   </div>
                 </div>
-                <label>Descripción</label>
+                <label>Descripción breve</label>
                 <textarea v-model="trip.description" rows="3"></textarea>
               </div>
             </div>

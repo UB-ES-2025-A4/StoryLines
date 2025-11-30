@@ -77,7 +77,7 @@
                   <p>{{ truncateText(trip.description, 45) }}</p>
                 </div>
 
-                <p class="trip-views" style="margin-top: 0.5rem;" v-if="currentTab !== 'saved'">
+                <p class="trip-views" style="margin-top: 0.5rem;" v-if="currentTab !== 'saved' && currentTab !== 'drafts'">
                   <span v-html="viewsIcon"></span> {{ formatCount(trip.views) }}
                 </p>
 
@@ -679,11 +679,6 @@ export default {
           currentMenuTrip.value = null
         }
       }
-    }
-
-    const goToProfile = (userId) => {
-      if (!userId) return;
-      router.push(`/user/${userId}`);
     }
 
     onMounted(async () => {
