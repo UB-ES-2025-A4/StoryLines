@@ -317,6 +317,28 @@ export default {
     const currentTab = ref('published')
     const friends = ref([])
     const showFriends = ref(false)
+    // === FIX para variables usadas en el template ===
+    const showEditModal = ref(false)
+    const showPictureModal = ref(false)
+    
+    function toggleEditModal() {
+      showEditModal.value = !showEditModal.value
+    }
+    
+    function togglePictureModal() {
+      showPictureModal.value = !showPictureModal.value
+    }
+    
+    // Si existen inputs para editar perfil:
+    const editUsername = ref('')
+    const editDisplayName = ref('')
+    const editBio = ref('')
+    
+    // Si el template usa esto, define aunque sea vacío:
+    function formatFriendCount(n) {
+      return n || 0
+    }
+
 
     const defaultAvatar =
       'https://upload.wikimedia.org/wikipedia/commons/a/ac/Default_pfp.jpg'
@@ -702,7 +724,6 @@ export default {
       success,
       hovering,
       showChangePicture,
-      handleImageUpdated,
       trips,
       drafts,
       currentTab,
