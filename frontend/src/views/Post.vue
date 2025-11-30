@@ -6,7 +6,8 @@
       backgroundImage: `url(${trip.cover_image || defaultCover})`,
       backgroundSize: 'cover',
       backgroundPosition: 'center',
-      backgroundRepeat: 'no-repeat'
+      backgroundRepeat: 'no-repeat',
+      backgroundAttachment: 'fixed'
     })
   }">
 
@@ -19,28 +20,32 @@
       <div v-else-if="error" class="error">{{ error }}</div>
 
       <div v-else class="trip-content">
-        <div class="trip-details">
-          <h1 class="trip-title">{{ trip.trip_name }}</h1>
-          <p class="trip-description">{{ trip.description }}</p>
-
-          <!-- Trip actions -->
-          <div class="trip-actions">
-            <button class="action-button like-button" @click="toggleLike">
-              <span class="like-icon" v-html="isLiked ? likeFilledIcon : likeOutlineIcon"></span>
-              <span class="like-count">{{ likeCount }}</span>
-            </button>
-            <button class="action-button" @click="showComments = !showComments">
-              <span class="action-icon" v-html="commentIcon"></span>
-              <span>{{ commentsCount }}</span>
-            </button>
-            <button class="action-button" @click="toggleSave">
-              <span class="action-icon" v-html="isSaved ? saveFilledIcon : saveOutlineIcon"></span>
-            </button>
-            <button class="action-button">
-              <span class="action-icon" v-html="viewsIcon"></span>
-              <span class="view-count">{{ views }}</span>
-            </button>
+        <div class="trip-container">
+          <div class="trip-header">
+            <div class="author-info">
+              <img :src="trip.user?.avatarUrl || defaultAvatar" alt="Author avatar" class="author-avatar" />
+              <p class="author-username">{{ trip.user?.displayName || trip.user?.username || 'Anónimo' }}</p>
+            </div>
+            <div class="trip-info">
+              <h1 class="trip-title">{{ trip.trip_name }}</h1>
+              <p class="trip-description">{{ trip.description }}</p>
+            </div>
+            <div class="trip-actions">
+              <button class="action-button like-button" @click="toggleLike">
+                <span class="like-icon" v-html="isLiked ? likeFilledIcon : likeOutlineIcon"></span>
+                <span class="like-count">{{ likeCount }}</span>
+              </button>
+              <button class="action-button" @click="showComments = !showComments">
+                <span class="action-icon" v-html="commentIcon"></span>
+                <span>{{ commentsCount }}</span>
+              </button>
+              <button class="action-button" v-if="showSaveButton()" @click="toggleSave">
+                <span class="action-icon" v-html="isSaved ? saveFilledIcon : saveOutlineIcon"></span>
+              </button>
+            </div>
           </div>
+
+          <hr class="separator" />
 
           <div class="stops-route">
             <div v-for="(stop, index) in trip.stops || []" :key="index" class="stop-card-wrapper">
@@ -68,47 +73,47 @@
             </div>
           </div>
         </div>
+      </div>
 
-        <!-- Sección de comentarios -->
-        <div v-show="showComments" class="comments-section">
-          <h2 class="section-title">Comentarios</h2>
+      <!-- Sección de comentarios -->
+      <div v-show="showComments" class="comments-section">
+        <h2 class="section-title">Comentarios</h2>
 
-          <div v-if="comments.length === 0" class="no-comments">No hay comentarios todavía.</div>
+        <div v-if="comments.length === 0" class="no-comments">No hay comentarios todavía.</div>
 
-          <div v-else>
-            <div v-for="comment in comments" :key="comment.id" class="comment-item">
-              <div class="comment-header">
-                <div class="comment-user-info">
-                  <img
-                    :src="comment.user?.avatarUrl || 'https://jkfenner.com/wp-content/uploads/2019/11/default-450x450.jpg'"
-                    alt="Avatar" class="comment-avatar" />
-                  <div class="user-text-wrapper">
-                    <p class="comment-user">{{ comment.user?.displayName || comment.user?.username || 'Anónimo' }}</p>
-                    <p class="comment-date">{{ formatDate(comment.createdAt) }}</p>
-                  </div>
-                </div>
-
-                <div v-if="canDeleteComment(comment)" class="comment-actions">
-                  <button @click.stop="toggleMenu(comment.id)" class="dots-btn">⋮</button>
-                  <div v-if="openMenuId === comment.id" class="dropdown-menu">
-                    <button @click.stop="confirmDelete(comment.id)" class="delete-option">Eliminar</button>
-                  </div>
+        <div v-else>
+          <div v-for="comment in comments" :key="comment.id" class="comment-item">
+            <div class="comment-header">
+              <div class="comment-user-info">
+                <img
+                  :src="comment.user?.avatarUrl || 'https://jkfenner.com/wp-content/uploads/2019/11/default-450x450.jpg'"
+                  alt="Avatar" class="comment-avatar" />
+                <div class="user-text-wrapper">
+                  <p class="comment-user">{{ comment.user?.displayName || comment.user?.username || 'Anónimo' }}</p>
+                  <p class="comment-date">{{ formatDate(comment.createdAt) }}</p>
                 </div>
               </div>
 
-              <p class="comment-text">{{ comment.text }}</p>
+              <div v-if="canDeleteComment(comment)" class="comment-actions">
+                <button @click.stop="toggleMenu(comment.id)" class="dots-btn">⋮</button>
+                <div v-if="openMenuId === comment.id" class="dropdown-menu">
+                  <button @click.stop="confirmDelete(comment.id)" class="delete-option">Eliminar</button>
+                </div>
+              </div>
             </div>
-          </div>
 
-          <div class="comment-input-wrapper">
-            <input v-model="newComment" type="text" placeholder="Escribe tu comentario..." class="comment-input" @keyup.enter="sendComment" />
-            <button class="comment-send-btn" @click="sendComment">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                stroke-linecap="round" stroke-linejoin="round">
-                <path d="M22 2L2 12.5l20 9.5-7-9.5L22 2z" />
-              </svg>
-            </button>
+            <p class="comment-text">{{ comment.text }}</p>
           </div>
+        </div>
+
+        <div class="comment-input-wrapper">
+          <input v-model="newComment" type="text" placeholder="Escribe tu comentario..." class="comment-input" @keyup.enter="sendComment" />
+          <button class="comment-send-btn" @click="sendComment">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round">
+              <path d="M22 2L2 12.5l20 9.5-7-9.5L22 2z" />
+            </svg>
+          </button>
         </div>
       </div>
     </div>
@@ -152,6 +157,7 @@ export default {
 
     const defaultImage = "https://jkfenner.com/wp-content/uploads/2019/11/default-450x450.jpg";
     const defaultCover = "https://i.imgur.com/mS1b7mF.jpeg";
+    const defaultAvatar = "https://jkfenner.com/wp-content/uploads/2019/11/default-450x450.jpg";
 
     const isLiked = ref(false);
     const likeCount = ref(0);
@@ -242,6 +248,10 @@ export default {
       }
     };
 
+    const showSaveButton = () => {
+      return userId !== tripOwnerId.value;
+    };
+
     const sendComment = async () => {
       if (!userId) return alert("Debes iniciar sesión para comentar.");
       if (!newComment.value.trim()) return;
@@ -312,7 +322,6 @@ export default {
     const commentIcon = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
     const saveFilledIcon = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M18 22l-6-4l-6 4V6a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4z" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
     const saveOutlineIcon = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M18 7v14l-6 -4l-6 4v-14a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
-    const viewsIcon = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 15a3 3 0 100-6 3 3 0 000 6z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
 
 
     onMounted(async () => {
@@ -327,421 +336,499 @@ export default {
     });
 
     return {
-      trip, loading, error, changeImage, defaultImage, defaultCover,
+      trip, loading, error, changeImage, defaultImage, defaultCover, defaultAvatar,
       isLiked, likeCount, toggleLike, isSaved, toggleSave, showComments, likeOutlineIcon,
-      likeFilledIcon, commentIcon, saveOutlineIcon, saveFilledIcon, viewsIcon, views,
+      likeFilledIcon, commentIcon, saveOutlineIcon, saveFilledIcon, views,
       comments, commentsCount, newComment, sendComment, formatDate,
       openMenuId, canDeleteComment, toggleMenu,
       showDeleteModal,
       commentToDelete,
       confirmDelete,
-      performDelete
+      performDelete,
+      showSaveButton
     };
   },
 };
 </script>
 
-<style
-  scoped>
-  .post-page {
-    display: flex;
-    min-height: 100vh;
-    color: #fff;
-    position: relative
-  }
+<style scoped>
+.post-page {
+  display: flex;
+  min-height: 100vh;
+  color: #fff;
+  position: relative
+}
 
-  .main-content {
-    flex: 1;
-    padding: 2rem;
-    margin-left: 250px;
-    margin-right: 350px;
-    display: flex;
-    justify-content: center;
-    align-items: flex-start;
-    min-height: 100vh
-  }
-
-  .trip-content {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: flex-start;
-    width: 100%;
-    max-width: 900px;
-    margin: 0 auto;
-    text-align: center
-  }
-
-  .trip-details {
-    width: 100%;
-    max-width: 850px;
-    text-align: center;
-    margin: 0 auto
-  }
-
-  .trip-title {
-    font-size: 1.8rem;
-    margin-bottom: 1rem;
-    color: #fff
-  }
-
-  .trip-description {
-    color: #ccc;
-    font-size: 1.1rem;
-    margin-bottom: 2rem;
-    max-width: 700px;
-    margin-inline: auto;
-    line-height: 1.6
-  }
-
-  .trip-actions {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 1rem;
-    margin-bottom: 2rem
-  }
-
-  .action-button {
-    display: flex;
-    align-items: center;
-    gap: .5rem;
-    background: rgba(255, 255, 255, .1);
-    border: 1px solid #fff;
-    border-radius: 8px;
-    padding: .5rem 1rem;
-    color: #fff;
-    cursor: pointer;
-    transition: background .2s
-  }
-
-  .action-button:hover {
-    background: rgba(255, 255, 255, .2)
-  }
-
-  .action-icon,
-  .like-icon {
-    display: inline-block;
-    width: 20px;
-    height: 20px
-  }
-
-  .stop-card-wrapper {
-    position: relative;
-    margin-bottom: 6rem;
-    width: 100%
-  }
-
-  .stop-card {
-    padding: 2rem;
-    border: 1.5px solid #fff;
-    border-radius: 12px;
-    background: rgba(10, 10, 10, .7);
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    max-width: 850px;
-    margin: 0 auto;
-    min-height: 300px;
-    animation: fadeIn .6s ease-in
-  }
-
-  .stop-images {
-    flex: 1;
-    position: relative;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    width: 350px
-  }
-
-  .stop-image {
-    width: 250px;
-    height: 250px;
-    object-fit: cover;
-    border-radius: 8px;
-    border: 1px solid #fff
-  }
-
-  .nav-arrow {
-    background: rgba(10, 10, 10, 0.7);
-    border: 1px solid #fff;
-    border-radius: 50%;
-    color: #fff;
-    cursor: pointer;
-    padding: 1rem;
-    opacity: 0.9;
-    transition: opacity 0.2s;
-    width: 50px;
-    height: 50px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-
-  .nav-arrow:hover {
-    opacity: 1;
-  }
-
-  .nav-arrow:disabled {
-    opacity: 0.3;
-    cursor: not-allowed;
-  }
-
-  .stop-details {
-    flex: 1;
-    padding-left: 1.5rem;
-    text-align: left;
-    max-width: 400px
-  }
-
-  .stop-title {
-    font-size: 1.5rem;
-    margin-bottom: 1rem
-  }
-
-  .stop-info p {
-    margin: .3rem 0;
-    font-size: 1.1rem;
-    line-height: 1.5
-  }
-
-  .route-line {
-    position: absolute;
-    width: 2px;
-    background: #fff;
-    height: 100px;
-    left: 50%;
-    transform: translateX(-50%);
-    top: 100%
-  }
-
-  .comments-section {
-    flex: 0 0 300px;
-    position: fixed;
-    right: 1.5rem;
-    top: 2rem;
-    bottom: 2rem;
-    width: 300px;
-    background: #0a0a0a;
-    border: 1.5px solid #fff;
-    border-radius: 12px;
-    padding: 1.5rem;
-    overflow-y: auto;
-    display: flex;
-    flex-direction: column
-  }
-
-  .section-title {
-    font-size: 1.3rem;
-    margin-bottom: .5rem
-  }
-
-  .no-comments {
-    color: #aaa;
-    font-size: 1rem;
-    margin: 1rem 0
-  }
-
-  .comment-item {
-    padding: 0.8rem 0;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1)
-  }
-
-  .comment-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    margin-bottom: 0.5rem
-  }
-
-  .comment-user-info {
-    display: flex;
-    align-items: center;
-    gap: 0.7rem
-  }
-
-  .comment-avatar {
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    object-fit: cover;
-    border: 1.5px solid #fff;
-    flex-shrink: 0
-  }
-
-  .user-text-wrapper {
-    display: flex;
-    flex-direction: column;
-    justify-content: center
-  }
-
-  .comment-user {
-    margin: 0;
-    font-weight: 600;
-    font-size: 0.95rem;
-    line-height: 1.2
-  }
-
-  .comment-date {
-    margin: 0;
-    font-size: 0.7rem;
-    color: #999;
-    line-height: 1.2
-  }
-
-  .comment-text {
-    margin: 0.6rem 0 0;
-    text-align: left;
-    font-size: 0.95rem;
-    line-height: 1.4
-  }
-
-  .comment-actions {
-    position: relative
-  }
-
-  .dots-btn {
-    background: none;
-    border: none;
-    color: #ccc;
-    font-size: 1.5rem;
-    cursor: pointer;
-    padding: 0.2rem 0.5rem;
-    border-radius: 4px
-  }
-
-  .dots-btn:hover {
-    background: rgba(255, 255, 255, 0.1);
-    color: #fff
-  }
-
-  .dropdown-menu {
-    position: absolute;
-    right: 0;
-    top: 100%;
-    background: #1a1a1a;
-    border: 1px solid #444;
-    border-radius: 6px;
-    min-width: 120px;
-    z-index: 10;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5)
-  }
-
-  .delete-option {
-    width: 100%;
-    padding: 0.6rem 1rem;
-    background: none;
-    border: none;
-    color: #ff6b6b;
-    text-align: left;
-    cursor: pointer;
-    font-size: 0.9rem
-  }
-
-  .delete-option:hover {
-    background: rgba(255, 107, 107, 0.2)
-  }
-
-  .comment-input-wrapper {
-    margin-top: auto;
-    display: flex;
-    gap: .5rem;
-    padding: .5rem;
-    background: rgba(255, 255, 255, .1);
-    border-radius: 8px;
-    border: 1px solid #fff
-  }
-
-  .comment-input {
-    flex: 1;
-    background: transparent;
-    border: none;
-    color: #fff;
-    font-size: 1rem;
-    outline: none
-  }
-
-  .comment-input::placeholder {
-    color: #aaa
-  }
-
-  .comment-send-btn {
-    background: transparent;
-    border: none;
-    color: #fff;
-    cursor: pointer;
-    padding: .3rem;
-    display: flex;
-    align-items: center
-  }
-
-  .comment-send-btn:hover {
-    opacity: .8
-  }
-
-  @keyframes fadeIn {
-    from {
-      opacity: 0;
-      transform: translateY(20px)
-    }
-
-    to {
-      opacity: 1;
-      transform: translateY(0)
-    }
-  }
-
-  .modal-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,0.75);
+.main-content {
+  flex: 1;
+  padding: 0;
+  margin-left: 250px;
+  margin-right: 350px;
   display: flex;
   justify-content: center;
+  align-items: flex-start;
+  min-height: 100vh;
+  position: relative;
+}
+
+
+.author-avatar {
+  margin-top: 1rem;
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid #fff;
+}
+
+.author-username {
+  font-size: 1.2rem;
+  margin-top: 0.5rem;
+  font-weight: 400;
+}
+
+.trip-content {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  justify-content: center;
+  width: 800px;
+  max-width: none;
+  margin: 0 auto;
+  gap: 2rem;
+}
+
+.trip-container {
+  flex: 1;
+  width: 100%;
+  height: 100vh;
+  background: #0a0a0a;
+  border: none;
+  padding: 2rem;
+  text-align: center;
+  overflow-y: auto;
+  -ms-overflow-style: none; 
+  scrollbar-width: none;
+}
+
+.trip-container::-webkit-scrollbar {
+  display: none;  /* Chrome, Safari, Opera */
+}
+
+.trip-header {
+  display: flex;
+  width: 100%;
+  justify-content: space-between;
   align-items: center;
-  z-index: 5000;
+  margin-bottom: 2rem;
+  position: relative;
+  gap: 1.5rem;
+}
+
+.author-info {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  flex-shrink: 0;
+  margin-left: 2rem;
+  margin-right: 1rem;
+}
+
+.author-avatar {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.author-username {
+  font-size: 1.2rem;
+  margin-top: 0.5rem;
+  font-weight: 600;
+}
+
+.trip-info {
+  text-align: center;
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: calc(100% - 200px);
+}
+
+.trip-title {
+  font-size: 1.8rem;
+  color: #fff;
+  margin: 0 0 1rem 0;
+}
+
+.trip-description {
+  color: #ccc;
+  font-size: 1.1rem;
+  margin: 0;
+  line-height: 1.6
+}
+
+.trip-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+.action-button {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  background: transparent;
+  border: none;
+  color: #fff;
+  cursor: pointer;
+  transition: opacity .2s;
+  padding: .5rem;
+}
+
+.action-button:hover {
+  opacity: .8;
+}
+
+.action-icon,
+.like-icon {
+  display: inline-block;
+  width: 20px;
+  height: 20px
+}
+
+.stops-route {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.stop-card-wrapper {
+  position: relative;
+  margin-bottom: 6rem;
+  width: max-content;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.stop-card {
+  padding: 0;
+  border: none;
+  background: transparent;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  max-width: 850px;
+  margin: 0;
+  min-height: 300px;
+  animation: fadeIn .6s ease-in
+}
+
+.stop-images {
+  flex: 1;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 350px
+}
+
+.stop-image {
+  width: 250px;
+  height: 250px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.nav-arrow {
+  background: rgba(10, 10, 10, 0.7);
+  border: 1px solid #fff;
+  border-radius: 50%;
+  color: #fff;
+  cursor: pointer;
+  padding: 1rem;
+  opacity: 0.9;
+  transition: opacity .2s;
+  width: 50px;
+  height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.nav-arrow:hover {
+  opacity: 1;
+}
+
+.nav-arrow:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.stop-details {
+  flex: 1;
+  padding-left: 1.5rem;
+  text-align: left;
+  max-width: 400px
+}
+
+.stop-title {
+  font-size: 1.5rem;
+  margin-bottom: 1rem
+}
+
+.stop-info p {
+  margin: .3rem 0;
+  font-size: 1.1rem;
+  line-height: 1.5
+}
+
+.route-line {
+  position: absolute;
+  width: 2px;
+  background: #fff;
+  height: 9rem;
+  left: 175px;
+  top: calc(250px + 1px); /* Bottom of image + outline */
+  transform: translateX(-50%);
+}
+
+.comments-section {
+  flex: 0 0 300px;
+  position: fixed;
+  right: 1.5rem;
+  top: 2rem;
+  bottom: 2rem;
+  width: 300px;
+  background: #0a0a0a;
+  border: 1.5px solid #fff;
+  border-radius: 12px;
+  padding: 1.5rem;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column
+}
+
+.section-title {
+  font-size: 1.3rem;
+  margin-bottom: .5rem
+}
+
+.no-comments {
+  color: #aaa;
+  font-size: 1rem;
+  margin: 1rem 0
+}
+
+.comment-item {
+  padding: 0.8rem 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1)
+}
+
+.comment-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 0.5rem
+}
+
+.comment-user-info {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem
+}
+
+.comment-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1.5px solid #fff;
+  flex-shrink: 0
+}
+
+.user-text-wrapper {
+  display: flex;
+  flex-direction: column;
+  justify-content: center
+}
+
+.comment-user {
+  margin: 0;
+  font-weight: 600;
+  font-size: 0.95rem;
+  line-height: 1.2
+}
+
+.comment-date {
+  margin: 0;
+  font-size: 0.7rem;
+  color: #999;
+  line-height: 1.2
+}
+
+.comment-text {
+  margin: 0.6rem 0 0;
+  text-align: left;
+  font-size: 0.95rem;
+  line-height: 1.4
+}
+
+.comment-actions {
+  position: relative
+}
+
+.dots-btn {
+  background: none;
+  border: none;
+  color: #ccc;
+  font-size: 1.5rem;
+  cursor: pointer;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px
+}
+
+.dots-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff
+}
+
+.dropdown-menu {
+  position: absolute;
+  right: 0;
+  top: 100%;
+  background: #1a1a1a;
+  border: 1px solid #444;
+  border-radius: 6px;
+  min-width: 120px;
+  z-index: 10;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5)
+}
+
+.delete-option {
+  width: 100%;
+  padding: 0.6rem 1rem;
+  background: none;
+  border: none;
+  color: #ff6b6b;
+  text-align: left;
+  cursor: pointer;
+  font-size: 0.9rem
+}
+
+.delete-option:hover {
+  background: rgba(255, 107, 107, 0.2)
+}
+
+.comment-input-wrapper {
+  margin-top: auto;
+  display: flex;
+  gap: .5rem;
+  padding: .5rem;
+  background: rgba(255, 255, 255, .1);
+  border-radius: 8px;
+  border: 1px solid #fff
+}
+
+.comment-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: #fff;
+  font-size: 1rem;
+  outline: none
+}
+
+.comment-input::placeholder {
+  color: #aaa
+}
+
+.comment-send-btn {
+  background: transparent;
+  border: none;
+  color: #fff;
+  cursor: pointer;
+  padding: .3rem;
+  display: flex;
+  align-items: center
+}
+
+.comment-send-btn:hover {
+  opacity: .8
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px)
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0)
+  }
+}
+
+.modal-overlay {
+position: fixed;
+inset: 0;
+background: rgba(0,0,0,0.75);
+display: flex;
+justify-content: center;
+align-items: center;
+z-index: 5000;
 }
 
 .modal-box {
-  background: #111;
-  padding: 1.5rem 2rem;
-  border-radius: 10px;
-  border: 1px solid #555;
-  text-align: center;
-  color: white;
+background: #111;
+padding: 1.5rem 2rem;
+border-radius: 10px;
+border: 1px solid #555;
+text-align: center;
+color: white;
 }
 
 .modal-buttons {
-  display: flex;
-  justify-content: center;
-  gap: 1rem;
-  margin-top: 1.5rem;
+display: flex;
+justify-content: center;
+gap: 1rem;
+margin-top: 1.5rem;
 }
 
 .modal-cancel,
 .modal-confirm {
-  padding: 0.6rem 1.2rem;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  font-weight: bold;
+padding: 0.6rem 1.2rem;
+border: none;
+border-radius: 8px;
+cursor: pointer;
+font-weight: bold;
 }
 
 .modal-cancel {
-  background: #333;
-  color: #ccc;
+background: #333;
+color: #ccc;
 }
 
 .modal-cancel:hover {
-  background: #444;
+background: #444;
 }
 
 .modal-confirm {
-  background: #ff4d4d;
-  color: white;
+background: #ff4d4d;
+color: white;
 }
 
 .modal-confirm:hover {
-  background: #ff3333;
+background: #ff3333;
+}
+
+.separator {
+  border: none;
+  border-top: 1px solid #fff;
+  margin: 2rem 0;
+  width: 100%;
 }
 </style>
