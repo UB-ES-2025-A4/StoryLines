@@ -79,7 +79,7 @@
 
                 <div class="trip-author" v-if="currentTab === 'saved' && trip.author">
                   <span class="published-by">Published by</span>
-                  <div class="author-info">
+                  <div class="author-info" @click.stop="goToUser(trip.author.id)" style="cursor: pointer; display:flex; align-items:center;">
                     <div class="avatar-container" style="width:30px; height:30px; margin-right:8px;">
                       <img :src="safeAvatar(trip.author.avatar_url)" alt="Avatar del autor" class="avatar" style="width:30px; height:30px; border-radius:50%; object-fit:cover;" />
                     </div>
@@ -555,6 +555,7 @@ export default {
           image: t.coverImage ||
             "https://jkfenner.com/wp-content/uploads/2019/11/default-450x450.jpg",
           author: {
+            id: t.userId,
             username: t.userName,
             avatar_url: t.userAvatar
           }
@@ -653,6 +654,11 @@ export default {
           currentMenuTrip.value = null
         }
       }
+    }
+
+    const goToProfile = (userId) => {
+      if (!userId) return;
+      router.push(`/user/${userId}`);
     }
 
     onMounted(async () => {

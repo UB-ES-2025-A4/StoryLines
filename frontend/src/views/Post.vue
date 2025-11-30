@@ -22,7 +22,7 @@
       <div v-else class="trip-content">
         <div class="trip-container">
           <div class="trip-header">
-            <div class="author-info">
+            <div class="author-info" @click="goToProfile(trip.user?.id)" style="cursor: pointer;">
               <img :src="trip.user?.avatarUrl || defaultAvatar" alt="Author avatar" class="author-avatar" />
               <p class="author-username">{{ trip.user?.username || 'Anónimo' }}</p>
             </div>
@@ -84,7 +84,7 @@
         <div v-else>
           <div v-for="comment in comments" :key="comment.id" class="comment-item">
             <div class="comment-header">
-              <div class="comment-user-info">
+              <div class="comment-user-info" @click="goToProfile(comment.user?.id)" style="cursor: pointer;">
                 <img
                   :src="comment.user?.avatarUrl || 'https://jkfenner.com/wp-content/uploads/2019/11/default-450x450.jpg'"
                   alt="Avatar" class="comment-avatar" />
@@ -135,7 +135,7 @@
 <script>
 import { ref, onMounted, onUnmounted } from "vue";
 import { supabase } from '@/config/supabase'
-import { useRoute } from "vue-router";
+import { useRoute, useRouter } from "vue-router";
 import Sidebar from '@/components/Sidebar.vue';
 
 export default {
@@ -150,6 +150,7 @@ export default {
     const commentsCount = ref(0);
     const newComment = ref("");
     const openMenuId = ref(null);
+    const router = useRouter();
 
     // Modal
     const showDeleteModal = ref(false);
@@ -316,6 +317,11 @@ export default {
       return new Date(dateStr).toLocaleString("es-ES", { dateStyle: "short", timeStyle: "short" });
     };
 
+    const goToProfile = (userId) => {
+      if (!userId) return;
+      router.push(`/user/${userId}`)   
+    };
+
     // Action icons
     const likeOutlineIcon = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
     const likeFilledIcon = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path fill="red" stroke="white" stroke-width="2" d="M11.645 20.906l-.007-.003-.022-.01a15.741 15.741 0 01-.383-.218 25.45 25.45 0 01-4.244-3.17C4.688 15.36 2.25 12.174 2.25 8.25 2.25 5.322 4.714 3 7.688 3A5.5 5.5 0 0112 5.052 5.5 5.5 0 0116.313 3c2.973 0 5.437 2.322 5.437 5.25 0 3.925-2.438 7.111-4.739 9.256a25.175 25.175 0 01-4.244 3.17 15.247 15.247 0 01-.383.219l-.022.01-.007.004-.003.001a.752 .752 0 01-.704 0l-.003-.001z"/></svg>`;
@@ -345,7 +351,8 @@ export default {
       commentToDelete,
       confirmDelete,
       performDelete,
-      showSaveButton
+      showSaveButton,
+      goToProfile,
     };
   },
 };
