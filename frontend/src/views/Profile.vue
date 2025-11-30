@@ -1,5 +1,5 @@
 <template>
-  <div class="profile-page">
+  <div class="profile-page" :style="bgStyle">
     <!-- Sidebar -->
     <Sidebar />
 
@@ -224,6 +224,8 @@ import { supabase } from '@/config/supabase'
 import { useRouter } from 'vue-router'
 import ChangePicture from '@/components/Profile/ChangePicture.vue'
 import Sidebar from '@/components/Sidebar.vue'
+import { useCustomization } from '@/composables/useCustomization'
+import { getItemById } from '@/data/shopThemes'
 
 export default {
   name: 'Profile',
@@ -254,6 +256,17 @@ export default {
 
     const defaultAvatar =
       'https://upload.wikimedia.org/wikipedia/commons/a/ac/Default_pfp.jpg'
+
+    // Sistema de personalización de fondo
+    const { getEquippedItem } = useCustomization()
+    const bgStyle = computed(() => {
+      const equippedBgId = getEquippedItem('profileBg')
+      const bgItem = equippedBgId ? getItemById(equippedBgId) : null
+      const bgUrl = bgItem?.bgUrl || 'https://images.unsplash.com/photo-1604608672516-f1b9b1d37076?ixlib=rb-4.1.0'
+      return {
+        background: `url('${bgUrl}') center/cover no-repeat`
+      }
+    })
 
     const showConfirmDeleteFriend = ref(false)
     const friendToDelete = ref(null)
@@ -570,6 +583,7 @@ export default {
       goToTrip,
       saveProfile,
       friends,
+      bgStyle,
       showFriends,
       goToUser,
       defaultAvatar,
@@ -588,8 +602,7 @@ export default {
 <style scoped>
   .profile-page {
     min-height: 100vh;
-    background: url('https://images.unsplash.com/photo-1604608672516-f1b9b1d37076?ixlib=rb-4.1.0')
-      center/cover no-repeat;
+    /* background aplicado dinámicamente via :style */
     display: flex;
     justify-content: center;
     align-items: flex-start;

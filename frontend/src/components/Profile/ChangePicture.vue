@@ -1,6 +1,6 @@
 <template>
   <div class="photo-adjuster">
-    <h1 class="photo-title">Selecciona y Ajusta tu Fotografía</h1>
+    <h1 class="photo-title">Selecciona y ajusta tu fotografía</h1>
     <input type="file" @change="onFileChange" accept="image/png, image/jpeg, image/jpg, image/webp" />
 
 
@@ -297,7 +297,6 @@ export default {
 <style scoped>
 .photo-adjuster {
   font-family: Arial, sans-serif;
-  background: #f2f2f251;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -309,7 +308,7 @@ h1 {
 }
 
 .photo-title {
-  font-size: 1.9rem;
+  font-size: 1rem;
   font-weight: 500;
   margin-bottom: 10px;
 }

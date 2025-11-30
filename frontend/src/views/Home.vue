@@ -13,11 +13,7 @@
       </div>
       
       <nav class="nav">
-        <div v-if="user" class="user-menu">
-          <span class="user-email">{{ user.email }}</span>
-          <button @click="handleLogout" class="btn btn-outline">Cerrar Sesión</button>
-        </div>
-        <div v-else class="guest-menu">
+        <div v-if="!user" class="guest-menu">
           <p class="explore-text">Explora viajes alrededor del mundo</p>
           <router-link to="/login" class="btn btn-primary">Iniciar Sesión</router-link>
           <router-link to="/register" class="btn btn-outline">Registrarse</router-link>
@@ -47,12 +43,14 @@ onMounted(async () => {
 // Escuchar cambios en la autenticación
 supabase.auth.onAuthStateChange((event, session) => {
   user.value = session?.user || null
+  
+  // Limpiar localStorage al cerrar sesión
+  if (event === 'SIGNED_OUT') {
+    localStorage.removeItem('user_balance')
+    localStorage.removeItem('purchased_items')
+    localStorage.removeItem('equipped_items')
+  }
 })
-
-const handleLogout = async () => {
-  await supabase.auth.signOut()
-  router.push('/login')
-}
 
 </script>
 
@@ -100,7 +98,6 @@ const handleLogout = async () => {
   align-items: center;
 }
 
-.user-menu,
 .guest-menu {
   display: flex;
   gap: 12px;
@@ -259,7 +256,6 @@ const handleLogout = async () => {
     padding: 15px;
   }
   
-  .user-menu,
   .guest-menu {
     flex-wrap: wrap;
     justify-content: center;

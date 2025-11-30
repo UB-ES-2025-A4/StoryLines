@@ -1,11 +1,13 @@
 <template>
   <div class="post-page" :style="{
-    backgroundImage: `url(${trip?.cover_image || defaultCover})`,
-    backgroundRepeat: 'no-repeat',
-    backgroundSize: 'cover',
-    backgroundPosition: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    backgroundBlendMode: 'overlay'
+    backgroundColor: loading ? '#0A0A0A' : 'transparent',
+    backgroundBlendMode: loading ? 'normal' : 'overlay',
+    ...(!loading && {
+      backgroundImage: `url(${trip.cover_image || defaultCover})`,
+      backgroundSize: 'cover',
+      backgroundPosition: 'center',
+      backgroundRepeat: 'no-repeat'
+    })
   }">
 
     <!-- Sidebar -->

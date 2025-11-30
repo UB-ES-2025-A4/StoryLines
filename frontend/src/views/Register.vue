@@ -70,6 +70,8 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { supabase } from '@/config/supabase'
+import { useBalance } from '@/composables/useBalance'
+
 
 export default {
   name: 'Register',
@@ -82,6 +84,7 @@ export default {
     const error = ref('')
     const success = ref('')
     const loading = ref(false)
+    const { loadBalance } = useBalance()
 
     const handleRegister = async () => {
       error.value = ''
@@ -139,6 +142,7 @@ export default {
         if (insertError) throw insertError
 
         success.value = '¡Registro exitoso! Redirigiendo...'
+        await loadBalance()
         setTimeout(() => router.push('/'), 1500)
       } catch (err) {
         error.value = err.message || 'Error al registrarse'
