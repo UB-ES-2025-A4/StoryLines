@@ -43,6 +43,13 @@ onMounted(async () => {
 // Escuchar cambios en la autenticación
 supabase.auth.onAuthStateChange((event, session) => {
   user.value = session?.user || null
+  
+  // Limpiar localStorage al cerrar sesión
+  if (event === 'SIGNED_OUT') {
+    localStorage.removeItem('user_balance')
+    localStorage.removeItem('purchased_items')
+    localStorage.removeItem('equipped_items')
+  }
 })
 
 </script>

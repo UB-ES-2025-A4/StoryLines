@@ -32,6 +32,9 @@ import notificationsRouter from "./routes/notifications.js";
 import searchRouter from "./routes/search.js";
 import tripsRouter from "./routes/trips.js";
 import usersRouter from "./routes/users.js";
+import shopRouter from './routes/shop.js';
+import balanceRouter from './routes/balance.js'; 
+import purchasesRouter from "./routes/purchases.js";
 
 // ❗ LAS QUE FALTABAN
 import avatarRouter from "./routes/avatar.js";
@@ -51,6 +54,9 @@ app.use("/api/notifications", notificationsRouter);
 app.use("/api/search", searchRouter);
 app.use("/api/trips", tripsRouter);
 app.use("/api/users", usersRouter);
+app.use('/api/shop', shopRouter);
+app.use('/api/balance', balanceRouter);
+app.use("/api/purchases", purchasesRouter);
 
 app.use("/api/avatar", avatarRouter);
 app.use("/api/friend-request", friendRequestRouter);
