@@ -118,6 +118,7 @@ router.get("/saved/:userId", async (req, res) => {
       startDate: t.start_date,
       endDate: t.end_date,
       stops: grouped[t.id] || [],
+      views: t.views || 0,
     }));
 
     // Sort by saved date descending

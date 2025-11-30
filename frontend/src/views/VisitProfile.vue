@@ -25,7 +25,7 @@
 
           <div class="button-row">
             <button class="friends-btn" @click="showFriends = true">
-              Amigos ({{ formatFriendCount(friends.length) }})
+              Amigos ({{ formatCount(friends.length) }})
             </button>
 
 
@@ -371,22 +371,24 @@ const goToUser = (id) => {
   }
 }
 
-    const formatFriendCount = (count) => {
-      if (count < 1000) return count.toString()
-      if (count < 1000000) {
-        if (count % 1000 === 0) {
-          return (count / 1000).toFixed(0) + 'K'
+
+    const formatCount = (count) => {
+      if (count < 1000) return count;
+      if (count < 1000000){
+        if (count % 1000 < 100){
+          return (count / 1000).toFixed(0) + 'K';
         } else {
-          return (count / 1000).toFixed(1) + 'K'
-        }
-      } else {
-        if (count % 1000000 === 0) {
-          return (count / 1000000).toFixed(0) + 'M'
-        } else {
-          return (count / 1000000).toFixed(1) + 'M'
+          return (count / 1000).toFixed(1) + 'K';
         }
       }
-    }
+      if (count < 1000000000){
+        if (count % 1000000 < 100000){
+          return (count / 1000000).toFixed(0) + 'M';
+        } else {
+          return (count / 1000000).toFixed(1) + 'M';
+        }
+      }
+    };
 
 /* ===============================
    LOAD
