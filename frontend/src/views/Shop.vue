@@ -90,9 +90,24 @@ const filteredItems = computed(() => {
   return allItems.value.filter(item => item.type === currentFilter.value)
 })
 
-onMounted(() => {
-  allItems.value = getItems()
+onMounted(async () => {
+  try {
+    const items = await getItems()
+
+    console.log("ITEMS RECIBIDOS DESDE BACKEND:", items)
+    console.log("TIPO:", typeof items)
+    console.log("ES ARRAY?", Array.isArray(items))
+    console.log("VALOR EXACTO:", JSON.stringify(items, null, 2))
+
+    allItems.value = items
+
+  } catch (err) {
+    console.error("Error cargando items", err)
+    allItems.value = []
+  }
 })
+
+
 
 function handleFilterChange(filterId) {
   currentFilter.value = filterId

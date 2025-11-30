@@ -100,14 +100,15 @@
 
 
 <script setup>
-import { ref, onMounted, onUnmounted, computed, watch } from 'vue'
+import { ref, onMounted, onUnmounted, computed, watch, nextTick } from 'vue'
 import Globe from 'globe.gl'
 import {  convertTripsToArcs, processDestinationsFromTrips } from '@/data/dummyTrips.js'
 import { supabase } from '@/config/supabase.js'
 import { useRouter } from 'vue-router'
 import { useCustomization } from '@/composables/useCustomization'
-import { getItemById } from '@/data/shopThemes'
+import { getItems } from '@/data/shopThemes'
 
+const allShopItems = ref([])
 
 const globeEl = ref(null)
 let myGlobe = null
@@ -123,6 +124,10 @@ const suggestedUsers = ref([])
 const allSuggestedUsers = ref([])
 
 const defaultAvatar = '/default-avatar.png'
+
+function findItemById(id) {
+  return allShopItems.value.find(i => i.id === id) || null
+}
 
 const friendUserIds = computed(() => {
   return friends.value
@@ -269,6 +274,9 @@ onMounted(async () => {
       fetchTrips(),
       fetchFriends(user.id)
     ])
+
+  allShopItems.value = await getItems()
+  await nextTick()
   initializeGlobe()
   window.addEventListener('resize', handleResize)
   document.addEventListener('click', handleDocumentClick)
@@ -699,13 +707,13 @@ function initializeGlobe() {
   // Obtener textura equipada del globo
   const { getEquippedItem } = useCustomization()
   const equippedGlobeId = getEquippedItem('globe')
-  const globeItem = equippedGlobeId ? getItemById(equippedGlobeId) : null
+  const globeItem = equippedGlobeId ? findItemById(equippedGlobeId) : null
   const globeTexture = globeItem?.textureUrl || '//unpkg.com/three-globe/example/img/earth-night.jpg'
-  
-  // Obtener fondo equipado del home
+
   const equippedHomeBgId = getEquippedItem('homeBg')
-  const homeBgItem = equippedHomeBgId ? getItemById(equippedHomeBgId) : null
+  const homeBgItem = equippedHomeBgId ? findItemById(equippedHomeBgId) : null
   const homeBackground = homeBgItem?.bgUrl || '//unpkg.com/three-globe/example/img/night-sky.png'
+
   
   myGlobe = Globe()(globeEl.value)
     .globeImageUrl(globeTexture)
