@@ -67,9 +67,24 @@
               </div>
 
               <div class="trip-info">
-                <div class="trip-details">
-                  <h4>{{ trip.title }}</h4>
-                  <p>{{ truncateText(trip.description, 120) }}</p>
+                <div class="trip-details" v-if="currentTab === 'saved'">
+                  <h4>{{ truncateText(trip.title, 20) }}</h4>
+                  <p>{{ truncateText(trip.description, 30) }}</p>
+                </div>
+
+                <div class="trip-details" v-if="currentTab !== 'saved'">
+                  <h4>{{ truncateText(trip.title, 30) }}</h4>
+                  <p>{{ truncateText(trip.description, 45) }}</p>
+                </div>
+
+                <div class="trip-author" v-if="currentTab === 'saved' && trip.author">
+                  <span class="published-by">Published by</span>
+                  <div class="author-info">
+                    <div class="avatar-container" style="width:30px; height:30px; margin-right:8px;">
+                      <img :src="safeAvatar(trip.author.avatar_url)" alt="Avatar del autor" class="avatar" style="width:30px; height:30px; border-radius:50%; object-fit:cover;" />
+                    </div>
+                    <span>{{ truncateText(trip.author.username, 10)}}</span>
+                  </div>
                 </div>
               </div>
 
@@ -533,7 +548,11 @@ export default {
           title: t.tripName || "Sin título",
           description: t.description || "Sin descripción",
           image: t.coverImage ||
-            "https://jkfenner.com/wp-content/uploads/2019/11/default-450x450.jpg"
+            "https://jkfenner.com/wp-content/uploads/2019/11/default-450x450.jpg",
+          author: {
+            username: t.userName,
+            avatar_url: t.userAvatar
+          }
         }))
 
       } catch (err) {
@@ -931,6 +950,8 @@ export default {
   display: flex;
   justify-content: space-between;
   width: 100%;
+  align-items: flex-start;
+  padding: 1rem;
 }
 
 .trip-details {
@@ -1264,6 +1285,33 @@ export default {
   display: flex;
   gap: 1rem;     /* separación entre botones */
   align-items: center;
+}
+
+.trip-author {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  text-align: right;
+  color: #0a0a0a;
+  font-size: 0.9rem;
+  margin-left: 1rem;
+  margin-right: 1rem;
+}
+
+.published-by {
+  font-size: 0.85rem;
+  opacity: 0.8;
+}
+
+.author-info {
+  display: flex;
+  align-items: center;
+  margin-top: 0.3rem;
+}
+
+.trip-author .avatar {
+  box-shadow: none;
+  border: 1px solid rgba(0, 0, 0, 0.2);
 }
 
 </style>
