@@ -51,7 +51,9 @@
             </button>
 
             <span class="separator">|</span>
-            <button>Viajes guardados</button>
+            <button :class="{ active: currentTab === 'saved' }" @click="currentTab = 'saved'">
+              Viajes guardados
+            </button>
           </div>
         </div>
 
@@ -71,13 +73,13 @@
                 </div>
               </div>
 
-              <button class="menu-btn" @click.stop="toggleMenu(trip.id)">⋯</button>
+              <button class="menu-btn" v-if="currentTab !== 'saved'" @click.stop="toggleMenu(trip.id)">⋯</button>
 
-              <div v-if="currentMenuTrip === trip.id" class="menu-dropdown">
+              <div v-if="currentMenuTrip === trip.id && currentTab !== 'saved'" class="menu-dropdown">
                 <button class="menu-item edit-item" @click.stop="editTrip(trip.id)">
                   <i class="fa fa-pencil"></i> Editar
                 </button>
-                <button class="menu-item delete-item" @click.stop="openDeleteTripConfirm(trip.id)">
+                <button class="menu-item delete-item" v-if="currentTab !== 'saved'" @click.stop="openDeleteTripConfirm(trip.id)">
                   <i class="fa fa-trash"></i> Eliminar
                 </button>
               </div>
@@ -241,6 +243,7 @@ export default {
     const hovering = ref(false)
     const currentMenuTrip = ref(null)
     const trips = ref([])
+    const savedTrips = ref([])
     const drafts = ref([])
     const currentTab = ref('published')
     const friends = ref([])
@@ -304,6 +307,7 @@ export default {
         // Recargar listas
         await loadTrips()
         await loadDrafts()
+        
       } catch (e) {
         console.error("Error eliminando viaje:", e)
       }
@@ -319,13 +323,28 @@ export default {
       return url
     }
 
-    const currentTrips = computed(() =>
-      currentTab.value === 'published' ? trips.value : drafts.value
-    )
-    const noTripsMessage = computed(() =>
-      currentTab.value === 'published'
-        ? 'No hay viajes publicados'
-        : 'No hay borradores'
+    const currentTrips = computed(() => {
+      if (currentTab.value === 'published') {
+        return trips.value
+      } else if (currentTab.value === 'drafts') {
+        return drafts.value
+      } else if (currentTab.value === 'saved') {
+        return savedTrips.value
+      }
+      return []
+    })
+
+    const noTripsMessage = computed(() => {
+      if (currentTab.value === 'published') {
+        return 'No hay viajes publicados.'
+      } else if (currentTab.value === 'drafts') {
+        return 'No hay borradores.'
+      } else if (currentTab.value === 'saved') {
+        return 'No hay viajes guardados.'
+      }
+      return ''
+    }
+  
     )
 
     // === Cargar perfil ===
@@ -491,6 +510,39 @@ export default {
       }
     }
 
+    // === Cargar viajes guardados ===
+    const loadSavedTrips = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession()
+        const userId = session?.user?.id
+        if (!userId) return
+
+
+        const res = await fetch(`/api/trips/saved/${userId}`)
+        const body = await res.json()
+
+        if (!body.ok || !body.trips) {
+          savedTrips.value = []
+          return
+        }
+
+        const trips = body.trips
+
+        savedTrips.value = trips.map(t => ({
+          id: t.id,
+          title: t.tripName || "Sin título",
+          description: t.description || "Sin descripción",
+          image: t.coverImage ||
+            "https://jkfenner.com/wp-content/uploads/2019/11/default-450x450.jpg"
+        }))
+
+      } catch (err) {
+        console.error("Error cargando viajes guardados:", err)
+        savedTrips.value = []
+      }
+    }
+
+
     // === Cargar borradores ===
     const loadDrafts = async () => {
       try {
@@ -584,6 +636,7 @@ export default {
       await loadFriends()
       await loadTrips()
       await loadDrafts()
+      await loadSavedTrips()
       document.addEventListener('click', handleClickOutside)
     })
 
@@ -629,7 +682,8 @@ export default {
       showPictureModal,
       togglePictureModal,
       handleImageUpdated,
-      formatFriendCount
+      formatFriendCount,
+      saveProfileAndClose
     }
   }
 }
