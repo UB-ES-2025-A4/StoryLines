@@ -31,10 +31,10 @@
           <span>Crear viaje</span>
         </router-link>
 
-        <div class="nav-item">
+        <router-link to="/shop" class="nav-item" :class="{ 'active': $route.path === '/shop' }">
           <svg class="icon" v-html="storeIcon"></svg>
           <span>Tienda</span>
-        </div>
+        </router-link>
 
         <div class="nav-item">
           <svg class="icon" v-html="messagesIcon"></svg>

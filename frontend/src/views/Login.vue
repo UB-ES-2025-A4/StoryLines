@@ -56,6 +56,8 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { supabase } from '@/config/supabase'
+import { useBalance } from '@/composables/useBalance'
+
 
 export default {
   name: 'Login',
@@ -66,6 +68,8 @@ export default {
     const rememberMe = ref(false)
     const error = ref('')
     const loading = ref(false)
+    const { loadBalance } = useBalance()
+
 
     const handleLogin = async () => {
       error.value = ''
@@ -89,7 +93,7 @@ export default {
           localStorage.removeItem('rememberedPassword')
           localStorage.removeItem('rememberMe')
         }
-
+        await loadBalance();
         router.push('/')
       } catch (err) {
         error.value = 'Credenciales incorrectas'
