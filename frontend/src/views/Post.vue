@@ -24,7 +24,7 @@
           <div class="trip-header">
             <div class="author-info">
               <img :src="trip.user?.avatarUrl || defaultAvatar" alt="Author avatar" class="author-avatar" />
-              <p class="author-username">{{ trip.user?.displayName || trip.user?.username || 'Anónimo' }}</p>
+              <p class="author-username">{{ trip.user?.username || 'Anónimo' }}</p>
             </div>
             <div class="trip-info">
               <h1 class="trip-title">{{ trip.trip_name }}</h1>
@@ -371,22 +371,6 @@ export default {
   position: relative;
 }
 
-
-.author-avatar {
-  margin-top: 1rem;
-  width: 120px;
-  height: 120px;
-  border-radius: 50%;
-  object-fit: cover;
-  border: 1px solid #fff;
-}
-
-.author-username {
-  font-size: 1.2rem;
-  margin-top: 0.5rem;
-  font-weight: 400;
-}
-
 .trip-content {
   display: flex;
   flex-direction: row;
@@ -436,16 +420,17 @@ export default {
 }
 
 .author-avatar {
-  width: 60px;
-  height: 60px;
+  width: 80px;
+  height: 80px;
   border-radius: 50%;
+  border: 1px solid #fff;
   object-fit: cover;
 }
 
 .author-username {
   font-size: 1.2rem;
   margin-top: 0.5rem;
-  font-weight: 600;
+  font-weight: 300;
 }
 
 .trip-info {
