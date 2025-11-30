@@ -245,8 +245,22 @@ export function getFeaturedTheme() {
   return null // No hay featured theme ahora
 }
 
-export function getItems() {
-  return standaloneItems
+export async function getItems() {
+  const res = await fetch('/api/shop/items')
+  const data = await res.json()
+  if (!data.ok) {
+    throw new Error(data.error || 'Error loading items')
+  }
+  return data.items
+}
+
+export async function getItemById(itemId) {
+  const res = await fetch(`/api/shop/items/${itemId}`)
+  const data = await res.json()
+  if (!data.ok) {
+    throw new Error(data.error || 'Error loading item')
+  }
+  return data.item
 }
 
 export function getItemsByTheme(themeId) {
@@ -255,10 +269,6 @@ export function getItemsByTheme(themeId) {
 
 export function getAdjustedThemePrice(themeId, purchasedItemIds) {
   return 0
-}
-
-export function getItemById(itemId) {
-  return standaloneItems.find(item => item.id === itemId)
 }
 
 export function getThemeById(themeId) {

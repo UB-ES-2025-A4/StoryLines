@@ -62,23 +62,40 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { getItems } from '@/data/shopThemes'
 import { useCustomization } from '@/composables/useCustomization'
 
 const { equippedItems, equipItem, isEquipped } = useCustomization()
-const allItems = getItems()
+
+
+const allItems = ref([])
+const loading = ref(true)
+const error = ref(null)
+
+// cargar items del backend al montar el componente
+onMounted(async () => {
+  try {
+    const items = await getItems()
+    allItems.value = items
+  } catch (e) {
+    console.error('Error cargando items de la tienda', e)
+    error.value = 'No se han podido cargar los items'
+  } finally {
+    loading.value = false
+  }
+})
 
 const globeItems = computed(() => 
-  allItems.filter(item => item.type === 'globe')
+  allItems.value.filter(item => item.type === 'globe')
 )
 
 const homeBgItems = computed(() => 
-  allItems.filter(item => item.type === 'homeBg')
+  allItems.value.filter(item => item.type === 'homeBg')
 )
 
 const profileBgItems = computed(() => 
-  allItems.filter(item => item.type === 'profileBg')
+  allItems.value.filter(item => item.type === 'profileBg')
 )
 
 function equipAndTest(item) {
@@ -93,6 +110,7 @@ function clearAll() {
 
 defineEmits(['close'])
 </script>
+
 
 <style scoped>
 .texture-tester {
