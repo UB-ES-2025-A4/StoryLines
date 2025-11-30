@@ -217,7 +217,7 @@ export default {
 
         const base64 = await blobToBase64(blob);
 
-        const res = await fetch(`${API_URL}/api/upload-avatar`, {
+        const res = await fetch(`${API_URL}/api/avatar/upload`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -254,7 +254,7 @@ export default {
       success.value = "";
 
       try {
-        const res = await fetch(`${API_URL}/api/delete-avatar`, {
+        const res = await fetch(`${API_URL}/api/avatar/delete`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ userId: user.value.id }),
@@ -268,6 +268,7 @@ export default {
         ctx.clearRect(0, 0, canvas.value.width, canvas.value.height);
 
         success.value = "Imagen eliminada correctamente!";
+        localStorage.setItem('profile_avatar_url', null);
         emit("image-updated", null);
       } catch (err) {
         error.value = err.message;

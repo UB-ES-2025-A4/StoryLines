@@ -33,8 +33,8 @@
               <span class="action-icon" v-html="commentIcon"></span>
               <span>{{ commentsCount }}</span>
             </button>
-            <button class="action-button">
-              <span class="action-icon" v-html="saveIcon"></span>
+            <button class="action-button" @click="toggleSave">
+              <span class="action-icon" v-html="isSaved ? saveFilledIcon : saveOutlineIcon"></span>
             </button>
             <button class="action-button">
               <span class="action-icon" v-html="viewsIcon"></span>
@@ -157,7 +157,7 @@ export default {
     const likeCount = ref(0);
     const showComments = ref(false);
     const views = ref(0);
-
+    const isSaved = ref(false);
     const tripOwnerId = ref(null);
 
     let userId = null;
@@ -182,6 +182,7 @@ export default {
           trip.value = data.trip;
           likeCount.value = data.trip.likes ?? 0;
           isLiked.value = data.trip.userLiked ?? false;
+          isSaved.value = data.trip.userSaved ?? false;
           views.value = data.trip.views ?? 0;
           comments.value = data.trip.comments ?? [];
           commentsCount.value = data.trip.commentsCount ?? 0;
@@ -219,6 +220,25 @@ export default {
         await fetchTrip();
       } catch (e) {
         console.error('Error toggling like');
+      }
+    };
+
+    const toggleSave = async () => {
+      if (!userId) return alert("Debes iniciar sesión para guardar.");
+      const id = route.params.id;
+      try {
+        if (isSaved.value) {
+          await fetch(`/api/trips/${id}/save/${userId}`, { method: "DELETE" });
+        } else {
+          await fetch(`/api/trips/${id}/save`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ userId }),
+          });
+        }
+        await fetchTrip();
+      } catch (e) {
+        console.error('Error toggling save');
       }
     };
 
@@ -290,11 +310,13 @@ export default {
     const likeOutlineIcon = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
     const likeFilledIcon = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path fill="red" stroke="white" stroke-width="2" d="M11.645 20.906l-.007-.003-.022-.01a15.741 15.741 0 01-.383-.218 25.45 25.45 0 01-4.244-3.17C4.688 15.36 2.25 12.174 2.25 8.25 2.25 5.322 4.714 3 7.688 3A5.5 5.5 0 0112 5.052 5.5 5.5 0 0116.313 3c2.973 0 5.437 2.322 5.437 5.25 0 3.925-2.438 7.111-4.739 9.256a25.175 25.175 0 01-4.244 3.17 15.247 15.247 0 01-.383.219l-.022.01-.007.004-.003.001a.752 .752 0 01-.704 0l-.003-.001z"/></svg>`;
     const commentIcon = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
-    const saveIcon = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M18 7v14l-6 -4l-6 4v-14a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+    const saveFilledIcon = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M18 22l-6-4l-6 4V6a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4z" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+    const saveOutlineIcon = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M18 7v14l-6 -4l-6 4v-14a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
     const viewsIcon = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 15a3 3 0 100-6 3 3 0 000 6z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
 
 
     onMounted(async () => {
+      await fetch(`/api/trips/${route.params.id}/view`, { method: 'POST' });
       await loadUser();
       await fetchTrip();
       document.addEventListener('click', closeMenuOutside);
@@ -306,8 +328,8 @@ export default {
 
     return {
       trip, loading, error, changeImage, defaultImage, defaultCover,
-      isLiked, likeCount, toggleLike, showComments, likeOutlineIcon,
-      likeFilledIcon, commentIcon, saveIcon, viewsIcon, views,
+      isLiked, likeCount, toggleLike, isSaved, toggleSave, showComments, likeOutlineIcon,
+      likeFilledIcon, commentIcon, saveOutlineIcon, saveFilledIcon, viewsIcon, views,
       comments, commentsCount, newComment, sendComment, formatDate,
       openMenuId, canDeleteComment, toggleMenu,
       showDeleteModal,

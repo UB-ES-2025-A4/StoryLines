@@ -83,7 +83,9 @@
             </button>
 
             <span class="separator">|</span>
-            <button>Viajes guardados</button>
+            <button :class="{ active: currentTab === 'saved' }" @click="currentTab = 'saved'">
+              Viajes guardados
+            </button>
           </div>
         </div>
 
@@ -101,19 +103,34 @@
               </div>
 
               <div class="trip-info">
-                <div class="trip-details">
-                  <h4>{{ trip.title }}</h4>
-                  <p>{{ truncateText(trip.description, 120) }}</p>
+                <div class="trip-details" v-if="currentTab === 'saved'">
+                  <h4>{{ truncateText(trip.title, 20) }}</h4>
+                  <p>{{ truncateText(trip.description, 30) }}</p>
+                </div>
+
+                <div class="trip-details" v-if="currentTab !== 'saved'">
+                  <h4>{{ truncateText(trip.title, 30) }}</h4>
+                  <p>{{ truncateText(trip.description, 45) }}</p>
+                </div>
+
+                <div class="trip-author" v-if="currentTab === 'saved' && trip.author">
+                  <span class="published-by">Published by</span>
+                  <div class="author-info">
+                    <div class="avatar-container" style="width:30px; height:30px; margin-right:8px;">
+                      <img :src="safeAvatar(trip.author.avatar_url)" alt="Avatar del autor" class="avatar" style="width:30px; height:30px; border-radius:50%; object-fit:cover;" />
+                    </div>
+                    <span>{{ truncateText(trip.author.username, 10)}}</span>
+                  </div>
                 </div>
               </div>
 
-              <button class="menu-btn" @click.stop="toggleMenu(trip.id)">⋯</button>
+              <button class="menu-btn" v-if="currentTab !== 'saved'" @click.stop="toggleMenu(trip.id)">⋯</button>
 
-              <div v-if="currentMenuTrip === trip.id" class="menu-dropdown">
+              <div v-if="currentMenuTrip === trip.id && currentTab !== 'saved'" class="menu-dropdown">
                 <button class="menu-item edit-item" @click.stop="editTrip(trip.id)">
                   <i class="fa fa-pencil"></i> Editar
                 </button>
-                <button class="menu-item delete-item" @click.stop="openDeleteTripConfirm(trip.id)">
+                <button class="menu-item delete-item" v-if="currentTab !== 'saved'" @click.stop="openDeleteTripConfirm(trip.id)">
                   <i class="fa fa-trash"></i> Eliminar
                 </button>
               </div>
@@ -215,6 +232,52 @@
         </div>
       </div>
     </div>
+
+    <!-- ============================================= -->
+    <!-- MODAL EDITAR PERFIL -->
+    <!-- ============================================= -->
+    <div v-if="showEditModal" class="modal-overlay" @click.self="toggleEditModal">
+      <div class="modal-box">
+        <button class="modal-close-x" @click="toggleEditModal">✕</button>
+        <h2 class="modal-title">Editar Perfil</h2>
+
+        <div class="edit-form">
+          <label>Nombre de usuario:</label>
+          <input type="text" v-model="editUsername" placeholder="Nombre de usuario" />
+
+          <label>Display name:</label>
+          <input type="text" v-model="editDisplayName" placeholder="Display name" />
+
+          <label>Biografía:</label>
+          <textarea v-model="editBio" placeholder="Biografía"></textarea>
+
+          <button class="save-btn" @click="saveProfileAndClose" :disabled="saving">
+            {{ saving ? 'Guardando...' : 'Guardar cambios' }}
+          </button>
+
+          <button class="cancel-btn" @click="toggleEditModal">
+            Cancelar
+          </button>
+
+          <div v-if="error" class="alert alert-error">{{ error }}</div>
+          <div v-if="success" class="alert alert-success">{{ success }}</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================= -->
+    <!-- MODAL CAMBIAR FOTO DE PERFIL -->
+    <!-- ============================================= -->
+    <div v-if="showPictureModal" class="modal-overlay" @click.self="togglePictureModal">
+      <div class="modal-box">
+        <button class="modal-close-x" @click="togglePictureModal">✕</button>
+        <h2 class="modal-title">Cambiar foto de perfil</h2>
+
+        <div class="change-picture-container">
+          <ChangePicture @image-updated="handleImageUpdated" />
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -249,6 +312,7 @@ export default {
     const hovering = ref(false)
     const currentMenuTrip = ref(null)
     const trips = ref([])
+    const savedTrips = ref([])
     const drafts = ref([])
     const currentTab = ref('published')
     const friends = ref([])
@@ -323,6 +387,7 @@ export default {
         // Recargar listas
         await loadTrips()
         await loadDrafts()
+        
       } catch (e) {
         console.error("Error eliminando viaje:", e)
       }
@@ -338,13 +403,28 @@ export default {
       return url
     }
 
-    const currentTrips = computed(() =>
-      currentTab.value === 'published' ? trips.value : drafts.value
-    )
-    const noTripsMessage = computed(() =>
-      currentTab.value === 'published'
-        ? 'No hay viajes publicados'
-        : 'No hay borradores'
+    const currentTrips = computed(() => {
+      if (currentTab.value === 'published') {
+        return trips.value
+      } else if (currentTab.value === 'drafts') {
+        return drafts.value
+      } else if (currentTab.value === 'saved') {
+        return savedTrips.value
+      }
+      return []
+    })
+
+    const noTripsMessage = computed(() => {
+      if (currentTab.value === 'published') {
+        return 'No hay viajes publicados.'
+      } else if (currentTab.value === 'drafts') {
+        return 'No hay borradores.'
+      } else if (currentTab.value === 'saved') {
+        return 'No hay viajes guardados.'
+      }
+      return ''
+    }
+  
     )
 
     // === Cargar perfil ===
@@ -424,6 +504,11 @@ export default {
           avatar_url: profileData.value.avatar_url
         }
 
+        // check if username contains spaces
+        if (/\s/.test(payload.username)) {
+          throw new Error('El nombre de usuario no puede contener espacios')
+        }
+
         const res = await fetch(`${API_URL}/api/profile`, {
           method: 'POST',
           headers: {
@@ -450,6 +535,13 @@ export default {
         error.value = err.message || 'Error al guardar el perfil'
       } finally {
         saving.value = false
+      }
+    }
+
+    const saveProfileAndClose = async () => {
+      await saveProfile()
+      if (!error.value) {
+        showEditModal.value = false
       }
     }
 
@@ -483,6 +575,43 @@ export default {
         console.error('Error cargando viajes:', err)
       }
     }
+
+    // === Cargar viajes guardados ===
+    const loadSavedTrips = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession()
+        const userId = session?.user?.id
+        if (!userId) return
+
+
+        const res = await fetch(`/api/trips/saved/${userId}`)
+        const body = await res.json()
+
+        if (!body.ok || !body.trips) {
+          savedTrips.value = []
+          return
+        }
+
+        const trips = body.trips
+
+        savedTrips.value = trips.map(t => ({
+          id: t.id,
+          title: t.tripName || "Sin título",
+          description: t.description || "Sin descripción",
+          image: t.coverImage ||
+            "https://jkfenner.com/wp-content/uploads/2019/11/default-450x450.jpg",
+          author: {
+            username: t.userName,
+            avatar_url: t.userAvatar
+          }
+        }))
+
+      } catch (err) {
+        console.error("Error cargando viajes guardados:", err)
+        savedTrips.value = []
+      }
+    }
+
 
     // === Cargar borradores ===
     const loadDrafts = async () => {
@@ -535,7 +664,9 @@ export default {
 
     const handleImageUpdated = (newUrl) => {
       profileData.value.avatar_url = newUrl
-      showChangePicture.value = false
+      showPictureModal.value = false
+      localStorage.setItem('profile_avatar_url', newUrl)
+      await saveProfile()
     }
 
     const handleClickOutside = (event) => {
@@ -553,6 +684,7 @@ export default {
       await loadFriends()
       await loadTrips()
       await loadDrafts()
+      await loadSavedTrips()
       document.addEventListener('click', handleClickOutside)
     })
 
@@ -593,149 +725,271 @@ export default {
       confirmDeleteFriend,
       showConfirmDeleteTrip,
       openDeleteTripConfirm,
-      confirmDeleteTrip
+      confirmDeleteTrip,
+      showEditModal,
+      toggleEditModal,
+      editUsername,
+      editDisplayName,
+      editBio,
+      showPictureModal,
+      togglePictureModal,
+      handleImageUpdated,
+      formatFriendCount,
+      saveProfileAndClose
     }
   }
 }
 </script>
 
 <style scoped>
-  .profile-page {
-    min-height: 100vh;
-    /* background aplicado dinámicamente via :style */
-    display: flex;
-    justify-content: center;
-    align-items: flex-start;
-    color: #fff;
-  }
-  
-  .profile-card {
-    background: linear-gradient(to bottom, rgba(11, 47, 74, 0.6), rgba(39, 45, 45, 0.6));
-    backdrop-filter: blur(14px);
-    width: 100%;
-    max-width: 700px;
-    border-radius: 0;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding: 3rem 1rem;
-    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
-    min-height: 100vh;
-  }
-  
-  /* --- CABECERA PERFIL --- */
-  .profile-header {
-    display: flex;
-    align-items: center;
-    text-align: left;
-    gap: 2rem;
-    margin-bottom: 2rem;
-    justify-content: flex-start;
-    margin-right: 20%;
-  }
-  
-  .profile-text {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-  }
-  
-  .avatar {
-    width: 180px;
-    height: 180px;
-    border-radius: 50%;
-    object-fit: cover;
-    border: 3px solid #ffffff;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
-  }
-  
-  .username {
-    font-size: 2rem;
-    font-weight: 500;
-    margin: 0;
-  }
-  
-  .display-name {
-    font-size: 1.3rem;
-    font-weight: 500;
-    margin: 0;
-  }
-  
-  .bio {
-    font-size: 0.9rem;
-    max-width: 500px;
-  }
-  
-  .edit-btn {
-    background: #ffffff;
-    border: none;
-    padding: 0.6rem 3rem;
-    border-radius: 10px;
-    color: #0a0a0a;
-    cursor: pointer;
-    transition: 0.2s;
-    font-weight: 500;
-    align-self: flex-start;
-  }
-  
-  .edit-btn:hover {
-    background: #e0e0e0;
-  }
-  
-  /* --- FORMULARIO DE EDICIÓN --- */
-  .edit-form {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-    margin-bottom: 2rem;
-    width: 100%;
-    max-width: 500px;
-  }
-  
-  .edit-form input,
-  .edit-form textarea {
-    padding: 0.8rem 1rem;
-    border: none;
-    border-radius: 0;
-    outline: none;
-    font-size: 1rem;
-    background: rgba(255, 255, 255, 0.15);
-    color: #fff;
-  }
-  
-  .save-btn {
-    background: #42b983;
-    border: none;
-    padding: 0.6rem 3rem;
-    border-radius: 25px;
-    color: #fff;
-    cursor: pointer;
-    transition: 0.2s;
-    font-size: 0.9rem;
-    font-weight: 500;
-  }
-  
-  /* --- VIAJES RECIENTES --- */
-  .recent-trips-section {
-    width: 95%;
-    border-radius: 0;
-    overflow: hidden;
-    padding-bottom: 2rem;
-  }
-  
-  .recent-trips-header {
-    text-align: left;
-    padding: 1rem 2rem;
-    background: linear-gradient(135deg, rgba(2, 161, 143, 0.8), rgba(55, 86, 137, 0.8));
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-  }
-  
-  .tabs {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 1rem;
-  }
+.profile-page {
+  min-height: 100vh;
+  background: url('https://images.unsplash.com/photo-1604608672516-f1b9b1d37076?ixlib=rb-4.1.0') center/cover no-repeat;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  color: #fff;
+}
+
+.profile-card {
+  background: linear-gradient(to bottom, rgba(11, 47, 74, 0.6), rgba(39, 45, 45, 0.6));
+  backdrop-filter: blur(14px);
+  width: 100%;
+  max-width: 700px;
+  border-radius: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 3rem 1rem;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+  min-height: 100vh;
+}
+
+/* --- CABECERA PERFIL --- */
+.profile-header {
+  display: flex;
+  align-items: center;
+  text-align: left;
+  gap: 2rem;
+  margin-bottom: 2rem;
+  justify-content: flex-start;
+}
+
+.profile-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  max-width: 300px;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+.avatar {
+  width: 180px;
+  height: 180px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid #ffffff;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+}
+
+.username {
+  font-size: 2rem;
+  font-weight: 500;
+  margin: 0;
+}
+
+.display-name {
+  font-size: 1.3rem;
+  font-weight: 500;
+  margin: 0;
+}
+
+.bio {
+  font-size: 0.9rem;
+  max-width: 500px;
+}
+
+.edit-btn {
+  margin-top: 0.3rem;
+  background: #02a18f;
+  color: #fff;
+  padding: 0.4rem 1.2rem;
+  border-radius: 10px;
+  border: none;
+  font-weight: 500;
+  cursor: pointer;
+  transition: 0.2s;
+  font-size: 0.9rem;
+  width: 150px;
+}
+
+
+
+.edit-btn:hover {
+  background: #028f7f;
+}
+
+/* --- FORMULARIO DE EDICIÓN --- */
+.edit-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-bottom: 2rem;
+  width: 100%;
+  max-width: 500px;
+}
+
+.edit-form input,
+.edit-form textarea {
+  padding: 0.8rem 1rem;
+  border: none;
+  border-radius: 0;
+  outline: none;
+  font-size: 1rem;
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+}
+
+.save-btn {
+  background: #42b983;
+  border: none;
+  padding: 0.6rem 3rem;
+  border-radius: 25px;
+  color: #fff;
+  cursor: pointer;
+  transition: 0.2s;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.cancel-btn {
+  background: rgba(255, 255, 255, 0.15);
+  border: none;
+  padding: 0.6rem 3rem;
+  border-radius: 25px;
+  color: #fff;
+  cursor: pointer;
+  transition: 0.2s;
+  font-size: 0.9rem;
+  font-weight: 500;
+  margin-top: 0.2rem;
+}
+
+/* --- VIAJES RECIENTES --- */
+.recent-trips-section {
+  width: 95%;
+  border-radius: 0;
+  overflow: hidden;
+  padding-bottom: 2rem;
+  padding-top: 1.5rem;
+}
+
+.recent-trips-header {
+  text-align: left;
+  padding: 1rem 2rem;
+  background: linear-gradient(135deg, rgba(2, 161, 143, 0.8), rgba(55, 86, 137, 0.8));
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+.tabs {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+}
+
+.tabs button {
+  background: none;
+  border: none;
+  color: #fff;
+  font-size: 1.3rem;
+  font-weight: 500;
+  padding: 0;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: border-bottom 0.3s;
+}
+
+.tabs button.active {
+  border-bottom: 2px solid #fff;
+}
+
+.separator {
+  color: #fff;
+  font-size: 1.3rem;
+  font-weight: 500;
+}
+
+/* --- CONTENEDOR DE TARJETAS --- */
+.trips-container {
+  display: flex;
+  flex-direction: column;
+  padding: 1.5rem 2rem;
+  background: rgba(11, 47, 74, 0.3);
+  border-radius: 0;
+  min-height: 200px;
+}
+
+/* --- TARJETA DE VIAJE --- */
+.trip-card {
+  background: #fff;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  padding: 0;
+  transition: all 0.3s ease;
+  height: 150px;
+  position: relative;
+}
+
+.trip-card:hover {
+  cursor: pointer;
+  background: #f0f0f0;
+}
+
+.trip-image-container {
+  position: relative;
+  width: 150px;
+  height: 100%;
+  flex-shrink: 0;
+}
+
+.trip-image {
+  width: 100%;
+  height: 100%;
+  border-radius: 12px 0 0 12px;
+  object-fit: cover;
+}
+
+.faded {
+  opacity: 0.7;
+}
+
+.draft-watermark {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: rgba(0, 0, 0, 0.5);
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+.trip-info {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+  align-items: flex-start;
+  padding: 1rem;
+}
+
+.trip-details {
+  flex-grow: 1;
+}
 
   .tabs button {
     background: none;
@@ -1134,5 +1388,32 @@ export default {
   background: rgba(255, 255, 255, 0.5);
 }
 
+
+.trip-author {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  text-align: right;
+  color: #0a0a0a;
+  font-size: 0.9rem;
+  margin-left: 1rem;
+  margin-right: 1rem;
+}
+
+.published-by {
+  font-size: 0.85rem;
+  opacity: 0.8;
+}
+
+.author-info {
+  display: flex;
+  align-items: center;
+  margin-top: 0.3rem;
+}
+
+.trip-author .avatar {
+  box-shadow: none;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+}
 
 </style>
