@@ -108,7 +108,7 @@ router.get("/saved/:userId", async (req, res) => {
     const formatted = trips.map((t) => ({
       id: t.id,
       userId: t.user_id,
-      userName: t.users?.display_name || t.users?.username,
+      userName: t.users?.username,
       userAvatar: t.users?.avatar_url,
       userColor: t.users?.user_color,
       tripName: t.trip_name,

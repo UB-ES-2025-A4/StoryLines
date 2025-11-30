@@ -456,6 +456,11 @@ export default {
           avatar_url: profileData.value.avatar_url
         }
 
+        // check if username contains spaces
+        if (/\s/.test(payload.username)) {
+          throw new Error('El nombre de usuario no puede contener espacios')
+        }
+
         const res = await fetch(`${API_URL}/api/profile`, {
           method: 'POST',
           headers: {
