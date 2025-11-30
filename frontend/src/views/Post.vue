@@ -21,31 +21,33 @@
 
       <div v-else class="trip-content">
         <div class="trip-container">
-          <div class="trip-header">
-            <div class="author-info" @click="goToProfile(trip.user?.id)" style="cursor: pointer;">
-              <img :src="trip.user?.avatarUrl || defaultAvatar" alt="Author avatar" class="author-avatar" />
-              <p class="author-username">{{ trip.user?.username || 'Anónimo' }}</p>
+          <div class="trip-header-wrapper">
+            <div class="trip-header">
+              <div class="author-info" @click="goToProfile(trip.user?.id)" style="cursor: pointer;">
+                <img :src="trip.user?.avatarUrl || defaultAvatar" alt="Author avatar" class="author-avatar" />
+                <p class="author-username">{{ trip.user?.username || 'Anónimo' }}</p>
+              </div>
+              <div class="trip-info">
+                <h1 class="trip-title">{{ trip.trip_name }}</h1>
+                <p class="trip-description">{{ trip.description }}</p>
+              </div>
+              <div class="trip-actions">
+                <button class="action-button like-button" @click="toggleLike">
+                  <span class="like-icon" v-html="isLiked ? likeFilledIcon : likeOutlineIcon"></span>
+                  <span class="like-count">{{ likeCount }}</span>
+                </button>
+                <button class="action-button" @click="showComments = !showComments">
+                  <span class="action-icon" v-html="commentIcon"></span>
+                  <span>{{ commentsCount }}</span>
+                </button>
+                <button class="action-button" v-if="showSaveButton()" @click="toggleSave">
+                  <span class="action-icon" v-html="isSaved ? saveFilledIcon : saveOutlineIcon"></span>
+                </button>
+              </div>
             </div>
-            <div class="trip-info">
-              <h1 class="trip-title">{{ trip.trip_name }}</h1>
-              <p class="trip-description">{{ trip.description }}</p>
-            </div>
-            <div class="trip-actions">
-              <button class="action-button like-button" @click="toggleLike">
-                <span class="like-icon" v-html="isLiked ? likeFilledIcon : likeOutlineIcon"></span>
-                <span class="like-count">{{ likeCount }}</span>
-              </button>
-              <button class="action-button" @click="showComments = !showComments">
-                <span class="action-icon" v-html="commentIcon"></span>
-                <span>{{ commentsCount }}</span>
-              </button>
-              <button class="action-button" v-if="showSaveButton()" @click="toggleSave">
-                <span class="action-icon" v-html="isSaved ? saveFilledIcon : saveOutlineIcon"></span>
-              </button>
-            </div>
-          </div>
 
-          <hr class="separator" />
+            <hr class="separator" />
+          </div>
 
           <div class="stops-route">
             <div v-for="(stop, index) in trip.stops || []" :key="index" class="stop-card-wrapper">
@@ -79,30 +81,31 @@
       <div v-show="showComments" class="comments-section">
         <h2 class="section-title">Comentarios</h2>
 
-        <div v-if="comments.length === 0" class="no-comments">No hay comentarios todavía.</div>
+        <div class="comments-list">
+          <div v-if="comments.length === 0" class="no-comments">No hay comentarios todavía.</div>
+          <div v-else>
+            <div v-for="comment in comments" :key="comment.id" class="comment-item">
+              <div class="comment-header">
+                <div class="comment-user-info" @click="goToProfile(comment.user?.id)" style="cursor: pointer;">
+                  <img
+                    :src="comment.user?.avatarUrl || 'https://jkfenner.com/wp-content/uploads/2019/11/default-450x450.jpg'"
+                    alt="Avatar" class="comment-avatar" />
+                  <div class="user-text-wrapper">
+                    <p class="comment-user">{{ comment.user?.displayName || comment.user?.username || 'Anónimo' }}</p>
+                    <p class="comment-date">{{ formatDate(comment.createdAt) }}</p>
+                  </div>
+                </div>
 
-        <div v-else>
-          <div v-for="comment in comments" :key="comment.id" class="comment-item">
-            <div class="comment-header">
-              <div class="comment-user-info" @click="goToProfile(comment.user?.id)" style="cursor: pointer;">
-                <img
-                  :src="comment.user?.avatarUrl || 'https://jkfenner.com/wp-content/uploads/2019/11/default-450x450.jpg'"
-                  alt="Avatar" class="comment-avatar" />
-                <div class="user-text-wrapper">
-                  <p class="comment-user">{{ comment.user?.displayName || comment.user?.username || 'Anónimo' }}</p>
-                  <p class="comment-date">{{ formatDate(comment.createdAt) }}</p>
+                <div v-if="canDeleteComment(comment)" class="comment-actions">
+                  <button @click.stop="toggleMenu(comment.id)" class="dots-btn">⋮</button>
+                  <div v-if="openMenuId === comment.id" class="dropdown-menu">
+                    <button @click.stop="confirmDelete(comment.id)" class="delete-option">Eliminar</button>
+                  </div>
                 </div>
               </div>
 
-              <div v-if="canDeleteComment(comment)" class="comment-actions">
-                <button @click.stop="toggleMenu(comment.id)" class="dots-btn">⋮</button>
-                <div v-if="openMenuId === comment.id" class="dropdown-menu">
-                  <button @click.stop="confirmDelete(comment.id)" class="delete-option">Eliminar</button>
-                </div>
-              </div>
+              <p class="comment-text">{{ comment.text }}</p>
             </div>
-
-            <p class="comment-text">{{ comment.text }}</p>
           </div>
         </div>
 
@@ -395,7 +398,7 @@ export default {
   height: 100vh;
   background: #0a0a0a;
   border: none;
-  padding: 2rem;
+  padding: 0;
   text-align: center;
   overflow-y: auto;
   -ms-overflow-style: none; 
@@ -406,6 +409,13 @@ export default {
   display: none;  /* Chrome, Safari, Opera */
 }
 
+.trip-header-wrapper {
+  position: sticky;
+  top: 0;
+  background: #0a0a0a;
+  z-index: 10;
+}
+
 .trip-header {
   display: flex;
   width: 100%;
@@ -414,6 +424,7 @@ export default {
   margin-bottom: 2rem;
   position: relative;
   gap: 1.5rem;
+  padding: 2rem 2rem 0 2rem;
 }
 
 .author-info {
@@ -495,6 +506,7 @@ export default {
   display: flex;
   flex-direction: column;
   align-items: center;
+  padding: 0 2rem 2rem 2rem;
 }
 
 .stop-card-wrapper {
@@ -564,6 +576,7 @@ export default {
   flex: 1;
   padding-left: 1.5rem;
   text-align: left;
+  margin-top: 1rem;
   max-width: 400px
 }
 
@@ -582,6 +595,7 @@ export default {
   position: absolute;
   width: 2px;
   background: #fff;
+  opacity: 0.7;
   height: 9rem;
   left: 175px;
   top: calc(250px + 1px); /* Bottom of image + outline */
@@ -591,22 +605,33 @@ export default {
 .comments-section {
   flex: 0 0 300px;
   position: fixed;
-  right: 1.5rem;
-  top: 2rem;
-  bottom: 2rem;
+  height: 100vh;
+  right: 320px;
+  top: 0;
   width: 300px;
   background: #0a0a0a;
-  border: 1.5px solid #fff;
-  border-radius: 12px;
   padding: 1.5rem;
-  overflow-y: auto;
+  overflow-y: hidden;
   display: flex;
-  flex-direction: column
+  flex-direction: column;
+  border-left: 1px solid rgba(255, 255, 255, 0.1);
+  transition: transform .3s ease-in-out;
 }
 
 .section-title {
   font-size: 1.3rem;
   margin-bottom: .5rem
+}
+
+.comments-list {
+  flex: 1;
+  overflow-y: auto;
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.comments-list::-webkit-scrollbar {
+  display: none;
 }
 
 .no-comments {
@@ -716,7 +741,6 @@ export default {
 }
 
 .comment-input-wrapper {
-  margin-top: auto;
   display: flex;
   gap: .5rem;
   padding: .5rem;
@@ -820,7 +844,8 @@ background: #ff3333;
 .separator {
   border: none;
   border-top: 1px solid #fff;
-  margin: 2rem 0;
-  width: 100%;
+  opacity: 0.5;
+  margin: 2rem 2rem 2rem 2rem;
+  width: calc(100% - 4rem);
 }
 </style>
