@@ -662,7 +662,7 @@ export default {
     const editTrip = (tripId) =>
       router.push(`/createtrip/${tripId}`)
 
-    const handleImageUpdated = (newUrl) => {
+    const handleImageUpdated = async (newUrl) => {
       profileData.value.avatar_url = newUrl
       showPictureModal.value = false
       localStorage.setItem('profile_avatar_url', newUrl)
