@@ -1,14 +1,13 @@
-import request from "supertest";
 import { jest } from "@jest/globals";
 
 // ------------------------------------------------------------
-// 1) IMPORTAR LA APP (Express, no server.js)
+// 1) Cargar la app Express REAL (no el server.js)
 // ------------------------------------------------------------
 import app from "./src/app.js";
 global.__app = app;
 
 // ------------------------------------------------------------
-// 2) MOCK DB EN MEMORIA
+// 2) Mock DB en memoria
 // ------------------------------------------------------------
 global.__mockDB = {
   users: [],
@@ -18,32 +17,36 @@ global.__mockDB = {
 };
 
 global.resetMockDB = () => {
-  global.__mockDB.users = [];
-  global.__mockDB.friends = [];
-  global.__mockDB.notifications = [];
-  global.__mockDB.trips = [];
-  global.__mockListUsers = [];       // ← importante para tests de email
+  global.__mockDB = {
+    users: [],
+    friends: [],
+    notifications: [],
+    trips: [],
+  };
+
+  global.__mockListUsers = [];
 };
 
 // ------------------------------------------------------------
-// 3) MOCK listUsers (supabaseAdmin.auth.admin.listUsers)
+// 3) Mock listUsers de supabaseAdmin.auth.admin
 // ------------------------------------------------------------
 global.__mockListUsers = [];
 
 const mockAuthAdmin = {
-  listUsers: jest.fn().mockImplementation(async () => ({
+  listUsers: jest.fn().mockResolvedValue({
     data: { users: global.__mockListUsers },
     error: null,
-  })),
+  }),
 };
 
 // ------------------------------------------------------------
-// 4) MOCK GENÉRICO PARA .from(tabla)
+// 4) Mock genérico de supabase.from(table)
 // ------------------------------------------------------------
 function mockTable(tableName) {
   return {
-    select: jest.fn().mockImplementation(async () => {
-      return { data: global.__mockDB[tableName] ?? [], error: null };
+    select: jest.fn().mockResolvedValue({
+      data: global.__mockDB[tableName] ?? [],
+      error: null,
     }),
 
     insert: jest.fn().mockImplementation(async (rows) => {
@@ -54,21 +57,19 @@ function mockTable(tableName) {
     upsert: jest.fn().mockImplementation(async (rows) => {
       const row = rows[0];
       const list = global.__mockDB[tableName];
-      const idx = list.findIndex((x) => x.id === row.id);
+      const index = list.findIndex((r) => r.id === row.id);
 
-      if (idx >= 0) list[idx] = row;
+      if (index >= 0) list[index] = row;
       else list.push(row);
 
       return { data: [row], error: null };
     }),
 
-    delete: jest.fn().mockImplementation(async ({ eq }) => {
-      const key = Object.keys(eq)[0];
-      const val = eq[key];
-
-      global.__mockDB[tableName] =
-        global.__mockDB[tableName].filter((r) => r[key] !== val);
-
+    delete: jest.fn().mockImplementation(async (filter) => {
+      const [[key, val]] = Object.entries(filter);
+      global.__mockDB[tableName] = global.__mockDB[tableName].filter(
+        (row) => row[key] !== val
+      );
       return { data: null, error: null };
     }),
 
@@ -79,17 +80,14 @@ function mockTable(tableName) {
 }
 
 // ------------------------------------------------------------
-// 5) MOCK COMPLETO DE supabase y supabaseAdmin
+// 5) Mock completo de supabase.js
 // ------------------------------------------------------------
 jest.unstable_mockModule("./src/config/supabase.js", () => ({
   supabase: {
     from: (table) => mockTable(table),
   },
-
   supabaseAdmin: {
     from: (table) => mockTable(table),
-    auth: {
-      admin: mockAuthAdmin, // ← ahora sí funciona correctamente
-    },
+    auth: { admin: mockAuthAdmin },
   },
 }));
