@@ -670,6 +670,7 @@ export default {
       profileData.value.avatar_url = newUrl
       showPictureModal.value = false
       localStorage.setItem('profile_avatar_url', newUrl)
+      window.dispatchEvent(new CustomEvent('avatar-updated', { detail: newUrl }))
       await saveProfile()
     }
 
