@@ -19,12 +19,11 @@ global.resetMockDB = () => {
     notifications: [],
     trips: [],
   };
-
   global.__mockListUsers = [];
 };
 
 /* ============================================================
-   QUERY BUILDER COMPATIBLE CON SUPABASE
+   QUERY BUILDER SUPABASE-COMPATIBLE
    ============================================================ */
 function createQuery(table) {
   return {
@@ -33,13 +32,13 @@ function createQuery(table) {
     _or: null,
     _limit: null,
 
-    /* ========== SELECT (REAL) ========== */
+    /* ========================== SELECT ======================== */
     select: jest.fn().mockImplementation(function () {
-      const data = applyFilters(this._table, this);
-      return Promise.resolve({ data, error: null });
+      this._selectCalled = true;
+      return this; // permite .eq(), .neq(), .order(), etc.
     }),
 
-    /* ========== WHERE ========== */
+    /* ========================== WHERE ========================== */
     eq: jest.fn().mockImplementation(function (key, value) {
       this._filters.push({ key, value, type: "eq" });
       return this;
@@ -55,118 +54,107 @@ function createQuery(table) {
       return this;
     }),
 
-    /* ========== LIMIT ========== */
-    limit: jest.fn().mockImplementation(function (num) {
-      this._limit = num;
+    limit: jest.fn().mockImplementation(function (n) {
+      this._limit = n;
       return this;
     }),
 
-    /* ========== ORDER ========== */
     order: jest.fn().mockImplementation(function () {
       return this;
     }),
 
-    /* ========== SINGLE RESULT ========== */
-    single: jest.fn().mockImplementation(async function () {
-      const data = applyFilters(this._table, this);
+    /* ======================== EJECUCIÓN ======================== */
+    async _run() {
+      let data = [...(global.__mockDB[this._table] || [])];
+
+      this._filters.forEach((f) => {
+        if (f.type === "eq") data = data.filter((x) => x[f.key] == f.value);
+        if (f.type === "neq") data = data.filter((x) => x[f.key] != f.value);
+      });
+
+      if (this._or) {
+        const parts = this._or.split(",");
+        data = data.filter((row) =>
+          parts.some((rule) => {
+            const [col, op, val] = rule.split(".");
+            return op === "eq" && row[col] == val;
+          })
+        );
+      }
+
+      if (this._limit !== null) data = data.slice(0, this._limit);
+      return data;
+    },
+
+    /* ========================== SINGLE ========================= */
+    async single() {
+      const data = await this._run();
       return { data: data[0] ?? null, error: null };
-    }),
+    },
 
-    maybeSingle: jest.fn().mockImplementation(async function () {
-      const data = applyFilters(this._table, this);
+    async maybeSingle() {
+      const data = await this._run();
       return { data: data[0] ?? null, error: null };
-    }),
+    },
 
-    then: undefined,
+    /* ========================== SELECT-FINAL =================== */
+    async then() {
+      const data = await this._run();
+      return { data, error: null };
+    },
 
-    /* ========== INSERT ========== */
-    insert: jest.fn().mockImplementation(async function (rows) {
+    /* ========================== INSERT ========================= */
+    async insert(rows) {
       global.__mockDB[this._table].push(...rows);
       return { data: rows, error: null };
-    }),
+    },
 
-    /* ========== UPSERT (CON SELECT ENCADENABLE) ========== */
+    /* ========================== UPSERT ========================= */
     upsert: jest.fn().mockImplementation(function (rows) {
       const row = rows[0];
       const list = global.__mockDB[this._table];
       const idx = list.findIndex((e) => e.id === row.id);
-
       if (idx >= 0) list[idx] = row;
       else list.push(row);
-
       return this; // permite .select()
     }),
 
-    /* ========== UPDATE ========== */
-    update: jest.fn().mockImplementation(async function (row) {
+    /* ========================== UPDATE ========================= */
+    async update(obj) {
       const list = global.__mockDB[this._table];
-      const idx = list.findIndex((e) => e.id === row.id);
+      const idx = list.findIndex((e) => e.id === obj.id);
 
-      if (idx >= 0) {
-        list[idx] = { ...list[idx], ...row };
-        return { data: [list[idx]], error: null };
-      }
+      if (idx >= 0)
+        list[idx] = { ...list[idx], ...obj };
+
+      return { data: list[idx] ?? null, error: null };
+    },
+
+    /* ========================== DELETE ========================= */
+    async delete() {
+      let list = global.__mockDB[this._table];
+
+      this._filters.forEach((f) => {
+        list = list.filter((item) =>
+          f.type === "eq"
+            ? item[f.key] !== f.value
+            : item[f.key] === f.value
+        );
+      });
+
+      global.__mockDB[this._table] = list;
       return { data: null, error: null };
-    }),
-
-    /* ========== DELETE ========== */
-    delete: jest.fn().mockImplementation(async function () {
-      const list = global.__mockDB[this._table];
-
-      if (this._filters.length > 0) {
-        this._filters.forEach((f) => {
-          global.__mockDB[this._table] = list.filter((item) =>
-            f.type === "eq"
-              ? item[f.key] !== f.value
-              : item[f.key] === f.value
-          );
-        });
-      }
-
-      return { data: null, error: null };
-    }),
+    },
   };
 }
 
 /* ============================================================
-   HELPERS DE FILTRADO
-   ============================================================ */
-function applyFilters(table, ctx) {
-  let data = [...global.__mockDB[table]];
-
-  // eq / neq
-  ctx._filters.forEach((f) => {
-    if (f.type === "eq") data = data.filter((x) => x[f.key] == f.value);
-    if (f.type === "neq") data = data.filter((x) => x[f.key] != f.value);
-  });
-
-  // or("user_id.eq.1,friend_id.eq.1")
-  if (ctx._or) {
-    const parts = ctx._or.split(",");
-    data = data.filter((row) => {
-      return parts.some((rule) => {
-        const [col, op, val] = rule.split(".");
-        if (op === "eq") return row[col] == val;
-        return false;
-      });
-    });
-  }
-
-  if (ctx._limit !== null) {
-    data = data.slice(0, ctx._limit);
-  }
-
-  return data ?? [];
-}
-
-/* ============================================================
-   MOCK SUPABASE (FINAL)
+   MOCK SUPABASE FINAL
    ============================================================ */
 jest.unstable_mockModule("./src/config/supabase.js", () => ({
   supabase: {
     from: (table) => createQuery(table),
   },
-
   supabaseAdmin: {
     from: (table) => createQuery(table),
     auth: {
@@ -181,7 +169,7 @@ jest.unstable_mockModule("./src/config/supabase.js", () => ({
 }));
 
 /* ============================================================
-   CARGAR APP DESPUÉS DEL MOCK
+   IMPORTAR LA APP DESPUÉS DEL MOCK
    ============================================================ */
 const { default: app } = await import("./src/app.js");
 global.__app = app;
