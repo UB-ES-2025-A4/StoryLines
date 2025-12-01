@@ -33,9 +33,10 @@ function createQuery(table) {
     _or: null,
     _limit: null,
 
-    /* ========== SELECT ========== */
+    /* ========== SELECT (REAL) ========== */
     select: jest.fn().mockImplementation(function () {
-      return this;
+      const data = applyFilters(this._table, this);
+      return Promise.resolve({ data, error: null });
     }),
 
     /* ========== WHERE ========== */
@@ -50,7 +51,6 @@ function createQuery(table) {
     }),
 
     or: jest.fn().mockImplementation(function (expr) {
-      // ej: "user_id.eq.123,friend_id.eq.123"
       this._or = expr;
       return this;
     }),
@@ -77,17 +77,16 @@ function createQuery(table) {
       return { data: data[0] ?? null, error: null };
     }),
 
-    /* ========== SELECT RESULT ========== */
-    then: undefined, // evita errores de promesa accidental
+    then: undefined,
 
-    /* ========== INSERTAR ========== */
+    /* ========== INSERT ========== */
     insert: jest.fn().mockImplementation(async function (rows) {
       global.__mockDB[this._table].push(...rows);
       return { data: rows, error: null };
     }),
 
-    /* ========== UPSERT ========== */
-    upsert: jest.fn().mockImplementation(async function (rows) {
+    /* ========== UPSERT (CON SELECT ENCADENABLE) ========== */
+    upsert: jest.fn().mockImplementation(function (rows) {
       const row = rows[0];
       const list = global.__mockDB[this._table];
       const idx = list.findIndex((e) => e.id === row.id);
@@ -95,7 +94,7 @@ function createQuery(table) {
       if (idx >= 0) list[idx] = row;
       else list.push(row);
 
-      return { data: [row], error: null };
+      return this; // permite .select()
     }),
 
     /* ========== UPDATE ========== */
@@ -116,12 +115,11 @@ function createQuery(table) {
 
       if (this._filters.length > 0) {
         this._filters.forEach((f) => {
-          global.__mockDB[this._table] =
-            list.filter((item) =>
-              f.type === "eq"
-                ? item[f.key] !== f.value
-                : item[f.key] === f.value
-            );
+          global.__mockDB[this._table] = list.filter((item) =>
+            f.type === "eq"
+              ? item[f.key] !== f.value
+              : item[f.key] === f.value
+          );
         });
       }
 
@@ -142,7 +140,7 @@ function applyFilters(table, ctx) {
     if (f.type === "neq") data = data.filter((x) => x[f.key] != f.value);
   });
 
-  // or("a.eq.1,b.eq.2")
+  // or("user_id.eq.1,friend_id.eq.1")
   if (ctx._or) {
     const parts = ctx._or.split(",");
     data = data.filter((row) => {
@@ -158,7 +156,7 @@ function applyFilters(table, ctx) {
     data = data.slice(0, ctx._limit);
   }
 
-  return data;
+  return data ?? [];
 }
 
 /* ============================================================
