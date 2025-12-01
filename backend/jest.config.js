@@ -2,12 +2,9 @@ export default {
   testEnvironment: "node",
   transform: {},
 
-  // Muy importante → cargar el mock ANTES de cualquier test
+  // Cargar el setup ANTES que los tests
   setupFiles: ["<rootDir>/jest.setup.js"],
 
-  // Permitir ES Modules
-  extensionsToTreatAsEsm: [".js"],
-
-  // Evitar que Jest intente transformar cosas de node_modules
+  // Extensiones permitidas
   moduleFileExtensions: ["js", "json", "node"],
 };
