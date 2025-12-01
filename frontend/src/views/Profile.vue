@@ -8,33 +8,23 @@
     <div v-else class="profile-card">
       <!-- Cabecera del perfil -->
       <div class="profile-header">
-        <div
-          class="avatar-container"
-          @mouseenter="hovering = true"
-          @mouseleave="hovering = false"
-        >
-          <img
-            class="avatar"
-            :src="profileData.avatar_url && profileData.avatar_url.trim() !== '' 
-              ? profileData.avatar_url 
-              : defaultAvatar"
-            alt="Foto de perfil"
-          />
+        <div class="avatar-container" @mouseenter="hovering = true" @mouseleave="hovering = false">
+          <img class="avatar" :src="profileData.avatar_url && profileData.avatar_url.trim() !== ''
+            ? profileData.avatar_url
+            : defaultAvatar" alt="Foto de perfil" />
 
           <!-- Hover change picture -->
-          <div
-            class="avatar-overlay"
-            v-show="hovering"
-            @click="showChangePicture = !showChangePicture"
-          >
+          <div class="avatar-overlay" v-show="hovering" @click="togglePictureModal">
             <i class="fa fa-camera camera-icon"></i>
           </div>
         </div>
 
         <div class="profile-text">
-          <div class="name-friends-row">
-            <h2 class="username">{{ profileData.username }}</h2>
+          <h2 class="username">{{ profileData.username }}</h2>
+          <h1 class="display-name">{{ profileData.display_name }}</h1>
+          <p class="bio">{{ profileData.bio }}</p>
 
+          <div class="button-row">
             <button class="friends-btn" @click="showFriends = true">
               Amigos ({{ formatCount(friends.length) }})
             </button>
@@ -43,33 +33,7 @@
               Editar perfil
             </button>
           </div>
-
-          <h1 class="display-name">{{ profileData.display_name }}</h1>
-          <p class="bio">{{ profileData.bio || 'Esta es mi biografía...' }}</p>
-
-          <button class="edit-btn" @click="isEditing = !isEditing">
-            {{ isEditing ? 'Cancelar' : 'Editar perfil' }}
-          </button>
         </div>
-      </div>
-
-      <!-- ChangePicture -->
-      <div v-if="showChangePicture" class="change-picture-container">
-        <ChangePicture @image-updated="handleImageUpdated" />
-      </div>
-
-      <!-- Formulario edición -->
-      <div v-if="isEditing" class="edit-form">
-        <input type="text" v-model="profileData.username" placeholder="Nombre de usuario" />
-        <input type="text" v-model="profileData.display_name" placeholder="Nombre" />
-        <textarea v-model="profileData.bio" placeholder="Biografía"></textarea>
-
-        <button class="save-btn" @click="saveProfile" :disabled="saving">
-          {{ saving ? 'Guardando...' : 'Guardar cambios' }}
-        </button>
-
-        <div v-if="error" class="alert alert-error">{{ error }}</div>
-        <div v-if="success" class="alert alert-success">{{ success }}</div>
       </div>
 
       <!-- VIAJES -->
@@ -95,19 +59,15 @@
 
         <div class="trips-container">
           <div v-if="currentTrips.length > 0" class="trip-cards-wrapper">
-            <div
-              class="trip-card"
-              v-for="trip in currentTrips"
-              :key="trip.id"
-              @click="goToTrip(trip.id)"
-            >
+            <div class="trip-card" v-for="trip in currentTrips" :key="trip.id" @click="goToTrip(trip.id)">
               <div class="trip-image-container">
-                <img :src="trip.image" alt="Foto del viaje" class="trip-image" :class="{ faded: currentTab === 'drafts' }" />
+                <img :src="trip.image" alt="Foto del viaje" class="trip-image"
+                  :class="{ faded: currentTab === 'drafts' }" />
                 <div v-if="currentTab === 'drafts'" class="draft-watermark">BORRADOR</div>
               </div>
 
               <div class="trip-info">
-                <div class="trip-details" style="margin-top: 1rem" v-if="currentTab === 'saved'">
+                <div class="trip-details" style="margin-top: 1.2rem" v-if="currentTab === 'saved'">
                   <h4>{{ truncateText(trip.title, 20) }}</h4>
                   <p>{{ truncateText(trip.description, 30) }}</p>
                 </div>
@@ -117,22 +77,23 @@
                   <p>{{ truncateText(trip.description, 45) }}</p>
                 </div>
 
-                <p class="trip-views" style="margin-top: 0.5rem;" v-if="currentTab !== 'saved' && currentTab !== 'drafts'">
+
+                <p class="trip-views" style="margin-top: 0.5rem;"
+                  v-if="currentTab !== 'saved' && currentTab !== 'drafts'">
                   <span v-html="viewsIcon"></span> {{ formatCount(trip.views) }}
                 </p>
 
                 <div class="trip-author" v-if="currentTab === 'saved' && trip.author">
                   <p class="trip-views" style="margin-bottom: 0.5rem;" v-if="currentTab === 'saved'">
-                    <span v-html="viewsIcon"></span> {{ formatCount(trip.views) }} 
+                    <span v-html="viewsIcon"></span> {{ formatCount(trip.views) }}
                   </p>
-                  <span class="published-by">Published by</span>
-                  <div class="author-info" @click.stop="goToUser(trip.author.id)"
-                    style="cursor: pointer; display:flex; align-items:center;">
+                  <span class="published-by">Publicado por</span>
+                  <div class="author-info" @click.stop="goToUser(trip.author.id)">
                     <div class="avatar-container" style="width:30px; height:30px; margin-right:8px;">
                       <img :src="safeAvatar(trip.author.avatar_url)" alt="Avatar del autor" class="avatar"
                         style="width:30px; height:30px; border-radius:50%; object-fit:cover;" />
                     </div>
-                    <span>{{ truncateText(trip.author.username, 10)}}</span>
+                    <span>{{ truncateText(trip.author.username, 15) }}</span>
                   </div>
                 </div>
               </div>
@@ -161,11 +122,7 @@
     <!-- =============================== -->
     <!-- POPUP AMIGOS (SOLO ESTE)       -->
     <!-- =============================== -->
-    <div
-      v-if="showFriends"
-      class="modal-overlay"
-      @click.self="showFriends = false"
-    >
+    <div v-if="showFriends" class="modal-overlay" @click.self="showFriends = false">
       <div class="modal-box">
         <button class="modal-close-x" @click="showFriends = false">✕</button>
         <h2 class="modal-title">Amigos</h2>
@@ -175,20 +132,13 @@
         </div>
 
         <div class="friends-list-scroll">
-          <div 
-            v-for="f in friends" 
-            :key="f.id" 
-            class="friend-item"
-          >
+          <div v-for="f in friends" :key="f.id" class="friend-item">
             <div class="friend-click-zone" @click="goToUser(f.id)">
               <img :src="safeAvatar(f.avatar_url)" class="friend-avatar" />
               <span class="friend-username">{{ f.username }}</span>
             </div>
 
-            <button
-              class="delete-friend-btn"
-              @click.stop="openDeleteFriendConfirm(f.id)"
-            >
+            <button class="delete-friend-btn" @click.stop="openDeleteFriendConfirm(f.id)">
               ✕
             </button>
           </div>
@@ -200,11 +150,7 @@
     <!-- ============================================= -->
     <!-- POPUP CONFIRMAR ELIMINAR AMIGO -->
     <!-- ============================================= -->
-    <div
-      v-if="showConfirmDeleteFriend"
-      class="modal-overlay"
-      @click.self="showConfirmDeleteFriend = false"
-    >
+    <div v-if="showConfirmDeleteFriend" class="modal-overlay" @click.self="showConfirmDeleteFriend = false">
       <div class="modal-box">
         <button class="modal-close-x" @click="showConfirmDeleteFriend = false">✕</button>
         <h2 class="modal-title">Eliminar amigo</h2>
@@ -225,11 +171,7 @@
     <!-- ============================================= -->
     <!-- POPUP CONFIRMAR ELIMINAR VIAJE -->
     <!-- ============================================= -->
-    <div
-      v-if="showConfirmDeleteTrip"
-      class="modal-overlay"
-      @click.self="showConfirmDeleteTrip = false"
-    >
+    <div v-if="showConfirmDeleteTrip" class="modal-overlay" @click.self="showConfirmDeleteTrip = false">
       <div class="modal-box">
         <button class="modal-close-x" @click="showConfirmDeleteTrip = false">✕</button>
         <h2 class="modal-title">Eliminar viaje</h2>
@@ -309,7 +251,6 @@ export default {
   components: { ChangePicture, Sidebar },
   setup() {
     const router = useRouter()
-    const showChangePicture = ref(false)
     const user = ref(null)
     const profileData = ref({
       username: '',
@@ -318,7 +259,11 @@ export default {
       avatar_url: ''
     })
     const originalData = ref({})
-    const isEditing = ref(false)
+    const showEditModal = ref(false)
+    const showPictureModal = ref(false)
+    const editUsername = ref('')
+    const editDisplayName = ref('')
+    const editBio = ref('')
     const loading = ref(true)
     const saving = ref(false)
     const error = ref('')
@@ -331,28 +276,6 @@ export default {
     const currentTab = ref('published')
     const friends = ref([])
     const showFriends = ref(false)
-    // === FIX para variables usadas en el template ===
-    const showEditModal = ref(false)
-    const showPictureModal = ref(false)
-    
-    function toggleEditModal() {
-      showEditModal.value = !showEditModal.value
-    }
-    
-    function togglePictureModal() {
-      showPictureModal.value = !showPictureModal.value
-    }
-    
-    // Si existen inputs para editar perfil:
-    const editUsername = ref('')
-    const editDisplayName = ref('')
-    const editBio = ref('')
-    
-    // Si el template usa esto, define aunque sea vacío:
-    function formatFriendCount(n) {
-      return n || 0
-    }
-
 
     const defaultAvatar =
       'https://upload.wikimedia.org/wikipedia/commons/a/ac/Default_pfp.jpg'
@@ -367,6 +290,7 @@ export default {
         background: `url('${bgUrl}') center/cover no-repeat`
       }
     })
+
 
     const showConfirmDeleteFriend = ref(false)
     const friendToDelete = ref(null)
@@ -423,7 +347,7 @@ export default {
         // Recargar listas
         await loadTrips()
         await loadDrafts()
-        
+
       } catch (e) {
         console.error("Error eliminando viaje:", e)
       }
@@ -460,7 +384,7 @@ export default {
       }
       return ''
     }
-  
+
     )
 
     // === Cargar perfil ===
@@ -517,38 +441,25 @@ export default {
         }
       } catch {
         friends.value = []
-      }const formatCount = (count) => {
-  if (count < 1000) return count.toString();
-
-  if (count < 1_000_000) {
-    const k = count / 1000;
-    return (Number.isInteger(k) ? k.toString() : k.toFixed(1)) + 'K';
-  }
-
-  const m = count / 1_000_000;
-  return (Number.isInteger(m) ? m.toString() : m.toFixed(1)) + 'M';
-};
-
+      }
     }
 
     const formatCount = (count) => {
-      if (count < 1000) return count;
-      if (count < 1000000){
-        if (count % 1000 < 100){
-          return (count / 1000).toFixed(0) + 'K';
+      if (count < 1000) return count.toString()
+      if (count < 1000000) {
+        if (count % 1000 === 0) {
+          return (count / 1000).toFixed(0) + 'K'
         } else {
-          return (count / 1000).toFixed(1) + 'K';
+          return (count / 1000).toFixed(1) + 'K'
+        }
+      } else {
+        if (count % 1000000 === 0) {
+          return (count / 1000000).toFixed(0) + 'M'
+        } else {
+          return (count / 1000000).toFixed(1) + 'M'
         }
       }
-      if (count < 1000000000){
-        if (count % 1000000 < 100000){
-          return (count / 1000000).toFixed(0) + 'M';
-        } else {
-          return (count / 1000000).toFixed(1) + 'M';
-        }
-      }
-    };
-
+    }
 
     // === Guardar perfil ===
     const API_URL = ''
@@ -564,9 +475,9 @@ export default {
 
         const payload = {
           userId: user.value.id,
-          username: profileData.value.username,
-          display_name: profileData.value.display_name,
-          bio: profileData.value.bio,
+          username: editUsername.value,
+          display_name: editDisplayName.value,
+          bio: editBio.value,
           avatar_url: profileData.value.avatar_url
         }
 
@@ -593,9 +504,11 @@ export default {
 
         if (!res.ok) throw new Error(body.error || `Error ${res.status}`)
         success.value =
-          body.message || 'Perfil actualizado correctamente ✅'
+          body.message || 'Perfil actualizado correctamente'
+        profileData.value.username = editUsername.value
+        profileData.value.display_name = editDisplayName.value
+        profileData.value.bio = editBio.value
         originalData.value = { ...profileData.value }
-        isEditing.value = false
       } catch (err) {
         console.error('saveProfile error:', err)
         error.value = err.message || 'Error al guardar el perfil'
@@ -731,6 +644,28 @@ export default {
     const editTrip = (tripId) =>
       router.push(`/createtrip/${tripId}`)
 
+    const toggleEditModal = () => {
+      if (showEditModal.value) {
+        showEditModal.value = false
+      } else {
+        success.value = ''
+        error.value = ''
+
+        editUsername.value = profileData.value.username
+        editDisplayName.value = profileData.value.display_name
+        editBio.value = profileData.value.bio
+        showEditModal.value = true
+        showPictureModal.value = false
+      }
+    }
+
+    const togglePictureModal = () => {
+      showPictureModal.value = !showPictureModal.value
+      if (showPictureModal.value) {
+        showEditModal.value = false
+      }
+    }
+
     const handleImageUpdated = async (newUrl) => {
       profileData.value.avatar_url = newUrl
       showPictureModal.value = false
@@ -763,16 +698,15 @@ export default {
 
     const viewsIcon = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 15a3 3 0 100-6 3 3 0 000 6z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
 
+
     return {
       user,
       profileData,
-      isEditing,
       loading,
       saving,
       error,
       success,
       hovering,
-      showChangePicture,
       trips,
       drafts,
       currentTab,
@@ -806,7 +740,7 @@ export default {
       handleImageUpdated,
       formatCount,
       saveProfileAndClose,
-      viewsIcon,
+      viewsIcon
     }
   }
 }
@@ -1062,139 +996,50 @@ export default {
   flex-grow: 1;
 }
 
-  .tabs button {
-    background: none;
-    border: none;
-    color: #fff;
-    font-size: 1.3rem;
-    font-weight: 500;
-    padding: 0;
-    cursor: pointer;
-    border-bottom: 2px solid transparent;
-    transition: border-bottom 0.3s;
-  }
+.trip-details h4 {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #0a0a0a;
+}
 
-  .tabs button.active {
-    border-bottom: 2px solid #fff;
-  }
+.trip-details p {
+  font-size: 0.95rem;
+  opacity: 0.9;
+  color: #0a0a0a;
+}
 
-  .separator {
-    color: #fff;
-    font-size: 1.3rem;
-    font-weight: 500;
-  }
-  
-  /* --- CONTENEDOR DE TARJETAS --- */
-  .trips-container {
-    display: flex;
-    flex-direction: column;
-    padding: 1.5rem 2rem;
-    background: rgba(11, 47, 74, 0.3);
-    border-radius: 0;
-    min-height: 200px;
-  }
-  
-  /* --- TARJETA DE VIAJE --- */
-  .trip-card {
-    background: #fff;
-    border-radius: 16px;
-    display: flex;
-    align-items: center;
-    gap: 1.5rem;
-    padding: 0;
-    transition: all 0.3s ease;
-    height: 150px;
-    position: relative;
-  }
-  
-  .trip-card:hover {
-    cursor: pointer;
-    background: #f0f0f0;
-  }
-  
-  .trip-image-container {
-    position: relative;
-    width: 150px;
-    height: 100%;
-    flex-shrink: 0;
-  }
+.avatar-container {
+  position: relative;
+  display: inline-block;
+}
 
-  .trip-image {
-    width: 100%;
-    height: 100%;
-    border-radius: 12px 0 0 12px;
-    object-fit: cover;
-  }
+.avatar-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  /* Fondo oscuro translúcido */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border-radius: 50%;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  cursor: pointer;
+  z-index: 10;
+}
 
-  .faded {
-    opacity: 0.7;
-  }
+.avatar-container:hover .avatar-overlay {
+  opacity: 1;
+}
 
-  .draft-watermark {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    font-size: 1.5rem;
-    font-weight: bold;
-    color: rgba(0, 0, 0, 0.5);
-    pointer-events: none;
-    white-space: nowrap;
-  }
-  
-  .trip-info {
-    display: flex;
-    justify-content: space-between;
-    width: 100%;
-  }
-  
-  .trip-details {
-    flex-grow: 1;
-  }
-  
-  .trip-details h4 {
-    margin: 0;
-    font-size: 1.1rem;
-    font-weight: 600;
-    color: #0a0a0a;
-  }
-  
-  .trip-details p {
-    font-size: 0.95rem;
-    opacity: 0.9;
-    color: #0a0a0a;
-  }
-  
-  .avatar-container {
-    position: relative;
-    display: inline-block;
-  }
-  
-  .avatar-overlay {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.5); /* Fondo oscuro translúcido */
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    border-radius: 50%;
-    opacity: 0;
-    transition: opacity 0.3s ease;
-    cursor: pointer;
-    z-index: 10;
-  }
-  
-  .avatar-container:hover .avatar-overlay {
-    opacity: 1;
-  }
-  
-  .camera-icon {
-    color: white;
-    font-size: 2rem;
-  }
+.camera-icon {
+  color: white;
+  font-size: 2rem;
+}
 
 .no-trips-message {
   text-align: center;
@@ -1222,7 +1067,7 @@ export default {
   right: 10px;
   background: #fff;
   border-radius: 8px;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
   display: flex;
   flex-direction: column;
   z-index: 10;
@@ -1276,7 +1121,11 @@ export default {
   cursor: pointer;
   transition: 0.2s;
   font-size: 0.9rem;
+  width: 150px;
 }
+
+
+
 .friends-btn:hover {
   background: #e0e0e0;
 }
@@ -1305,7 +1154,7 @@ export default {
 .modal-title {
   text-align: center;
   margin-bottom: 1rem;
-  font-size: 1.5rem;
+  font-weight: 500;
 }
 
 .modal-close-x {
@@ -1347,11 +1196,12 @@ export default {
   padding: 1rem 0;
   opacity: 0.8;
 }
+
 .friend-click-zone {
   display: flex;
   align-items: center;
   gap: 1rem;
-  flex-grow: 1;           
+  flex-grow: 1;
   cursor: pointer;
   padding-right: 1rem;
 }
@@ -1364,14 +1214,16 @@ export default {
   gap: 1rem;
   padding: 0.8rem 0;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  cursor: default; /* ⬅ ELIMINA EL CLICK GENERAL */
+  cursor: default;
+  /* ⬅ ELIMINA EL CLICK GENERAL */
 }
 
 .friend-info {
   display: flex;
   align-items: center;
   gap: 1rem;
-  cursor: pointer; /* SOLO ESTA PARTE ES CLICABLE */
+  cursor: pointer;
+  /* SOLO ESTA PARTE ES CLICABLE */
 }
 
 .delete-friend-btn {
@@ -1392,7 +1244,14 @@ export default {
   margin-top: 1.8rem;
   display: flex;
   justify-content: center;
-  gap: 1.2rem;        /* más separación */
+  gap: 1.2rem;
+  /* más separación */
+}
+
+.change-picture-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
 /* Botón cancelar */
@@ -1440,7 +1299,8 @@ export default {
 
 /* Scroll para lista de amigos (máx. 5 amigos visibles) */
 .friends-list-scroll {
-  max-height: 320px;      /* ≈ 5 amigos (5 × ~60px) */
+  max-height: 320px;
+  /* ≈ 5 amigos (5 × ~60px) */
   overflow-y: auto;
   padding-right: 0.5rem;
 }
@@ -1459,6 +1319,12 @@ export default {
   background: rgba(255, 255, 255, 0.5);
 }
 
+.button-row {
+  display: flex;
+  gap: 1rem;
+  /* separación entre botones */
+  align-items: center;
+}
 
 .trip-author {
   display: flex;
@@ -1495,5 +1361,4 @@ export default {
   font-size: 0.85rem;
   color: #555;
 }
-
 </style>

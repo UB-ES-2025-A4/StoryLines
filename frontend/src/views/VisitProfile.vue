@@ -58,7 +58,9 @@
                 <p class="trip-views" style="margin-top: 0.5rem;">
                   <span v-html="viewsIcon"></span> {{ formatCount(trip.views) }}
                 </p>
+
               </div>
+
             </div>
           </div>
 
@@ -419,6 +421,9 @@ watch(
     loading.value = false
   }
 )
+
+const viewsIcon = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 15a3 3 0 100-6 3 3 0 000 6z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+
 </script>
 
 <style scoped>
@@ -546,7 +551,7 @@ watch(
 .recent-trips-section {
   width: 95%;
   margin: 0 auto;
-  padding-top: 1rem;
+  padding-top: 1.5rem;
   padding-bottom: 2rem;
 }
 
@@ -558,8 +563,12 @@ watch(
 }
 
 .trips-container {
+  display: flex;
+  flex-direction: column;
   padding: 1.5rem 2rem;
   background: rgba(11, 47, 74, 0.3);
+  border-radius: 0;
+  min-height: 200px;
 }
 
 /* Tarjetas estilo Profile.vue */
@@ -575,12 +584,15 @@ watch(
   display: flex;
   align-items: center;
   gap: 1.5rem;
+  padding: 0;
+  transition: all 0.3s ease;;
   height: 150px;
   cursor: pointer;
-  transition: 0.2s;
+  position: relative;
 }
 
 .trip-card:hover {
+  cursor: pointer;
   background: #f0f0f0;
 }
 
@@ -592,8 +604,11 @@ watch(
 }
 
 .trip-info {
-  width: 100%;
   display: flex;
+  justify-content: space-between;
+  width: 100%;
+  align-items: flex-start;
+  padding: 1rem;
 }
 
 .trip-details {

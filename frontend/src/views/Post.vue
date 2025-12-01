@@ -322,12 +322,12 @@ export default {
       return new Date(dateStr).toLocaleString("es-ES", { dateStyle: "short", timeStyle: "short" });
     };
 
-    const goToProfile = (userId) => {
-      if (!userId) return;
-      if (userId === userId) {
+    const goToProfile = (id) => {
+      if (!id) return;
+      if(id === userId) {
         router.push('/profile');
       } else {
-        router.push(`/user/${userId}`);
+        router.push(`/user/${id}`);
       }
     };
 
@@ -614,7 +614,7 @@ export default {
   flex: 0 0 300px;
   position: fixed;
   height: 100vh;
-  right: 260px;
+  left: calc(250px + 900px + 50px);
   top: 0;
   width: 300px;
   background: #0a0a0a;
