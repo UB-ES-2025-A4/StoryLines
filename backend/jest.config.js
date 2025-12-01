@@ -2,9 +2,15 @@ export default {
   testEnvironment: "node",
   transform: {},
 
-  // Cargar el setup ANTES que los tests
+  // Fuerza que Jest NO use el cache de ESM para supabase.js
+  moduleNameMapper: {
+    "^@/config/supabase$": "<rootDir>/tests/__mocks__/supabaseMock.js"
+  },
+
   setupFiles: ["<rootDir>/jest.setup.js"],
 
-  // Extensiones permitidas
   moduleFileExtensions: ["js", "json", "node"],
+
+  // IMPORTANTE
+  extensionsToTreatAsEsm: []
 };

@@ -78,16 +78,3 @@ function mockTable(tableName) {
     limit: jest.fn().mockReturnThis(),
   };
 }
-
-// ------------------------------------------------------------
-// 5) Mock completo de supabase.js
-// ------------------------------------------------------------
-jest.unstable_mockModule("./src/config/supabase.js", () => ({
-  supabase: {
-    from: (table) => mockTable(table),
-  },
-  supabaseAdmin: {
-    from: (table) => mockTable(table),
-    auth: { admin: mockAuthAdmin },
-  },
-}));
