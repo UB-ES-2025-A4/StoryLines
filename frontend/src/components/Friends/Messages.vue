@@ -2,7 +2,6 @@
   <div v-show="isOpen" class="messages-drawer">
     <!-- HEADER -->
     <div class="panel-header">
-      <button @click="closePanel" class="close-btn">✕</button>
       <button v-if="mode === 'chat'" @click="backToList" class="back-btn">
         ←
       </button>
@@ -10,6 +9,8 @@
       <h2 v-if="mode === 'list'">Chats</h2>
       <h2 v-if="mode === 'new'">Nuevo chat</h2>
       <h2 v-if="mode === 'chat'">{{ selectedFriend?.display_name || selectedFriend?.username }}</h2>
+    
+      <button class="close-btn" @click="emit('close')">✕</button>
     </div>
 
     <!-- LISTA DE CHATS RECIENTES -->
@@ -59,19 +60,25 @@
 
       <div class="input-row">
         <input v-model="messageInput" placeholder="Escribe un mensaje..." @keyup.enter="sendMessage" />
-        <button @click="sendMessage">Enviar</button>
+        <button class="send-btn" @click="sendMessage">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round">
+            <path d="M22 2L2 12.5l20 9.5-7-9.5L22 2z" />
+          </svg>
+        </button>
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, nextTick } from "vue";
+import { ref, computed, onMounted, nextTick, watch } from "vue";
 import { supabase } from "@/config/supabase";
 
+const emit =  defineEmits(["close"]);
+
 const props = defineProps({
-  isOpen: Boolean,
-  closePanel: Function
+  isOpen: Boolean
 });
 
 // STATE
@@ -88,6 +95,13 @@ const mode = ref("list"); // list | new | chat
 const loadingChats = ref(true);
 
 const search = ref("");
+
+watch(() => props.isOpen, (newVal) => {
+  if (newVal) {
+    mode.value = "list";
+  }
+});
+
 
 // Cargar sesión + amigos del usuario
 onMounted(async () => {
@@ -282,32 +296,32 @@ const messagesList = ref(null);
 <style scoped>
 .messages-drawer {
   width: 350px;
-  height: 100%;
   background: #0a0a0a;
-  box-shadow: -2px 0 5px rgba(0,0,0,0.1);
+  height: 100vh;
   display: flex;
   flex-direction: column;
+  border-left: 1px solid #333;
 }
 
 .panel-header {
   display: flex;
+  justify-content: space-between;
   align-items: center;
-  padding: 1rem;
-  border-bottom: 1px solid #ccc;
+  padding: 1.5rem;
+  border-bottom: 1px solid #333;
 }
 
 .panel-header h2 {
   color: #fff;
   margin: 0;
   font-size: 1.5rem;
-  flex: 1;
 }
 
 .close-btn {
-  background: transparent;
+  background: none;
   border: none;
-  font-size: 1.2rem;
-  margin-right: 1rem;
+  color: #ccc;
+  font-size: 1.5rem;
   cursor: pointer;
 }
 
@@ -323,6 +337,7 @@ const messagesList = ref(null);
 
 .list-container {
   flex: 1;
+  padding: 1rem;
   overflow-y: auto;
 }
 
@@ -380,6 +395,20 @@ const messagesList = ref(null);
   flex: 1;
   background: #222;
   border: 1px solid #444;
+}
+
+.send-btn {
+  background: transparent;
+  border: none;
+  color: #fff;
+  cursor: pointer;
+  padding: .3rem;
+  display: flex;
+  align-items: center
+}
+
+.send-btn:hover {
+  opacity: .8
 }
 
 .preview {

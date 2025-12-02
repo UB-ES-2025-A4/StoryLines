@@ -107,6 +107,7 @@ const toggleNotifications = () => {
   showNotifications.value = !showNotifications.value
   if (showNotifications.value) {
     showSearcher.value = false
+    showMessages.value = false
   }
 }
 
@@ -114,11 +115,16 @@ const toggleSearcher = () => {
   showSearcher.value = !showSearcher.value
   if (showSearcher.value) {
     showNotifications.value = false
+    showMessages.value = false
   }
 }
 
 const toggleMessages = () => {
   showMessages.value = !showMessages.value
+  if (showMessages.value) {
+    showNotifications.value = false
+    showSearcher.value = false
+  }
 }
 
 const defaultAvatar = 'https://upload.wikimedia.org/wikipedia/commons/a/ac/Default_pfp.jpg'
