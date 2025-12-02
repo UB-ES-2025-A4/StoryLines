@@ -59,7 +59,7 @@
       </div>
 
       <div class="input-row">
-        <input v-model="messageInput" placeholder="Escribe un mensaje..." @keyup.enter="sendMessage" />
+        <input class="message-input" v-model="messageInput" placeholder="Escribe un mensaje..." @keyup.enter="sendMessage" @input="saveDraft" />
         <button class="send-btn" @click="sendMessage">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
             stroke-linecap="round" stroke-linejoin="round">
@@ -86,6 +86,8 @@ const userId = ref(null);
 const friends = ref([]);
 const recentChats = ref([]);
 const messages = ref([]);
+
+const drafts = ref({}); 
 
 const messageInput = ref("");
 const selectedFriend = ref(null);
@@ -212,6 +214,9 @@ async function openChat(friend, fid) {
   friendshipId.value = fid;
   mode.value = "chat";
   await fetchMessages();
+
+  messageInput.value = drafts.value[friendshipId.value] || "";
+
 }
 
 /* --------------------------
@@ -222,6 +227,9 @@ async function startChat(friend) {
   friendshipId.value = friend.friendshipId;
   mode.value = "chat";
   await fetchMessages();
+
+  messageInput.value = drafts.value[friendshipId.value] || "";
+
 }
 
 /* --------------------------
@@ -263,6 +271,7 @@ async function sendMessage() {
 
   messages.value.push(response.message);
   messageInput.value = "";
+  drafts.value[friendshipId.value] = "";
 
   await nextTick();
   scrollBottom();
@@ -286,6 +295,15 @@ function backToList() {
   friendshipId.value = null;
   messages.value = [];
   loadRecentChats(); // recargar lista
+}
+
+/* --------------------------
+   Guardar borrador
+-------------------------- */
+function saveDraft() {
+  if (friendshipId.value) {
+    drafts.value[friendshipId.value] = messageInput.value;
+  }
 }
 
 
@@ -383,6 +401,15 @@ const messagesList = ref(null);
 .message.mine {
   margin-left: auto;
   background: #0066ff;
+}
+
+.message-input {
+  flex: 1;
+  background: #222;
+  border: 1px solid #444;
+  color: #fff;
+  padding: .5rem;
+  border-radius: 5px;
 }
 
 .input-row {
