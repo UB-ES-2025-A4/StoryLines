@@ -36,7 +36,10 @@
           <span>Tienda</span>
         </router-link>
 
-        <div class="nav-item">
+        <div class="nav-item"
+          :class="{ 'active': showMessages }"
+          @click="toggleMessages"
+        >
           <svg class="icon" v-html="messagesIcon"></svg>
           <span>Mensajes</span>
         </div>
@@ -58,7 +61,9 @@
     </div>
     <div class="searcher-panel" :class="{ 'show': showSearcher }">
       <Searcher :isOpen="showSearcher" @close="showSearcher = false" />
-
+    </div>
+    <div class="messages-panel" :class="{ 'show': showMessages }">
+      <Messages :isOpen="showMessages" @close="showMessages = false" />
     </div>
   </div>
 </template>
@@ -68,11 +73,13 @@ import { onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import Searcher from '@/components/Friends/Searcher.vue'
 import Notifications from './Friends/Notifications.vue'
+import Messages from './Friends/Messages.vue'
 import { supabase } from '@/config/supabase'
 
 const route = useRoute()
 const showNotifications = ref(false)
 const showSearcher = ref(false)
+const showMessages = ref(false)
 const user = ref(null)
 const user_avatar_url = ref(localStorage.getItem('user_avatar_url') || null)
 
@@ -108,6 +115,10 @@ const toggleSearcher = () => {
   if (showSearcher.value) {
     showNotifications.value = false
   }
+}
+
+const toggleMessages = () => {
+  showMessages.value = !showMessages.value
 }
 
 const defaultAvatar = 'https://upload.wikimedia.org/wikipedia/commons/a/ac/Default_pfp.jpg'
@@ -159,6 +170,18 @@ const settingsIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="26" height=
 }
 
 .searcher-panel.show {
+  width: 350px;
+}
+
+.messages-panel {
+  width: 0;
+  overflow: hidden;
+  transition: width 0.3s ease;
+  background: #0a0a0a;
+  border-left: 1px solid #333;
+}
+
+.messages-panel.show {
   width: 350px;
 }
 

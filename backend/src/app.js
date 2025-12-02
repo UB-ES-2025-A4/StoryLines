@@ -35,6 +35,7 @@ import usersRouter from "./routes/users.js";
 import shopRouter from './routes/shop.js';
 import balanceRouter from './routes/balance.js'; 
 import purchasesRouter from "./routes/purchases.js";
+import messagesRouter from "./routes/messages.js";
 
 // ❗ LAS QUE FALTABAN
 import avatarRouter from "./routes/avatar.js";
@@ -61,6 +62,7 @@ app.use("/api/purchases", purchasesRouter);
 app.use("/api/avatar", avatarRouter);
 app.use("/api/friend-request", friendRequestRouter);
 
+app.use("/api/messages", messagesRouter);
 
 // ============================================================
 // FRONTEND STATIC FILES

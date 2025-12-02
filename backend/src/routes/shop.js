@@ -11,8 +11,6 @@ router.get('/items', async (req, res) => {
       .select('*')
       .order('price', { ascending: true })
 
-    console.log("Supabase devolvió:", data)
-
     if (error) {
       console.error('Error supabase shop_items:', error)
       return res.status(500).json({ ok: false, error: 'Error loading items' })
