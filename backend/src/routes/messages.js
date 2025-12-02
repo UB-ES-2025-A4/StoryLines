@@ -3,9 +3,9 @@ import { supabaseAdmin } from '../config/supabase.js';
 
 const router = Router();
 
-// ------------------------------------------------------
-// Helper para verificar que el usuario pertenece a la amistad
-// ------------------------------------------------------
+/* ------------------------------------------------------
+   Helper: verificar si el usuario pertenece a la amistad
+------------------------------------------------------ */
 async function validateFriendship(userId, friendshipId) {
   const { data, error } = await supabaseAdmin
     .from('friends')
@@ -19,9 +19,9 @@ async function validateFriendship(userId, friendshipId) {
   return data.user_id === userId || data.friend_id === userId;
 }
 
-// ------------------------------------------------------
-// Helper para obtener el ID del amigo en una amistad
-// ------------------------------------------------------
+/* ------------------------------------------------------
+   Helper: obtener el ID del amigo en la amistad
+------------------------------------------------------ */
 async function getFriendId(friendshipId, userId) {
   const { data, error } = await supabaseAdmin
     .from("friends")
@@ -34,16 +34,15 @@ async function getFriendId(friendshipId, userId) {
   return data.user_id === userId ? data.friend_id : data.user_id;
 }
 
-
-// ------------------------------------------------------
-// GET /messages/recent
-// Últimos chats (para "Chats recientes")
-// ------------------------------------------------------
+/* ------------------------------------------------------
+   GET /messages/recents
+   Últimos chats + unreadCounts
+------------------------------------------------------ */
 router.get('/recents', async (req, res) => {
   try {
     const userId = req.query.userId;
 
-    // Todas las amistades del usuario
+    // Obtener amistades del usuario
     const { data: friendships, error: fError } = await supabaseAdmin
       .from('friends')
       .select(`
@@ -53,15 +52,14 @@ router.get('/recents', async (req, res) => {
         user:user_id (*),
         friend:friend_id (*)
       `)
-      .or(`user_id.eq.${userId},friend_id.eq.${userId}`)
+      .or(`user_id.eq.${userId},friend_id.eq.${userId}`);
 
     if (fError) throw fError;
-
     if (!friendships.length) return res.json({ chats: [] });
 
     const friendshipIds = friendships.map(f => f.id);
 
-    // Último mensaje de cada chat
+    // Obtener mensajes ordenados por fecha
     const { data: messages, error: mError } = await supabaseAdmin
       .from('messages')
       .select('*')
@@ -70,7 +68,20 @@ router.get('/recents', async (req, res) => {
 
     if (mError) throw mError;
 
-    // Agrupar para quedarnos solo el último por amistad
+    // Mensajes no leídos
+    const { data: unreadMessages } = await supabaseAdmin
+      .from('messages')
+      .select('friendship_id')
+      .in('friendship_id', friendshipIds)
+      .eq('status', 'sent')
+      .neq('sender_id', userId);
+
+    const unreadCounts = unreadMessages.reduce((acc, msg) => {
+      acc[msg.friendship_id] = (acc[msg.friendship_id] || 0) + 1;
+      return acc;
+    }, {});
+
+    // Solo el último mensaje por amistad
     const lastPerFriendship = Object.values(
       messages.reduce((acc, msg) => {
         if (!acc[msg.friendship_id]) acc[msg.friendship_id] = msg;
@@ -78,7 +89,7 @@ router.get('/recents', async (req, res) => {
       }, {})
     );
 
-    // Combinar con datos del amigo
+    // Formateo final
     const chats = lastPerFriendship.map(msg => {
       const fs = friendships.find(f => f.id === msg.friendship_id);
 
@@ -89,9 +100,9 @@ router.get('/recents', async (req, res) => {
         friendship_id: fs.id,
         last_message: msg.content,
         created_at: msg.created_at,
-        status: msg.status,
         sender_id: msg.sender_id,
-        hasUnread: msg.status === 'sent' && msg.sender_id !== userId,
+        status: msg.status,
+        unreadCounts: unreadCounts[msg.friendship_id] || 0,
         friend: {
           id: friendUser.id,
           username: friendUser.username,
@@ -102,54 +113,28 @@ router.get('/recents', async (req, res) => {
     });
 
     res.json({ chats });
+
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
 
-// ------------------------------------------------------
-// GET /messages/:friendshipId
-// Cargar historial de una conversación
-// ------------------------------------------------------
-/*router.get('/:friendshipId', async (req, res) => {
-  try {
-    const { friendshipId } = req.params;
-    const userId = req.query.userId;
-
-    // Validación de permisos
-    const allowed = await validateFriendship(userId, friendshipId);
-    if (!allowed) return res.status(403).json({ error: 'Acceso denegado' });
-
-    const { data, error } = await supabaseAdmin
-      .from('messages')
-      .update({ status: 'read' })
-      .eq('friendship_id', friendshipId)
-      .eq('sender_id', userId)
-      .select('*')
-      .eq('friendship_id', friendshipId)
-      .order('created_at', { ascending: true });
-
-    if (error) throw error;
-
-    res.json({ messages: data });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});*/
-
+/* ------------------------------------------------------
+   GET /messages/:friendshipId
+   Cargar historial + marcar como leídos
+------------------------------------------------------ */
 router.get('/:friendshipId', async (req, res) => {
   try {
     const { friendshipId } = req.params;
     const userId = req.query.userId;
 
-    // Validación
     const allowed = await validateFriendship(userId, friendshipId);
     if (!allowed) return res.status(403).json({ error: 'Acceso denegado' });
 
-    // Obtener ID del otro usuario
+    // ID del amigo
     const friendId = await getFriendId(friendshipId, userId);
 
-    // 1) Obtener todos los mensajes del chat
+    // Mensajes del chat
     const { data: messages, error: mError } = await supabaseAdmin
       .from('messages')
       .select('*')
@@ -158,24 +143,24 @@ router.get('/:friendshipId', async (req, res) => {
 
     if (mError) throw mError;
 
-   //marcar como leídos los mensajes recibidos
-    const { error: uError } = await supabaseAdmin
+    // Marcar como leídos los mensajes del amigo
+    await supabaseAdmin
       .from('messages')
       .update({ status: 'read' })
       .eq('friendship_id', friendshipId)
-      .eq('sender_id', friendId); 
+      .eq('sender_id', friendId);
 
     res.json({ messages });
+
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
 
-
-// ------------------------------------------------------
-// POST /messages/:friendshipId
-// Enviar un mensaje
-// ------------------------------------------------------
+/* ------------------------------------------------------
+   POST /messages/:friendshipId
+   Enviar mensaje
+------------------------------------------------------ */
 router.post('/:friendshipId', async (req, res) => {
   try {
     const { friendshipId } = req.params;
@@ -202,6 +187,7 @@ router.post('/:friendshipId', async (req, res) => {
     if (error) throw error;
 
     res.status(201).json({ message: data[0] });
+
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

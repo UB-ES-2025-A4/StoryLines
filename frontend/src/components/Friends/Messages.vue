@@ -32,7 +32,9 @@
             <p class="preview">{{ chat.last_message }}</p>
             <small class="timestamp">{{ new Date(chat.created_at).toLocaleString() }}</small>
           </div>
-          <div v-if="chat.hasUnread" class="unread-indicator">●</div>
+          <div v-if="chat.unreadCounts > 0" class="unread-indicator">
+            {{ chat.unreadCounts }}
+          </div>
         </div>
       </div>
     </div>
@@ -185,6 +187,7 @@ async function loadRecentChats() {
     recentChats.value = raw.map((chat) => {
       const isMine = chat.sender_id === userId.value;
 
+
       return {
         friendshipId: chat.friendship_id,
         friend: chat.friend,
@@ -193,7 +196,7 @@ async function loadRecentChats() {
           : chat.last_message,
         created_at: chat.created_at,
         sender_id: chat.sender_id,
-        hasUnread: chat.hasUnread || false
+        unreadCounts: chat.unreadCounts
       };
     });
 
@@ -223,6 +226,13 @@ async function openChat(friend, fid) {
   mode.value = "chat";
   await fetchMessages();
 
+  const chat = recentChats.value.find(c => c.friendshipId === fid);
+  if (chat) {
+    chat.unreadCounts = 0; // reset unread count
+  }
+
+  loadRecentChats(); // recargar lista
+
   messageInput.value = drafts.value[friendshipId.value] || "";
 
 }
@@ -235,6 +245,13 @@ async function startChat(friend) {
   friendshipId.value = friend.friendshipId;
   mode.value = "chat";
   await fetchMessages();
+
+  const chat = recentChats.value.find(c => c.friendshipId === friendshipId.value);
+  if (chat) {
+    chat.unreadCounts = 0; // reset unread count
+  }
+
+  loadRecentChats(); // recargar lista
 
   messageInput.value = drafts.value[friendshipId.value] || "";
 
@@ -381,12 +398,19 @@ const messagesList = ref(null);
 }
 
 .unread-indicator {
-  width: 10px;
-  height: 10px;
+  width: 20px;
+  height: 20px;
   background-color: #0066ff;
+  color: white;
   border-radius: 50%;
-  margin-left: auto; 
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: bold;
+  margin-left: auto;
 }
+
 
 
 .avatar {
