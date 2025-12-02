@@ -95,13 +95,24 @@ onMounted(async () => {
       .eq('id', user.value.id)
       .single()
     
-    if (error) {
-      console.error('Error fetching user profile:', error.message)
+    if (!error) {
+      const avatar = data?.avatar_url || defaultAvatar
+      user_avatar_url.value = avatar
+      localStorage.setItem('user_avatar_url', avatar)
     } else {
-      localStorage.setItem('user_avatar_url', data.avatar_url)
+      // 🔥 Si hay error, usar inmediatamente el avatar por defecto
+      user_avatar_url.value = defaultAvatar
     }
   }
 })
+
+window.addEventListener("avatar-updated", (e) => {
+  const newAvatar = e.detail
+  user_avatar_url.value = newAvatar
+  localStorage.setItem("user_avatar_url", newAvatar)
+})
+
+
 
 const toggleNotifications = () => {
   showNotifications.value = !showNotifications.value
