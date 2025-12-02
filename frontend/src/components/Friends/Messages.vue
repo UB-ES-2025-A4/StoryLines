@@ -25,16 +25,25 @@
         @click="openChat(chat.friend, chat.friendshipId)">
         <img :src="chat.friend.avatar_url || defaultAvatar" class="avatar" />
         <div class="chat-preview">
-          <div class="name">{{ chat.friend.display_name || chat.friend.username }}</div>
-          <div class="preview">{{ chat.last_message }}</div>
+          <div class="name-and-time">
+            <div class="name">{{ chat.friend.display_name || chat.friend.username }}</div>
+            <div class="time">{{ formatTimeRecents(chat.created_at) }}</div>
+          </div>
+
+          <div class="preview-and-badge">
+            <div class="preview">{{ truncateText(chat.last_message, 60) }}</div>
+            <div v-if="chat.unreadCounts > 0" class="unread-badge">{{ chat.unreadCounts }}</div>
+          </div>
         </div>
-        <div v-if="chat.unreadCounts > 0" class="unread-badge">{{ chat.unreadCounts }}</div>
       </div>
     </div>
 
     <!-- NUEVO CHAT -->
     <div v-if="mode === 'new'" class="list-container">
       <div class="search-box">
+        <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+        </svg>
         <input v-model="search" placeholder="Buscar amigos..." />
       </div>
       <div v-if="filteredFriends.length === 0" class="empty">No hay amigos</div>
@@ -55,7 +64,7 @@
             <div class="message">
               <p class="content">{{ m.content }}</p>
               <div class="meta">
-                <span class="time">{{ formatTimeOnly(m.created_at) }}</span>
+                <span class="time" :class="{mine: m.sender_id === userId }">{{ formatTimeOnly(m.created_at) }}</span>
                 <span v-if="m.sender_id === userId" class="status">
                   <span v-html="m.status === 'read' ? CheckRead : CheckSent"></span>
                 </span>
@@ -66,8 +75,8 @@
       </div>
 
       <div class="input-row">
-        <input class="message-input" v-model="messageInput" placeholder="Escribe un mensaje..."
-          @keyup.enter="sendMessage" @input="saveDraft" />
+        <textarea class="message-input" v-model="messageInput" placeholder="Escribe un mensaje..."
+          @input="autoResize" @keyup.enter="sendMessage" rows="1"></textarea>
         <button class="send-btn" @click="sendMessage">
           <span v-html="SendIcon"></span>
         </button>
@@ -137,6 +146,41 @@ const formatTimeOnly = (date) => {
   const d = new Date(date);
   return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 };
+
+const formatTimeRecents = (date) => {
+  const d = new Date(date);
+  const now = new Date();
+
+  const isSameDay = (a, b) =>
+    a.getDate() === b.getDate() &&
+    a.getMonth() === b.getMonth() &&
+    a.getFullYear() === b.getFullYear();
+
+  // HOY ➜ hora
+  if (isSameDay(d, now)) {
+    return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  }
+
+  // AYER ➜ "ayer"
+  const yesterday = new Date();
+  yesterday.setDate(now.getDate() - 1);
+
+  if (isSameDay(d, yesterday)) {
+    return "ayer";
+  }
+
+  // Anterior ➜ dd/mm/yyyy
+  const dd = String(d.getDate()).padStart(2, "0");
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const yyyy = d.getFullYear();
+
+  return `${dd}/${mm}/${yyyy}`;
+};
+
+
+const truncateText = (text, limit) =>
+  text?.length > limit ? text.slice(0, limit) + '...' : text || ''
+
 
 const groupedMessages = computed(() => {
   const groups = {};
@@ -313,11 +357,19 @@ function saveDraft() {
     drafts.value[friendshipId.value] = messageInput.value;
   }
 }
+
+function autoResize(event) {
+  const el = event.target;
+  el.style.height = 'auto';
+  el.style.height = el.scrollHeight + 'px';
+  saveDraft();
+}
+
 </script>
 
 <style scoped>
 .messages-drawer {
-  width: 380px;
+  width: 400px;
   background: #0a0a0a;
   height: 100vh;
   position: fixed;
@@ -418,12 +470,30 @@ function saveDraft() {
 .chat-preview, .chat-info {
   flex: 1;
   margin-left: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.name-and-time {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
 .name {
   color: #fff;
   font-weight: 600;
   font-size: 15px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.preview-and-badge {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
 .preview {
@@ -433,6 +503,7 @@ function saveDraft() {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  max-width: 220px;
 }
 
 .unread-badge {
@@ -446,6 +517,7 @@ function saveDraft() {
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
 }
 
 .chat-area {
@@ -524,6 +596,8 @@ function saveDraft() {
   margin: 0;
   font-size: 15px;
   line-height: 1.45;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
 }
 
 .meta {
@@ -554,6 +628,12 @@ function saveDraft() {
   border-radius: 24px;
   font-size: 15px;
   outline: none;
+  resize: none;
+  overflow-y: hidden;
+  line-height: 1.45;
+  max-height: 180px;
+  word-break: break-word;
+  font-family: inherit;
 }
 
 .message-input:focus {
@@ -561,7 +641,7 @@ function saveDraft() {
 }
 
 .send-btn {
-  background: #0066ff;
+  background: #0a0a0a;
   color: white;
   border: none;
   width: 46px;
@@ -575,7 +655,6 @@ function saveDraft() {
 }
 
 .send-btn:hover {
-  background: #0055dd;
   transform: scale(1.08);
 }
 
@@ -586,15 +665,53 @@ function saveDraft() {
   font-size: 15px;
 }
 
+.-box-box {
+  position: relative;
+  margin: 8px 8px 0 8px;
+}
+
+.search-box{
+  position: relative;
+  width: 100%;
+  margin-bottom: 12px;
+  padding: 0 12px;
+}
+
 .search-box input {
   width: 100%;
   background: #1a1a1a;
   border: none;
   color: #fff;
-  padding: 12px 16px;
-  border-radius: 12px;
+  padding: 14px 20px 14px 48px;
+  border-radius: 14px;
   font-size: 15px;
   outline: none;
-  margin-bottom: 12px;
+  box-sizing: border-box;
+}
+
+.search-box input:focus {
+  background: #222;
+}
+
+.search-icon {
+  position: absolute;
+  left: 28px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 20px;
+  height: 20px;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.time {
+  font-size: 11px;
+  text-align: right;
+  color: #888;
+  margin-left: 8px;
+}
+
+.time.mine {
+  color: rgba(255,255,255,0.9);
 }
 </style>
