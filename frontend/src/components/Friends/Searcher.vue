@@ -41,7 +41,7 @@
               <div>
                 <span class="username">{{ user.username }}</span>
               </div>
-              <div class="display-name">{{ user.displayName || 'Sin nombre' }}</div>
+              <div class="display-name">{{ user.display_name || 'Sin nombre' }}</div>
             </div>
           </div>
           <button 

@@ -39,6 +39,7 @@ router.get("/", async (req, res) => {
         friend: {
           id: friendData?.id,
           username: friendData?.username,
+          display_name: friendData?.display_name,
           avatar_url: friendData?.avatar_url,
         },
       };
@@ -50,5 +51,6 @@ router.get("/", async (req, res) => {
     res.status(500).json({ error: "Error interno obteniendo amigos" });
   }
 });
+
 
 export default router;
