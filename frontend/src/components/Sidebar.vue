@@ -8,20 +8,12 @@
           <span>Home</span>
         </router-link>
 
-        <div 
-          class="nav-item" 
-          :class="{ 'active': showSearcher }"
-          @click="toggleSearcher"
-        >
+        <div class="nav-item" :class="{ 'active': showSearcher }" @click="toggleSearcher">
           <svg class="icon" v-html="searchIcon"></svg>
           <span>Buscar</span>
         </div>
 
-        <div 
-          class="nav-item" 
-          :class="{ 'active': showNotifications }"
-          @click="toggleNotifications"
-        >
+        <div class="nav-item" :class="{ 'active': showNotifications }" @click="toggleNotifications">
           <svg class="icon" v-html="notificationsIcon"></svg>
           <span>Notificaciones</span>
         </div>
@@ -36,12 +28,13 @@
           <span>Tienda</span>
         </router-link>
 
-        <div class="nav-item"
-          :class="{ 'active': showMessages }"
-          @click="toggleMessages"
-        >
+        <div class="nav-item" :class="{ 'active': showMessages }" @click="toggleMessages">
           <svg class="icon" v-html="messagesIcon"></svg>
           <span>Mensajes</span>
+
+          <span v-if="unreadMessageCount > 0" class="badge">
+            {{ unreadMessageCount > 99 ? '99+' : unreadMessageCount }}
+          </span>
         </div>
 
         <router-link to="/profile" class="nav-item" :class="{ 'active': $route.path === '/profile' }">
@@ -57,13 +50,14 @@
     </div>
 
     <div class="notification-panel" :class="{ 'show': showNotifications }">
-    <Notifications :isVisible="showNotifications" @close="showNotifications = false" />
+      <Notifications :isVisible="showNotifications" @close="showNotifications = false" />
     </div>
     <div class="searcher-panel" :class="{ 'show': showSearcher }">
       <Searcher :isOpen="showSearcher" @close="showSearcher = false" />
     </div>
     <div class="messages-panel" :class="{ 'show': showMessages }">
-      <Messages :isOpen="showMessages" @close="showMessages = false" />
+      <Messages :isOpen="showMessages" @close="showMessages = false"
+        @update-unread-count="unreadMessageCount = $event" />
     </div>
   </div>
 </template>
@@ -82,6 +76,7 @@ const showSearcher = ref(false)
 const showMessages = ref(false)
 const user = ref(null)
 const user_avatar_url = ref(localStorage.getItem('user_avatar_url') || null)
+const unreadMessageCount = ref(0)
 
 // Obtener sesión y avatar del usuario
 onMounted(async () => {
@@ -259,4 +254,25 @@ const settingsIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="26" height=
   object-fit: cover;
   flex-shrink: 0;
 }
+
+.badge {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 23px;
+  height: 23px;
+  min-width: 23px;
+  background: #e63946;
+  color: white;
+  font-size: 0.68rem;
+  font-weight: bold;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: 1 / 1;
+  padding: 0 !important;
+}
+
 </style>

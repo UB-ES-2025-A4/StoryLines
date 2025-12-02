@@ -82,7 +82,7 @@
 import { ref, computed, onMounted, nextTick, watch } from "vue";
 import { supabase } from "@/config/supabase";
 
-const emit =  defineEmits(["close"]);
+const emit = defineEmits(["close"]);
 
 const props = defineProps({
   isOpen: Boolean
@@ -112,7 +112,6 @@ watch(() => props.isOpen, (newVal) => {
     mode.value = "list";
   }
 });
-
 
 // Cargar sesión + amigos del usuario
 onMounted(async () => {
@@ -187,7 +186,6 @@ async function loadRecentChats() {
     recentChats.value = raw.map((chat) => {
       const isMine = chat.sender_id === userId.value;
 
-
       return {
         friendshipId: chat.friendship_id,
         friend: chat.friend,
@@ -199,6 +197,9 @@ async function loadRecentChats() {
         unreadCounts: chat.unreadCounts
       };
     });
+
+    const totalUnread = recentChats.value.reduce((sum, chat) => sum + chat.unreadCounts, 0);
+    emit("update-unread-count", totalUnread);
 
   } catch (err) {
     console.error("Error loading recent chats:", err);
@@ -234,7 +235,6 @@ async function openChat(friend, fid) {
   loadRecentChats(); // recargar lista
 
   messageInput.value = drafts.value[friendshipId.value] || "";
-
 }
 
 /* --------------------------
@@ -254,7 +254,6 @@ async function startChat(friend) {
   loadRecentChats(); // recargar lista
 
   messageInput.value = drafts.value[friendshipId.value] || "";
-
 }
 
 /* --------------------------
@@ -306,9 +305,12 @@ async function sendMessage() {
    Scroll al fondo
 -------------------------- */
 function scrollBottom() {
-  const el = messagesList.value;
-  if (!el) return;
-  el.scrollTop = el.scrollHeight;
+  nextTick(() => {
+    const el = messagesList.value;
+    if (el) {
+      el.scrollTop = el.scrollHeight;
+    }
+  });
 }
 
 /* --------------------------
@@ -331,8 +333,6 @@ function saveDraft() {
   }
 }
 
-
-
 const messagesList = ref(null);
 </script>
 
@@ -344,6 +344,9 @@ const messagesList = ref(null);
   display: flex;
   flex-direction: column;
   border-left: 1px solid #333;
+  position: fixed;
+  z-index: 1000;
+  overflow: hidden;
 }
 
 .panel-header {
@@ -352,6 +355,7 @@ const messagesList = ref(null);
   align-items: center;
   padding: 1.5rem;
   border-bottom: 1px solid #333;
+  flex-shrink: 0;
 }
 
 .panel-header h2 {
@@ -377,11 +381,17 @@ const messagesList = ref(null);
   color: #fff;
 }
 
-
 .list-container {
   flex: 1;
   padding: 1rem;
   overflow-y: auto;
+  /* Scroll invisible */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.list-container::-webkit-scrollbar {
+  display: none;
 }
 
 .chat-item {
@@ -411,8 +421,6 @@ const messagesList = ref(null);
   margin-left: auto;
 }
 
-
-
 .avatar {
   width: 40px;
   height: 40px;
@@ -423,12 +431,22 @@ const messagesList = ref(null);
   flex: 1;
   display: flex;
   flex-direction: column;
+  min-height: 0;
 }
 
 .messages-list {
   flex: 1;
   overflow-y: auto;
   padding: 10px;
+  min-height: 0;
+  /* Scroll invisible */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  scroll-behavior: smooth;
+}
+
+.messages-list::-webkit-scrollbar {
+  display: none;
 }
 
 .message {
@@ -472,6 +490,8 @@ const messagesList = ref(null);
   display: flex;
   padding: 10px;
   border-top: 1px solid #333;
+  flex-shrink: 0;
+  background: #0a0a0a;
 }
 
 .input-row input {
