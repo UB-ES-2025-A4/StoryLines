@@ -9,7 +9,7 @@
       <h2 v-if="mode === 'list'">Chats</h2>
       <h2 v-if="mode === 'new'">Nuevo chat</h2>
       <h2 v-if="mode === 'chat'">{{ selectedFriend?.display_name || selectedFriend?.username }}</h2>
-    
+
       <button class="close-btn" @click="emit('close')">✕</button>
     </div>
 
@@ -26,7 +26,7 @@
         <div v-else></div>
         <div v-for="chat in recentChats" :key="chat.friendshipId" class="chat-item"
           @click="openChat(chat.friend, chat.friendshipId)">
-          <img :src="chat.friend.avatar_url" class="avatar" />
+          <img :src="chat.friend.avatar_url || defaultAvatar" class="avatar" />
           <div class="chat-info">
             <strong>{{ chat.friend.display_name || chat.friend.username }}</strong>
             <p class="preview">{{ chat.last_message }}</p>
@@ -45,8 +45,8 @@
       <div v-if="filteredFriends.length === 0" class="empty">No hay amigos</div>
 
       <div v-for="f in filteredFriends" :key="f.id" class="chat-item" @click="startChat(f)">
-        <img :src="f.avatar_url" class="avatar" />
-        <strong>{{ f.display_name || f.username }}</strong>
+        <img :src="f.avatar_url || defaultAvatar" class="avatar" />
+        <div class="chat-info">{{ f.display_name || f.username }}</div>
       </div>
     </div>
 
@@ -55,11 +55,15 @@
       <div class="messages-list" ref="messagesList">
         <div v-for="m in messages" :key="m.id" class="message" :class="{ mine: m.sender_id === userId }">
           <p>{{ m.content }}</p>
+          <p class="message-timestamp">{{ new Date(m.created_at).toLocaleString() }}</p>
+          <span class="message-status" v-if="m.status === 'sent' && m.sender_id === userId">enviado</span>
+          <span class="message-status" v-else-if="m.status === 'read' && m.sender_id === userId">leído</span>
         </div>
       </div>
 
       <div class="input-row">
-        <input class="message-input" v-model="messageInput" placeholder="Escribe un mensaje..." @keyup.enter="sendMessage" @input="saveDraft" />
+        <input class="message-input" v-model="messageInput" placeholder="Escribe un mensaje..."
+          @keyup.enter="sendMessage" @input="saveDraft" />
         <button class="send-btn" @click="sendMessage">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
             stroke-linecap="round" stroke-linejoin="round">
@@ -97,6 +101,8 @@ const mode = ref("list"); // list | new | chat
 const loadingChats = ref(true);
 
 const search = ref("");
+
+const defaultAvatar = 'https://upload.wikimedia.org/wikipedia/commons/a/ac/Default_pfp.jpg'
 
 watch(() => props.isOpen, (newVal) => {
   if (newVal) {
@@ -400,6 +406,7 @@ const messagesList = ref(null);
 
 .message.mine {
   margin-left: auto;
+  color: #fff;
   background: #0066ff;
 }
 
@@ -410,6 +417,20 @@ const messagesList = ref(null);
   color: #fff;
   padding: .5rem;
   border-radius: 5px;
+}
+
+.message-timestamp {
+  font-size: 10px;
+  color: #0a0a0a;
+  opacity: 0.6;
+  text-align: right;
+}
+
+.message-status {
+  font-size: 10px;
+  color: #0a0a0a;
+  opacity: 0.6;
+  text-align: right;
 }
 
 .input-row {

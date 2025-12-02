@@ -20,6 +20,22 @@ async function validateFriendship(userId, friendshipId) {
 }
 
 // ------------------------------------------------------
+// Helper para obtener el ID del amigo en una amistad
+// ------------------------------------------------------
+async function getFriendId(friendshipId, userId) {
+  const { data, error } = await supabaseAdmin
+    .from("friends")
+    .select("user_id, friend_id")
+    .eq("id", friendshipId)
+    .single();
+
+  if (error) throw error;
+
+  return data.user_id === userId ? data.friend_id : data.user_id;
+}
+
+
+// ------------------------------------------------------
 // GET /messages/recent
 // Últimos chats (para "Chats recientes")
 // ------------------------------------------------------
@@ -73,6 +89,7 @@ router.get('/recents', async (req, res) => {
         friendship_id: fs.id,
         last_message: msg.content,
         created_at: msg.created_at,
+        status: msg.status,
         sender_id: msg.sender_id,
         friend: {
           id: friendUser.id,
@@ -93,7 +110,7 @@ router.get('/recents', async (req, res) => {
 // GET /messages/:friendshipId
 // Cargar historial de una conversación
 // ------------------------------------------------------
-router.get('/:friendshipId', async (req, res) => {
+/*router.get('/:friendshipId', async (req, res) => {
   try {
     const { friendshipId } = req.params;
     const userId = req.query.userId;
@@ -104,6 +121,9 @@ router.get('/:friendshipId', async (req, res) => {
 
     const { data, error } = await supabaseAdmin
       .from('messages')
+      .update({ status: 'read' })
+      .eq('friendship_id', friendshipId)
+      .eq('sender_id', userId)
       .select('*')
       .eq('friendship_id', friendshipId)
       .order('created_at', { ascending: true });
@@ -114,7 +134,42 @@ router.get('/:friendshipId', async (req, res) => {
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
+});*/
+
+router.get('/:friendshipId', async (req, res) => {
+  try {
+    const { friendshipId } = req.params;
+    const userId = req.query.userId;
+
+    // Validación
+    const allowed = await validateFriendship(userId, friendshipId);
+    if (!allowed) return res.status(403).json({ error: 'Acceso denegado' });
+
+    // Obtener ID del otro usuario
+    const friendId = await getFriendId(friendshipId, userId);
+
+    // 1) Obtener todos los mensajes del chat
+    const { data: messages, error: mError } = await supabaseAdmin
+      .from('messages')
+      .select('*')
+      .eq('friendship_id', friendshipId)
+      .order('created_at', { ascending: true });
+
+    if (mError) throw mError;
+
+   //marcar como leídos los mensajes recibidos
+    const { error: uError } = await supabaseAdmin
+      .from('messages')
+      .update({ status: 'read' })
+      .eq('friendship_id', friendshipId)
+      .eq('sender_id', friendId); 
+
+    res.json({ messages });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 });
+
 
 // ------------------------------------------------------
 // POST /messages/:friendshipId
@@ -137,7 +192,8 @@ router.post('/:friendshipId', async (req, res) => {
         {
           friendship_id: friendshipId,
           sender_id: senderId,
-          content: message
+          content: message,
+          status: 'sent'
         }
       ])
       .select();
@@ -145,39 +201,6 @@ router.post('/:friendshipId', async (req, res) => {
     if (error) throw error;
 
     res.status(201).json({ message: data[0] });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// ------------------------------------------------------
-// DELETE /messages/:id
-// Eliminar un mensaje propio
-// ------------------------------------------------------
-router.delete('/:id', async (req, res) => {
-  try {
-    const messageId = req.params.id;
-    const userId = req.body;
-
-    const { data: message, error: fetchError } = await supabaseAdmin
-      .from('messages')
-      .select('*')
-      .eq('id', messageId)
-      .single();
-
-    if (fetchError) throw fetchError;
-
-    if (message.sender_id !== userId)
-      return res.status(403).json({ error: 'No autorizado' });
-
-    const { error: deleteError } = await supabaseAdmin
-      .from('messages')
-      .delete()
-      .eq('id', messageId);
-
-    if (deleteError) throw deleteError;
-
-    res.status(204).send();
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
