@@ -32,6 +32,7 @@
             <p class="preview">{{ chat.last_message }}</p>
             <small class="timestamp">{{ new Date(chat.created_at).toLocaleString() }}</small>
           </div>
+          <div v-if="chat.hasUnread" class="unread-indicator">●</div>
         </div>
       </div>
     </div>
@@ -191,7 +192,8 @@ async function loadRecentChats() {
           ? `Tú: ${chat.last_message}`
           : chat.last_message,
         created_at: chat.created_at,
-        sender_id: chat.sender_id
+        sender_id: chat.sender_id,
+        hasUnread: chat.hasUnread || false
       };
     });
 
@@ -377,6 +379,15 @@ const messagesList = ref(null);
   flex: 1;
   color: #fff;
 }
+
+.unread-indicator {
+  width: 10px;
+  height: 10px;
+  background-color: #0066ff;
+  border-radius: 50%;
+  margin-left: auto; 
+}
+
 
 .avatar {
   width: 40px;

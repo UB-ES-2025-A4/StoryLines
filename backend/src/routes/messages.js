@@ -91,6 +91,7 @@ router.get('/recents', async (req, res) => {
         created_at: msg.created_at,
         status: msg.status,
         sender_id: msg.sender_id,
+        hasUnread: msg.status === 'sent' && msg.sender_id !== userId,
         friend: {
           id: friendUser.id,
           username: friendUser.username,
