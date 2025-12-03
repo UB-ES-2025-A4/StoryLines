@@ -7,9 +7,13 @@
 
       <h2 v-if="mode === 'list'">Chats</h2>
       <h2 v-if="mode === 'new'">Nuevo chat</h2>
-      <h2 v-if="mode === 'chat'" class="friend-title">
-        {{ selectedFriend?.display_name || selectedFriend?.username }}
-      </h2>
+
+      <div v-if="mode === 'chat'" class="friend-info">
+        <img :src="selectedFriend?.avatar_url || defaultAvatar" class="friend-avatar-small" />
+        <span class="friend-name">
+          {{ selectedFriend?.display_name || selectedFriend?.username }}
+        </span>
+      </div>
 
       <button class="close-btn" @click="emit('close')">✕</button>
     </div>
@@ -75,8 +79,8 @@
       </div>
 
       <div class="input-row">
-        <textarea class="message-input" v-model="messageInput" placeholder="Escribe un mensaje..."
-          @input="autoResize" @keyup.enter="sendMessage" rows="1"></textarea>
+        <textarea class="message-input" v-model="messageInput" placeholder="Escribe un mensaje..." @input="autoResize"
+          @keyup.enter="sendMessage" rows="1"></textarea>
         <button class="send-btn" @click="sendMessage">
           <span v-html="SendIcon"></span>
         </button>
@@ -398,12 +402,26 @@ function autoResize(event) {
   font-weight: 600;
 }
 
-.friend-title {
-  overflow: hidden;
-  text-overflow: ellipsis;
+.friend-info {
+  margin-right: auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: 240px;
   white-space: nowrap;
-  max-width: 210px;
+  overflow: hidden;
+  font-size: 1.2rem;
+  font-weight: 500;
+  margin-left: 12px;
 }
+
+.friend-avatar-small {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
 
 .back-btn, .close-btn {
   background: none;
