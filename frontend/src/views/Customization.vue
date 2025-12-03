@@ -22,7 +22,13 @@
                 <div v-else class="no-item-placeholder">Sin equipar</div>
               </div>
               <div class="current-item">{{ equippedItems.globe || 'Sin equipar' }}</div>
-
+              <button 
+                v-if="getEquippedItemByType('globe')" 
+                @click="unequipItem('globe')" 
+                class="unequip-btn"
+              >
+                ✕ Quitar
+              </button>
             </div>
           </div>
           <div class="drop-zone" @drop="handleDrop($event, 'homeBg')" @dragover.prevent>
@@ -33,7 +39,13 @@
                 <div v-else class="no-item-placeholder">Sin equipar</div>
               </div>
               <div class="current-item">{{ equippedItems.homeBg || 'Sin equipar' }}</div>
-
+              <button 
+                v-if="getEquippedItemByType('homeBg')" 
+                @click="unequipItem('homeBg')" 
+                class="unequip-btn"
+              >
+                ✕ Quitar
+              </button>
             </div>
           </div>
           <div class="drop-zone" @drop="handleDrop($event, 'profileBg')" @dragover.prevent>
@@ -44,7 +56,13 @@
                 <div v-else class="no-item-placeholder">Sin equipar</div>
               </div>
               <div class="current-item">{{ equippedItems.profileBg || 'Sin equipar' }}</div>
-
+              <button 
+                v-if="getEquippedItemByType('profileBg')" 
+                @click="unequipItem('profileBg')" 
+                class="unequip-btn"
+              >
+                ✕ Quitar
+              </button>
             </div>
           </div>
         </div>
