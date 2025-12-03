@@ -199,7 +199,15 @@
 
         <div class="edit-form">
           <label>Nombre de usuario:</label>
-          <input type="text" v-model="editUsername" placeholder="Nombre de usuario" />
+          <input type="text" v-model="editUsername" @input="checkUsernameAvailability($event.target.value)" placeholder="Nombre de usuario" />
+          <div style="margin-top: 0.8rem; min-height: 28px;">
+            <small v-if="checkingUsername" style="color:#888;">Comprobando disponibilidad...</small>
+            <small v-else-if="usernameStatus === 'available'" style="color:#4ade80; font-weight:600;">Disponible</small>
+            <small v-else-if="usernameStatus === 'taken'" style="color:#ff5555; font-weight:600;">Ya está en
+              uso</small>
+            <small v-else-if="usernameStatus === 'invalid'" style="color:#ff5555; font-weight:600;">Solo se
+              permiten letras, números, "." y "_". Longitud: 3-20 caracteres.</small>
+          </div>
 
           <label>Display name:</label>
           <input type="text" v-model="editDisplayName" placeholder="Display name" />
@@ -276,6 +284,8 @@ export default {
     const currentTab = ref('published')
     const friends = ref([])
     const showFriends = ref(false)
+    const checkingUsername = ref(false)
+    const usernameAvailable = ref(null)
 
     const defaultAvatar =
       'https://upload.wikimedia.org/wikipedia/commons/a/ac/Default_pfp.jpg'
@@ -481,11 +491,6 @@ export default {
           avatar_url: profileData.value.avatar_url
         }
 
-        // check if username contains spaces
-        if (/\s/.test(payload.username)) {
-          throw new Error('El nombre de usuario no puede contener espacios')
-        }
-
         const res = await fetch(`${API_URL}/api/profile`, {
           method: 'POST',
           headers: {
@@ -514,6 +519,50 @@ export default {
         error.value = err.message || 'Error al guardar el perfil'
       } finally {
         saving.value = false
+      }
+    }
+
+    const usernameStatus = computed(() => {
+      if (!editUsername.value) return "available" // Estado inicial
+      if (!isValidUsername(editUsername.value)) return "invalid"
+      if (!usernameAvailable.value) return "taken"
+      return "available"
+    })
+
+    const isValidUsername = (name) => {
+      // ^ = inicio, $ = fin, \w = [a-zA-Z0-9_], {3,15} = longitud mínima 3, máxima 15
+      return /^[a-zA-Z0-9._]{3,15}$/.test(name)
+    }
+
+
+    const checkUsernameAvailability = async (name) => {
+      name = name.trim()
+      editUsername.value = name
+      
+      if (!isValidUsername(name)) {
+        usernameAvailable.value = null
+        return false
+      }
+
+      checkingUsername.value = true
+      usernameAvailable.value = null
+
+      try {
+        const { data, error } = await supabase
+          .from('users')
+          .select('id')
+          .eq('username', name)
+          .neq('id', user.value.id)
+          .maybeSingle()
+
+        if (error) throw error
+
+        usernameAvailable.value = !data
+      } catch (err) {
+        console.error('checkUsernameAvailability error:', err)
+        
+      } finally {
+        checkingUsername.value = false
       }
     }
 
@@ -652,6 +701,7 @@ export default {
         error.value = ''
 
         editUsername.value = profileData.value.username
+        usernameAvailable.value = true // Asumir disponible al abrir
         editDisplayName.value = profileData.value.display_name
         editBio.value = profileData.value.bio
         showEditModal.value = true
@@ -741,7 +791,12 @@ export default {
       handleImageUpdated,
       formatCount,
       saveProfileAndClose,
-      viewsIcon
+      viewsIcon,
+      checkingUsername,
+      usernameAvailable,
+      isValidUsername,
+      checkUsernameAvailability,
+      usernameStatus,
     }
   }
 }
