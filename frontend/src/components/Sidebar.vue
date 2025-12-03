@@ -13,7 +13,7 @@
           <span>Buscar</span>
         </div>
 
-        <div class="nav-item" :class="{ 'active': showNotifications }" @click="toggleNotifications">
+        <div class="nav-item" :class="{ 'active': showNotifications, 'disabled': !user }" @click="toggleNotifications">
           <svg class="icon" v-html="notificationsIcon"></svg>
           <span>Notificaciones</span>
         </div>
@@ -28,7 +28,7 @@
           <span>Tienda</span>
         </router-link>
 
-        <div class="nav-item" :class="{ 'active': showMessages }" @click="toggleMessages">
+        <div class="nav-item" :class="{ 'active': showMessages, 'disabled': !user }" @click="toggleMessages">
           <svg class="icon" v-html="messagesIcon"></svg>
           <span>Mensajes</span>
 
@@ -95,7 +95,6 @@ onMounted(async () => {
       user_avatar_url.value = avatar
       localStorage.setItem('user_avatar_url', avatar)
     } else {
-      // 🔥 Si hay error, usar inmediatamente el avatar por defecto
       user_avatar_url.value = defaultAvatar
     }
   }
@@ -231,6 +230,11 @@ const settingsIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="26" height=
   background: rgba(0, 0, 0, 0.1);
 }
 
+.nav-item.disabled {
+  pointer-events: none;
+  cursor: default;
+}
+
 .icon {
   width: 26px;
   height: 26px;
@@ -273,5 +277,6 @@ const settingsIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="26" height=
   aspect-ratio: 1 / 1;
   padding: 0 !important;
 }
+
 
 </style>
