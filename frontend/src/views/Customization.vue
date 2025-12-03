@@ -12,12 +12,43 @@
           <h1 class="title">Personalización</h1>
         </div>
         
-        
+        <!-- Drop zones con preview y botón eliminar -->
+        <div class="drop-zones">
+          <div class="drop-zone" @drop="handleDrop($event, 'globe')" @dragover.prevent>
+            <h3>Globo</h3>
+            <div class="preview-container">
+              <div class="equipped-preview">
+                <img v-if="equippedPreviews.globe" :src="equippedPreviews.globe" class="equipped-image" />
+                <div v-else class="no-item-placeholder">Sin equipar</div>
+              </div>
+              <div class="current-item">{{ equippedItems.globe || 'Sin equipar' }}</div>
 
+            </div>
+          </div>
+          <div class="drop-zone" @drop="handleDrop($event, 'homeBg')" @dragover.prevent>
+            <h3>Fondo de home</h3>
+            <div class="preview-container">
+              <div class="equipped-preview">
+                <img v-if="equippedPreviews.homeBg" :src="equippedPreviews.homeBg" class="equipped-image" />
+                <div v-else class="no-item-placeholder">Sin equipar</div>
+              </div>
+              <div class="current-item">{{ equippedItems.homeBg || 'Sin equipar' }}</div>
 
+            </div>
+          </div>
+          <div class="drop-zone" @drop="handleDrop($event, 'profileBg')" @dragover.prevent>
+            <h3>Fondo de perfil</h3>
+            <div class="preview-container">
+              <div class="equipped-preview">
+                <img v-if="equippedPreviews.profileBg" :src="equippedPreviews.profileBg" class="equipped-image" />
+                <div v-else class="no-item-placeholder">Sin equipar</div>
+              </div>
+              <div class="current-item">{{ equippedItems.profileBg || 'Sin equipar' }}</div>
 
-
-        
+            </div>
+          </div>
+        </div>
+  
         <!-- Filtros -->
         <div class="filter-bar">
           <button 
