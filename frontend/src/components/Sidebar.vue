@@ -170,31 +170,30 @@ const settingsIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="26" height=
 }
 
 .notification-panel.show {
-  width: 350px;
+  width: 400px;
+  transform: translateX(0);
 }
 
 .searcher-panel {
   width: 0;
   overflow: hidden;
   transition: width 0.3s ease;
-  background: #0a0a0a;
-  border-left: 1px solid #333;
 }
 
 .searcher-panel.show {
-  width: 350px;
+  width: 400px;
+  transform: translateX(0);
 }
 
 .messages-panel {
   width: 0;
   overflow: hidden;
   transition: width 0.3s ease;
-  background: #0a0a0a;
-  border-left: 1px solid #333;
 }
 
 .messages-panel.show {
-  width: 350px;
+  width: 400px;
+  transform: translateX(0);
 }
 
 .logo {
@@ -265,7 +264,7 @@ const settingsIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="26" height=
   min-width: 23px;
   background: #e63946;
   color: white;
-  font-size: 0.68rem;
+  font-size: 0.9rem;
   font-weight: bold;
   border-radius: 50%;
   display: flex;

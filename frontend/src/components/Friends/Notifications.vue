@@ -114,7 +114,7 @@ watch(() => props.isVisible, (newValue) => {
 
 <style scoped>
 .notifications-panel {
-  width: 350px;
+  width: 400px;
   background: #0a0a0a;
   height: 100vh;
   display: flex;
