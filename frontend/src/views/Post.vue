@@ -614,7 +614,7 @@ export default {
   flex: 0 0 300px;
   position: fixed;
   height: 100vh;
-  left: calc(250px + 900px + 50px);
+  left: calc(50% + 400px);
   top: 0;
   width: 300px;
   background: #0a0a0a;

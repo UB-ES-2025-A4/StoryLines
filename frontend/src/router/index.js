@@ -11,6 +11,7 @@ import VisitProfile from '@/views/VisitProfile.vue'
 import CreateTrip from '@/views/CreateTrip.vue'
 import Settings from '@/views/Settings.vue'
 import Shop from '@/views/Shop.vue'
+import Customization from '@/views/Customization.vue'
 
 const routes = [
   {
@@ -74,7 +75,13 @@ const routes = [
     name: 'Shop',
     component: Shop,
     meta: { requiresAuth: true }
-  }
+  },
+  {
+    path: '/customization',
+    name: 'Customization',
+    component: Customization,
+    meta: { requiresAuth: true }
+  },
 ]
 
 
