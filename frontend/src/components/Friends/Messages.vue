@@ -31,7 +31,7 @@
           </div>
 
           <div class="preview-and-badge">
-            <div class="preview">{{ truncateText(chat.last_message, 60) }}</div>
+            <div class="preview">{{ truncateText(chat.last_message, 50) }}</div>
             <div v-if="chat.unreadCounts > 0" class="unread-badge">{{ chat.unreadCounts }}</div>
           </div>
         </div>
@@ -374,7 +374,7 @@ function autoResize(event) {
   height: 100vh;
   position: fixed;
   z-index: 1000;
-  border-right: 1px solid #333;
+  border-left: 1px solid #333;
   display: flex;
   flex-direction: column;
   font-family: system-ui, -apple-system, sans-serif;
@@ -503,7 +503,7 @@ function autoResize(event) {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 220px;
+  max-width: 210px;
 }
 
 .unread-badge {
@@ -581,6 +581,9 @@ function autoResize(event) {
   border-radius: 18px;
   background: #1a1a1a;
   color: #fff;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 
 .message-wrapper.mine .message {
