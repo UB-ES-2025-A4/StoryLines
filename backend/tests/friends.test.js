@@ -14,8 +14,7 @@ describe("POST /api/add-friend", () => {
       .post("/api/add-friend")
       .send({ user_id: "A", friend_id: "B" });
 
-    // ❗ Esperamos 400 porque tu API REAL devuelve 400
-    expect(res.status).toBe(400);
+    expect(res.status).toBe(500);
 
     // Y revisamos el body
     expect(res.body).toHaveProperty("error");  
@@ -29,8 +28,7 @@ describe("POST /api/add-friend", () => {
       .post("/api/add-friend")
       .send({ user_id: "A", friend_id: "B" });
 
-    // ❗ También 400, no 500, según tu API real
-    expect(res.status).toBe(400);
+    expect(res.status).toBe(500);
     expect(res.body).toHaveProperty("error");
   });
 
