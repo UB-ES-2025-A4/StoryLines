@@ -79,14 +79,15 @@ function createQuery(table) {
           return { data: data[0] ?? null, error: null };
         },
 
-        async then(resolve) {
+        async all() {
           const data = runFilters(ctx);
-          resolve({ data, error: null });
+          return { data, error: null };
         }
       };
 
       return wrapper;
     },
+
 
     /* ========================================================
        INSERT
@@ -124,7 +125,6 @@ function createQuery(table) {
       return {
         select() {
           return {
-            [Symbol.toStringTag]: "SupabaseQuerySelect",
             async single() {
               return { data: row, error: null };
             },
