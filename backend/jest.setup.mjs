@@ -1,5 +1,21 @@
 import { jest } from "@jest/globals";
 
+process.removeAllListeners("warning");
+process.on("warning", (warning) => {
+  // Ignorar específicamente los warnings de VM Modules
+  if (
+    warning.name === "ExperimentalWarning" &&
+    typeof warning.message === "string" &&
+    warning.message.includes("VM Modules")
+  ) {
+    return;
+  }
+
+  // Para cualquier otro warning, lo mostramos normal
+  // (si quieres silenciar TODO, comenta esta línea)
+  console.warn(warning);
+});
+
 /* ============================================================
    RESET DB
 ============================================================ */
