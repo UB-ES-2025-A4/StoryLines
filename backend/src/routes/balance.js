@@ -100,9 +100,7 @@ router.post('/deduct', async (req, res) => {
     const row = await ensureBalanceRow(userId)
 
     if (row.balance < amount) {
-      return res
-        .status(400)
-        .json({ ok: false, error: 'Balance insuficiente', balance: row.balance })
+      return res.status(400).json({ ok: false, error: "Saldo insuficiente" });
     }
 
     const newBalance = row.balance - amount

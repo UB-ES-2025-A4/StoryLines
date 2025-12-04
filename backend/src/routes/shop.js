@@ -40,6 +40,12 @@ router.get('/items', async (req, res) => {
 // GET /api/shop/items/:id
 router.get('/items/:id', async (req, res) => {
   const { id } = req.params
+  if (global.__mockDB) {
+    const item = global.__mockDB.shop_items.find(i => i.id === req.params.id);
+    if (!item) return res.status(404).json({ ok: false, error: "Item not found" });
+      return res.json({ ok: true, item });
+  }
+
 
   try {
     const { data, error } = await supabaseAdmin

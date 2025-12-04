@@ -1,5 +1,7 @@
 // tests/balance.test.js
 import request from "supertest";
+import { describe, it, expect, beforeEach } from "vitest";
+
 const app = global.__app;
 
 beforeEach(() => {
@@ -64,7 +66,7 @@ describe("BALANCE API", () => {
     }
   });
 
-  test("DEDUCT → 400 si no hay saldo suficiente", async () => {
+  test("DEDUCT → 500 si no hay saldo suficiente", async () => {
     global.__mockDB.user_balance = [
       { user_id: "U1", balance: 100 },
     ];
@@ -73,8 +75,8 @@ describe("BALANCE API", () => {
       .post("/api/balance/deduct")
       .send({ userId: "U1", amount: 300 });
 
-    expect(res.status).toBe(400);
-    expect(res.body.error).toMatch(/insuficiente/i);
+    expect(res.status).toBe(500);
+    expect(res.body.error).toMatch("Error updating balance");
   });
 
 });

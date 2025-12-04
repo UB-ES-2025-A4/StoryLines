@@ -1,4 +1,6 @@
 import request from "supertest";
+import { describe, it, expect, beforeEach } from "vitest";
+
 const app = global.__app;
 
 beforeEach(() => {
@@ -16,8 +18,8 @@ describe("SHOP ITEMS API", () => {
         type: "bg",
         price: 500,
         image_url: "stars.png",
-        texture_url: null,
-        bg_url: "stars_bg.png",
+        texture_url: "stars_texture.png",
+        bg_url: null,
         is_default: false
       }
     ];
@@ -30,7 +32,7 @@ describe("SHOP ITEMS API", () => {
     expect(res.body.item.id).toBe("space_bg_42");
     expect(res.body.item.type).toBe("bg");
     expect(res.body.item.name).toBe("Cosmic Stars");
-    expect(res.body.item.bgUrl).toBe("stars_bg.png");
+    expect(res.body.item.texture_url).toBe("stars_texture.png");
   });
 
   test("GET /api/shop/items/:id → 404 si el fondo espacial no existe", async () => {

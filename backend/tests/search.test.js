@@ -1,4 +1,6 @@
 import request from "supertest";
+import { describe, it, expect, beforeEach } from "vitest";
+
 import app from "../src/app.js";
 
 beforeEach(() => {
