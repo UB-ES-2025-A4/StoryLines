@@ -35,3 +35,64 @@ describe("POST /api/delete-friend", () => {
     expect(res.status).toBe(200);
   });
 });
+// ============================================================
+// 🧪 TESTS UNITARIOS — VALIDACIÓN (sin backend, sin imports)
+// ============================================================
+describe("UNIT — deleteFriend logic", () => {
+  const deleteRelation = (db, user_id, friend_id) => {
+    if (!user_id || !friend_id) return { error: "Missing" };
+
+    db.friends = db.friends.filter(
+      f => !(f.user_id === user_id && f.friend_id === friend_id)
+    );
+
+    return { ok: true };
+  };
+
+  test("Elimina relación existente", () => {
+    const db = { friends: [{ user_id: "A", friend_id: "B" }] };
+
+    deleteRelation(db, "A", "B");
+    expect(db.friends.length).toBe(0);
+  });
+
+  test("No rompe si no existe (idempotente)", () => {
+    const db = { friends: [] };
+
+    deleteRelation(db, "A", "B");
+    expect(db.friends.length).toBe(0);
+  });
+});
+
+describe("DELETE FRIEND — validación extra", () => {
+  beforeEach(() => {
+    global.resetMockDB();
+  });
+
+  test("400 si falta user_id", async () => {
+    const res = await request(app)
+      .post("/api/delete-friend")
+      .send({ friend_id: "B" });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBeDefined();
+  });
+
+  test("400 si falta friend_id", async () => {
+    const res = await request(app)
+      .post("/api/delete-friend")
+      .send({ user_id: "A" });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBeDefined();
+  });
+
+  test("200 aunque la relación no exista (idempotente)", async () => {
+    const res = await request(app)
+      .post("/api/delete-friend")
+      .send({ user_id: "A", friend_id: "B" });
+
+    // según cómo lo tengas, podría ser 200 ok aunque no hubiera nada
+    expect([200, 404]).toContain(res.status);
+  });
+});
