@@ -1,4 +1,5 @@
 import { jest } from "@jest/globals";
+global.jest = jest;
 
 process.removeAllListeners("warning");
 process.on("warning", (warning) => {
