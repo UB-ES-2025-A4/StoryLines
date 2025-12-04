@@ -8,7 +8,8 @@
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
     "lint": "eslint .",
-    "test": "node run-jest.cjs"
+    "test": "NODE_OPTIONS='' ./node_modules/.bin/jest"
+
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.76.1",
