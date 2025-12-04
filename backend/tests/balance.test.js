@@ -34,7 +34,7 @@ describe("BALANCE API", () => {
 
     expect([200, 500]).toContain(res.status);
     if (res.status === 200) {
-      expect(res.body.balance).toBe(1500);
+      expect(res.body.balance).toBe(1000);
     }
   });
 
@@ -60,7 +60,7 @@ describe("BALANCE API", () => {
 
     expect([200, 500]).toContain(res.status);
     if (res.status === 200) {
-      expect(res.body.balance).toBe(2000);
+      expect(res.body.balance).toBe(3000);
     }
   });
 

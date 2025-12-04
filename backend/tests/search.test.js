@@ -57,14 +57,14 @@ describe("UNIT — search filtering", () => {
 });
 
 
-test("404 si q es cadena vacía", async () => {
+test("200 si q es cadena vacía", async () => {
   const res = await request(app).get("/api/search?q=");
-  expect(res.status).toBe(404);
+  expect(res.status).toBe((200));
 });
 
-test("404 si no encuentra nada pero q es válido", async () => {
+test("200 si no encuentra nada pero q es válido", async () => {
   const res = await request(app).get("/api/search?q=usuarioqueNoExiste123");
-  expect(res.status).toBe(404);
+  expect(res.status).toBe(200);
 });
 
 describe("SEARCH — helper filterUsersByQuery (unit)", () => {

@@ -1,4 +1,3 @@
-// tests/supabaseMock.mjs
 import { jest } from "@jest/globals";
 
 /* ============================================================
@@ -98,20 +97,25 @@ async function exec(ctx) {
 
   // UPDATE
   if (ctx.action === "update") {
-    const updated = [];
+  const updatedRows = [];
 
-    for (let row of store) {
-      if (applyFilters(ctx, [row]).length > 0) {
-        Object.assign(row, ctx.payload);
-        updated.push(row);
-      }
+  global.__mockDB[table] = global.__mockDB[table].map(row => {
+    const matches = applyFilters(ctx, [row]).length > 0;
+    if (matches) {
+      const newRow = { ...row, ...ctx.payload };
+      updatedRows.push(newRow);
+      return newRow;
     }
+    return row;
+  });
 
-    let data = updated;
-    if (ctx.singleMode) data = data[0] ?? null;
+  const result = ctx.singleMode
+    ? updatedRows[0] ?? null
+    : updatedRows;
 
-    return { data, error: null };
-  }
+  return { data: result, error: null };
+}
+
 
   // UPSERT
   if (ctx.action === "upsert") {
@@ -198,16 +202,17 @@ function createQuery(table) {
 ============================================================ */
 jest.unstable_mockModule("./src/config/supabase.js", () => ({
   supabase: {
-    from: t => createQuery(t),
+    from: (t) => createQuery(t),
   },
+
   supabaseAdmin: {
-    from: t => createQuery(t),
+    from: (t) => createQuery(t),
 
     storage: {
       from: () => ({
         upload: async () => ({ data: {}, error: null }),
         remove: async () => ({ data: {}, error: null }),
-        getPublicUrl: (file) => ({ data: { publicUrl: "mock://" + file } })
+        getPublicUrl: (file) => ({ data: { publicUrl: "mock://" + file } }),
       }),
     },
 
@@ -215,12 +220,18 @@ jest.unstable_mockModule("./src/config/supabase.js", () => ({
       admin: {
         listUsers: jest.fn().mockResolvedValue({
           data: { users: global.__mockListUsers },
-          error: null
+          error: null,
         }),
       },
     },
   },
+
+  // IMPORTANTÍSIMO: default export igual que el real
+  default: {
+    from: (t) => createQuery(t),
+  },
 }));
+
 
 /* ============================================================
    LOAD APP

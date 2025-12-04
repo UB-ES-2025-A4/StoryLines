@@ -29,7 +29,7 @@ router.get("/", async (req, res) => {
     const { data, error } = await query;
     if (error) return res.status(500).json({ error: error.message });
 
-    const formatted = data.map((row) => {
+    const formatted = (data ?? []).map((row) => {
       const isSender = row.user_id === userId;
       const friendData = isSender ? row.friend : row.user;
 

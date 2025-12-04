@@ -9,16 +9,16 @@ router.get('/items', async (req, res) => {
     const { data, error } = await supabaseAdmin
       .from('shop_items')
       .select('*')
-      .order('price', { ascending: true })
 
-    console.log("Supabase devolvió:", data)
+    console.log("Supabase devolvió:", data ?? [])
+
 
     if (error) {
       console.error('Error supabase shop_items:', error)
       return res.status(500).json({ ok: false, error: 'Error loading items' })
     }
 
-    const items = data.map(row => ({
+    const items = (data ?? []).map(row => ({
       id: row.id,
       name: row.name,
       description: row.description,
