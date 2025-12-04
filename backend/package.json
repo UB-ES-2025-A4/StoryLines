@@ -8,7 +8,7 @@
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
     "lint": "eslint .",
-    "test": "NODE_OPTIONS='--experimental-vm-modules' jest"
+    "test": "vitest run"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.76.1",
