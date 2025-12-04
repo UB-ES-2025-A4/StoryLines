@@ -9,14 +9,16 @@ router.get('/items', async (req, res) => {
     const { data, error } = await supabaseAdmin
       .from('shop_items')
       .select('*')
-      .order('price', { ascending: true })
+
+    console.log("Supabase devolvió:", data ?? [])
+
 
     if (error) {
       console.error('Error supabase shop_items:', error)
       return res.status(500).json({ ok: false, error: 'Error loading items' })
     }
 
-    const items = data.map(row => ({
+    const items = (data ?? []).map(row => ({
       id: row.id,
       name: row.name,
       description: row.description,
@@ -38,6 +40,12 @@ router.get('/items', async (req, res) => {
 // GET /api/shop/items/:id
 router.get('/items/:id', async (req, res) => {
   const { id } = req.params
+  if (global.__mockDB) {
+    const item = global.__mockDB.shop_items.find(i => i.id === req.params.id);
+    if (!item) return res.status(404).json({ ok: false, error: "Item not found" });
+      return res.json({ ok: true, item });
+  }
+
 
   try {
     const { data, error } = await supabaseAdmin

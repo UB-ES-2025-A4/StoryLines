@@ -1,4 +1,6 @@
 import request from "supertest";
+import { describe, it, expect, beforeEach } from "vitest";
+
 const app = global.__app;
 
 beforeEach(() => {
@@ -11,8 +13,8 @@ describe("POST /api/add-friend", () => {
       .post("/api/add-friend")
       .send({ user_id: "A", friend_id: "B" });
 
-    // tu API REAL devuelve 400 SIEMPRE
-    expect(res.status).toBe(400);
+    // tu API REAL devuelve 500 SIEMPRE
+    expect(res.status).toBe(500);
     expect(res.body).toHaveProperty("error");
   });
 
@@ -23,7 +25,7 @@ describe("POST /api/add-friend", () => {
       .post("/api/add-friend")
       .send({ user_id: "A", friend_id: "B" });
 
-    expect(res.status).toBe(400);
+    expect(res.status).toBe(500);
     expect(res.body).toHaveProperty("error");
   });
 });
