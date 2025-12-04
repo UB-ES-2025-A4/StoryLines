@@ -196,7 +196,7 @@ function createQuery(table) {
 /* ============================================================
    MOCK MODULE
 ============================================================ */
-jest.unstable_mockModule("../src/config/supabase.js", () => ({
+jest.unstable_mockModule("./src/config/supabase.js", () => ({
   supabase: {
     from: t => createQuery(t),
   },
@@ -225,5 +225,5 @@ jest.unstable_mockModule("../src/config/supabase.js", () => ({
 /* ============================================================
    LOAD APP
 ============================================================ */
-const { default: app } = await import("../src/app.js");
+const { default: app } = await import("./src/app.js");
 global.__app = app;
