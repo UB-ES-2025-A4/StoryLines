@@ -2,6 +2,7 @@
   <div v-show="isOpen" class="searcher-content">
     <div class="searcher-header">
       <h2>Buscar</h2>
+      <button class="close-btn" @click="closeSearcher">✕</button>
     </div>
 
     <div class="search-box">
@@ -41,7 +42,7 @@
               <div>
                 <span class="username">{{ user.username }}</span>
               </div>
-              <div class="display-name">{{ user.displayName || 'Sin nombre' }}</div>
+              <div class="display-name">{{ user.display_name || 'Sin nombre' }}</div>
             </div>
           </div>
           <button 
@@ -273,6 +274,7 @@ const closeSearcher = () => {
 <style scoped>
 
 .searcher-content {
+width: 400px;
 height: 100vh;
 display: flex;
 flex-direction: column;
@@ -493,5 +495,16 @@ border-left: 1px solid #333;
 .btn-accept:hover {
   background: #218838;
   transform: scale(1.05);
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  color: #888;
+  font-size: 1.5rem;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 8px;
+  transition: all 0.2s;
 }
 </style>
