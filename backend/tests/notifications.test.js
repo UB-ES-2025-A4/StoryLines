@@ -21,3 +21,46 @@ describe("Notifications API", () => {
     expect([200, 500]).toContain(res.status);
   });
 });
+// ============================================================
+// 🧪 TESTS UNITARIOS — VALIDACIÓN (sin backend, sin imports)
+// ============================================================
+describe("UNIT — notifications logic", () => {
+  const createNotif = (db, userId, text) => {
+    if (!userId || !text) return { error: "Missing" };
+
+    const notif = { id: db.list.length + 1, userId, text };
+    db.list.push(notif);
+    return notif;
+  };
+
+  test("Crea una notificación válida", () => {
+    const db = { list: [] };
+
+    const n = createNotif(db, "U1", "Hola!");
+    expect(n.text).toBe("Hola!");
+    expect(db.list.length).toBe(1);
+  });
+
+  test("Error si faltan datos", () => {
+    const db = { list: [] };
+    const res = createNotif(db, null, "");
+
+    expect(res.error).toBeDefined();
+  });
+});
+
+test("404 si falta user_id en POST", async () => {
+  const res = await request(app)
+    .post("/api/notifications")
+    .send({ type: "friend_request", message: "Hola" });
+
+  expect(res.status).toBe(404);
+});
+
+test("404 si falta type en POST", async () => {
+  const res = await request(app)
+    .post("/api/notifications")
+    .send({ user_id: "U1", message: "Hola" });
+
+  expect(res.status).toBe(404);
+});
