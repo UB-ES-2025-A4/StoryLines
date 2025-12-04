@@ -63,7 +63,6 @@ function createQuery(table) {
     select(columns = "*") {
       const wrapper = {
         ctx,
-        [Symbol.toStringTag]: "SupabaseQuery",
         eq: (k, v) => { ctx._filters.push({ type: "eq", key: k, value: v }); return wrapper; },
         neq: (k, v) => { ctx._filters.push({ type: "neq", key: k, value: v }); return wrapper; },
         or: (expr) => { ctx._or = expr; return wrapper; },
@@ -80,11 +79,10 @@ function createQuery(table) {
           return { data: data[0] ?? null, error: null };
         },
 
-        async all() {
+        async then(resolve) {
           const data = runFilters(ctx);
-          return { data, error: null };
+          resolve({ data, error: null });
         }
-
       };
 
       return wrapper;
