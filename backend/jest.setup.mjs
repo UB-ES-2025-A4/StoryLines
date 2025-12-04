@@ -80,11 +80,11 @@ function createQuery(table) {
           return { data: data[0] ?? null, error: null };
         },
 
-        /* PROMESA REAL */
-        then(resolve) {
+        async all() {
           const data = runFilters(ctx);
-          resolve({ data, error: null });
+          return { data, error: null };
         }
+
       };
 
       return wrapper;
@@ -126,12 +126,19 @@ function createQuery(table) {
       return {
         select() {
           return {
-            then(resolve) {
-              resolve({ data: [row], error: null });
+            async single() {
+              return { data: row, error: null };
+            },
+            async maybeSingle() {
+              return { data: row, error: null };
+            },
+            async all() {
+              return { data: [row], error: null };
             }
           };
         }
       };
+
     },
 
     /* ========================================================
