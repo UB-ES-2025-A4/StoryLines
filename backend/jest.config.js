@@ -2,10 +2,7 @@ export default {
   testEnvironment: "node",
   transform: {},
 
-  // NECESARIO PARA EVITAR EL BUG CON ES MODULES
-  extensionsToTreatAsEsm: [".js"],
-
-  // NECESARIO PARA QUE JEST NO ENTRE EN RECURSIÓN TRANSFORMANDO ARCHIVOS
+  // Muy importante para Jest + ESM: evita errores de import/export
   moduleNameMapper: {
     "^(\\.{1,2}/.*)\\.js$": "$1.js",
   },
