@@ -455,21 +455,22 @@ export default {
     }
 
     const formatCount = (count) => {
-      if (count < 1000) return count.toString()
+      if (count < 1000) return count;
       if (count < 1000000) {
-        if (count % 1000 === 0) {
-          return (count / 1000).toFixed(0) + 'K'
+        if (count % 1000 < 100) {
+          return (count / 1000).toFixed(0) + 'K';
         } else {
-          return (count / 1000).toFixed(1) + 'K'
-        }
-      } else {
-        if (count % 1000000 === 0) {
-          return (count / 1000000).toFixed(0) + 'M'
-        } else {
-          return (count / 1000000).toFixed(1) + 'M'
+          return (count / 1000).toFixed(1) + 'K';
         }
       }
-    }
+      if (count < 1000000000) {
+        if (count % 1000000 < 100000) {
+          return (count / 1000000).toFixed(0) + 'M';
+        } else {
+          return (count / 1000000).toFixed(1) + 'M';
+        }
+      }
+    };
 
     // === Guardar perfil ===
     const API_URL = ''
@@ -678,7 +679,11 @@ export default {
     const truncateText = (text, limit) =>
       text?.length > limit ? text.slice(0, limit) + '...' : text || ''
 
-    const goToTrip = (tripId) => router.push(`/post/${tripId}`)
+    const goToTrip = (tripId) => {
+      if(currentTab.value === 'drafts') editTrip(tripId)
+      else
+      router.push(`/post/${tripId}`)
+    }
 
     const goToUser = (id) => {
       showFriends.value = false
@@ -910,6 +915,7 @@ export default {
   font-size: 1rem;
   background: rgba(255, 255, 255, 0.15);
   color: #fff;
+  font-family: inherit;
 }
 
 .save-btn {

@@ -22,7 +22,7 @@
         <div class="notification-content">
           <div class="text">
             <p>{{ n.message }}</p>
-            <small>{{ new Date(n.created_at).toLocaleDateString() }}</small>
+            <small>{{ formatDate(n.created_at) }}</small>
           </div>
 
           <div v-if="n.type === 'friend-approval'" class="actions">
@@ -96,6 +96,27 @@ async function rejectRequest(notif) {
     console.error(e)
   }
 }
+
+const formatDate = (dateStr) => {
+      if (!dateStr) return "";
+      
+      //how long ago was created
+      const date = new Date(dateStr);
+      const now = new Date();
+      const diff = now - date; // diferencia en milisegundos
+      const seconds = Math.floor(diff / 1000);
+      const minutes = Math.floor(seconds / 60);
+      const hours = Math.floor(minutes / 60);
+      const days = Math.floor(hours / 24);
+      const weeks = Math.floor(days / 7);
+
+      if (weeks > 0) return `${weeks} semana${weeks > 1 ? 's' : ''}`;
+      if (days > 0) return `${days}d`;
+      if (hours > 0) return `${hours}h`;
+      if (minutes > 0) return `${minutes}m`;
+      if (seconds > 0) return `${seconds}s`;
+      return "justo ahora";
+    };
 
 onMounted(async () => {
   const { data: { session } } = await supabase.auth.getSession()

@@ -8,7 +8,7 @@
       <h2 v-if="mode === 'list'">Chats</h2>
       <h2 v-if="mode === 'new'">Nuevo chat</h2>
 
-      <div v-if="mode === 'chat'" class="friend-info">
+      <div v-if="mode === 'chat'" class="friend-info" @click="goToFriendProfile(selectedFriend.id)">
         <img :src="selectedFriend?.avatar_url || defaultAvatar" class="friend-avatar-small" />
         <span class="friend-name">
           {{ selectedFriend?.display_name || selectedFriend?.username }}
@@ -91,8 +91,10 @@
 
 <script setup>
 import { ref, computed, onMounted, nextTick, watch } from "vue";
+import { useRouter } from "vue-router";
 import { supabase } from "@/config/supabase";
 
+const router = useRouter();
 const emit = defineEmits(["close"]);
 const props = defineProps({ isOpen: Boolean });
 
@@ -369,6 +371,10 @@ function autoResize(event) {
   saveDraft();
 }
 
+function goToFriendProfile(id){
+  router.push(`/user/${id}`);
+}
+
 </script>
 
 <style scoped>
@@ -413,6 +419,11 @@ function autoResize(event) {
   font-size: 1.2rem;
   font-weight: 500;
   margin-left: 12px;
+}
+
+.friend-info:hover {
+  cursor: pointer;
+  text-decoration: underline;
 }
 
 .friend-avatar-small {

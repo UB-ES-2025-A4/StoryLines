@@ -34,36 +34,44 @@
               <div class="trip-actions">
                 <button class="action-button like-button" @click="toggleLike">
                   <span class="like-icon" v-html="isLiked ? likeFilledIcon : likeOutlineIcon"></span>
-                  <span class="like-count">{{ likeCount }}</span>
+                  <span class="like-count">{{ formatCount(likeCount) }}</span>
                 </button>
                 <button class="action-button" @click="showComments = !showComments">
                   <span class="action-icon" v-html="commentIcon"></span>
-                  <span>{{ commentsCount }}</span>
+                  <span>{{ formatCount(commentsCount) }}</span>
                 </button>
                 <button class="action-button" v-if="showSaveButton()" @click="toggleSave">
                   <span class="action-icon" v-html="isSaved ? saveFilledIcon : saveOutlineIcon"></span>
                 </button>
               </div>
             </div>
-
-            <hr class="separator" />
           </div>
 
           <div class="stops-route">
             <div v-for="(stop, index) in trip.stops || []" :key="index" class="stop-card-wrapper">
               <div class="stop-card fade-in">
                 <div class="stop-images">
-                  <button class="nav-arrow left" @click="changeImage(stop, -1)" :disabled="stop.currentImageIndex === 0">◀</button>
+                  <button class="nav-arrow left" @click="changeImage(stop, -1)" :disabled="stop.currentImageIndex === 0">
+                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <path d="M15 18L9 12L15 6" stroke="#fff" stroke-width="2" stroke-linecap="round"
+                            stroke-linejoin="round" />
+                    </svg>
+                  </button>
 
                   <img :src="stop.images && stop.images.length > 0
                     ? stop.images[stop.currentImageIndex]
                     : defaultImage" alt="Stop image" class="stop-image" />
 
-                  <button class="nav-arrow right" @click="changeImage(stop, 1)" :disabled="!stop.images || stop.currentImageIndex === stop.images.length - 1">▶</button>
+                  <button class="nav-arrow right" @click="changeImage(stop, 1)" :disabled="!stop.images || stop.currentImageIndex === stop.images.length - 1">
+                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <path d="M9 6L15 12L9 18" stroke="#fff" stroke-width="2" stroke-linecap="round"
+                            stroke-linejoin="round" />
+                        </svg>
+                  </button>
                 </div>
 
                 <div class="stop-details">
-                  <h3 class="stop-title">
+                  <h3 class="stop-title" lang="es">
                     {{  index === 0 ? 'Origen: ' + stop.country : stop.country }}
                   </h3>
                   <div class="stop-info">
@@ -83,7 +91,7 @@
       <div v-show="showComments" class="comments-section">
         <h2 class="section-title">Comentarios</h2>
 
-        <div class="comments-list">
+        <div class="comments-list" ref="commentsListRef">
           <div v-if="comments.length === 0" class="no-comments">No hay comentarios todavía.</div>
           <div v-else>
             <div v-for="comment in comments" :key="comment.id" class="comment-item">
@@ -93,7 +101,7 @@
                     :src="comment.user?.avatarUrl || 'https://jkfenner.com/wp-content/uploads/2019/11/default-450x450.jpg'"
                     alt="Avatar" class="comment-avatar" />
                   <div class="user-text-wrapper">
-                    <p class="comment-user">{{ comment.user?.displayName || comment.user?.username || 'Anónimo' }}</p>
+                    <p class="comment-user">{{ comment.user?.username || comment.user?.username || 'Anónimo' }}</p>
                     <p class="comment-date">{{ formatDate(comment.createdAt) }}</p>
                   </div>
                 </div>
@@ -138,7 +146,7 @@
 </template>
 
 <script>
-import { ref, onMounted, onUnmounted } from "vue";
+import { ref, onMounted, onUnmounted, nextTick } from "vue";
 import { supabase } from '@/config/supabase'
 import { useRoute, useRouter } from "vue-router";
 import Sidebar from '@/components/Sidebar.vue';
@@ -156,6 +164,7 @@ export default {
     const newComment = ref("");
     const openMenuId = ref(null);
     const router = useRouter();
+    const commentsListRef = ref(null); // <-- AÑADIR ESTA REF
 
     // Modal
     const showDeleteModal = ref(false);
@@ -173,10 +182,25 @@ export default {
     const tripOwnerId = ref(null);
 
     let userId = null;
+    let username = null;
+    let avatarUrl = null;
 
     const loadUser = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       userId = user ? user.id : null;
+      
+      if (userId) {
+        const { data, error } = await supabase
+          .from('users')
+          .select('username, avatar_url')
+          .eq('id', userId)
+          .single();
+
+        if (!error && data) {
+          username = data.username;
+          avatarUrl = data.avatar_url;
+        }
+      }
     };
 
     const fetchTrip = async () => {
@@ -218,9 +242,16 @@ export default {
 
     const toggleLike = async () => {
       if (!userId) return alert("Debes iniciar sesión para dar like.");
+
       const id = route.params.id;
+
+      // --- OPTIMISTIC UPDATE ---
+      const previous = isLiked.value;
+      isLiked.value = !isLiked.value;
+      likeCount.value += isLiked.value ? 1 : -1;
+
       try {
-        if (isLiked.value) {
+        if (previous) {
           await fetch(`/api/trips/${id}/like/${userId}`, { method: "DELETE" });
         } else {
           await fetch(`/api/trips/${id}/like`, {
@@ -229,30 +260,42 @@ export default {
             body: JSON.stringify({ userId }),
           });
         }
-        await fetchTrip();
       } catch (e) {
-        console.error('Error toggling like');
+        // Revertir si falla
+        isLiked.value = previous;
+        likeCount.value += previous ? 1 : -1;
       }
     };
 
-    const toggleSave = async () => {
-      if (!userId) return alert("Debes iniciar sesión para guardar.");
-      const id = route.params.id;
-      try {
-        if (isSaved.value) {
-          await fetch(`/api/trips/${id}/save/${userId}`, { method: "DELETE" });
-        } else {
-          await fetch(`/api/trips/${id}/save`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ userId }),
-          });
-        }
-        await fetchTrip();
-      } catch (e) {
-        console.error('Error toggling save');
-      }
-    };
+
+const toggleSave = async () => {
+  if (!userId) return alert("Debes iniciar sesión para guardar.");
+
+  const id = route.params.id;
+
+  // --- OPTIMISTIC UPDATE ---
+  const previous = isSaved.value;
+  isSaved.value = !isSaved.value;
+
+  try {
+    if (previous) {
+      await fetch(`/api/trips/${id}/save/${userId}`, {
+        method: "DELETE"
+      });
+    } else {
+      await fetch(`/api/trips/${id}/save`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId })
+      });
+    }
+  } catch (e) {
+    // --- REVERT IF FAILED ---
+    isSaved.value = previous;
+    console.error("Error toggling save", e);
+  }
+};
+
 
     const showSaveButton = () => {
       return userId !== tripOwnerId.value;
@@ -263,18 +306,78 @@ export default {
       if (!newComment.value.trim()) return;
 
       const tripId = route.params.id;
+
+      // --- ID TEMPORAL ---
+      const tempId = "temp-" + Math.random().toString(36).slice(2, 10);
+
+      // --- COMENTARIO TEMPORAL ---
+      const temporaryComment = {
+        id: tempId,
+        user: {
+          id: userId,
+          username: username,
+          avatarUrl: avatarUrl || defaultAvatar,
+        },
+        text: newComment.value,
+        createdAt: new Date().toISOString(),
+        isTemporary: true
+      };
+
+      // --- AÑADIMOS AL ARRAY CORRECTO: comments ---
+      comments.value.push(temporaryComment);
+
+      // --- AUMENTAR COUNT ---
+      commentsCount.value++;
+
+      const commentText = newComment.value;
+      newComment.value = "";
+
+      // --- SCROLL AL FONDO DESPUÉS DE ACTUALIZAR EL DOM ---
+      await nextTick();
+      if (commentsListRef.value) {
+        commentsListRef.value.scrollTop = commentsListRef.value.scrollHeight;
+      }
+
       try {
-        await fetch(`/api/trips/${tripId}/comments`, {
+        // ENVIAR A LA API
+        const res = await fetch(`/api/trips/${tripId}/comments`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ userId, text: newComment.value }),
+          body: JSON.stringify({ userId, text: commentText }),
         });
-        newComment.value = "";
-        await fetchTrip();
+
+        const real = await res.json();
+        console.log("Respuesta del backend:", real);
+
+        // REEMPLAZAR TEMPORAL con el comentario normalizado del backend
+        const idx = comments.value.findIndex(c => c.id === tempId);
+
+        if (idx !== -1) {
+          // Normalizar la respuesta del backend para que coincida con la estructura del temporal
+          const normalizedComment = {
+            id: real.comment.id,
+            text: real.comment.text,
+            createdAt: real.comment.createdAt || real.comment.created_at,
+            user: {
+              id: userId,
+              username: username,
+              avatarUrl: avatarUrl || defaultAvatar,
+            }
+          };
+          console.log("Comentario normalizado:", normalizedComment);
+          comments.value.splice(idx, 1, normalizedComment);
+        }
+
       } catch (e) {
         console.error("Error enviando comentario:", e);
+
+        // REVERTIR CAMBIO OPTIMISTA
+        comments.value = comments.value.filter(c => c.id !== tempId);
+        commentsCount.value--;
       }
     };
+
+
 
     const canDeleteComment = (comment) => {
       if (!userId) return false;
@@ -299,6 +402,15 @@ export default {
 
       showDeleteModal.value = false;
 
+      // Eliminación optimista: remover del array local inmediatamente
+      const commentIndex = comments.value.findIndex(c => c.id === commentId);
+      let deletedComment = null;
+      if (commentIndex !== -1) {
+        deletedComment = comments.value[commentIndex];
+        comments.value.splice(commentIndex, 1);
+        commentsCount.value--;
+      }
+
       try {
         const res = await fetch(`/api/trips/${tripId}/comments/${commentId}/${userId}`, {
           method: 'DELETE'
@@ -307,19 +419,62 @@ export default {
         const data = await res.json();
 
         if (data.ok) {
-          await fetchTrip();
           openMenuId.value = null;
         } else {
+          // Revertir si falla
+          if (deletedComment) {
+            comments.value.splice(commentIndex, 0, deletedComment);
+            commentsCount.value++;
+          }
           alert(data.error || 'Error al eliminar');
         }
       } catch (e) {
+        // Revertir si falla
+        if (deletedComment) {
+          comments.value.splice(commentIndex, 0, deletedComment);
+          commentsCount.value++;
+        }
         alert('Error al eliminar comentario');
       }
     };
 
     const formatDate = (dateStr) => {
       if (!dateStr) return "";
-      return new Date(dateStr).toLocaleString("es-ES", { dateStyle: "short", timeStyle: "short" });
+      
+      //how long ago was created
+      const date = new Date(dateStr);
+      const now = new Date();
+      const diff = now - date; // diferencia en milisegundos
+      const seconds = Math.floor(diff / 1000);
+      const minutes = Math.floor(seconds / 60);
+      const hours = Math.floor(minutes / 60);
+      const days = Math.floor(hours / 24);
+      const weeks = Math.floor(days / 7);
+
+      if (weeks > 0) return `${weeks} semana${weeks > 1 ? 's' : ''}`;
+      if (days > 0) return `${days}d`;
+      if (hours > 0) return `${hours}h`;
+      if (minutes > 0) return `${minutes}m`;
+      if (seconds > 0) return `${seconds}s`;
+      return "justo ahora";
+    };
+
+    const formatCount = (count) => {
+      if (count < 1000) return count;
+      if (count < 1000000) {
+        if (count % 1000 < 100) {
+          return (count / 1000).toFixed(0) + 'K';
+        } else {
+          return (count / 1000).toFixed(1) + 'K';
+        }
+      }
+      if (count < 1000000000) {
+        if (count % 1000000 < 100000) {
+          return (count / 1000000).toFixed(0) + 'M';
+        } else {
+          return (count / 1000000).toFixed(1) + 'M';
+        }
+      }
     };
 
     const goToProfile = (id) => {
@@ -354,7 +509,7 @@ export default {
       trip, loading, error, changeImage, defaultImage, defaultCover, defaultAvatar,
       isLiked, likeCount, toggleLike, isSaved, toggleSave, showComments, likeOutlineIcon,
       likeFilledIcon, commentIcon, saveOutlineIcon, saveFilledIcon, views,
-      comments, commentsCount, newComment, sendComment, formatDate,
+      comments, commentsCount, newComment, sendComment, formatDate, formatCount,
       openMenuId, canDeleteComment, toggleMenu,
       showDeleteModal,
       commentToDelete,
@@ -362,6 +517,7 @@ export default {
       performDelete,
       showSaveButton,
       goToProfile,
+      commentsListRef,
     };
   },
 };
@@ -402,7 +558,8 @@ export default {
   flex: 1;
   width: 100%;
   height: 100vh;
-  background: #0a0a0a;
+  background: linear-gradient(to bottom, rgba(11, 47, 74, 0.8), rgba(39, 45, 45, 0.8));
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
   border: none;
   padding: 0;
   text-align: center;
@@ -418,7 +575,8 @@ export default {
 .trip-header-wrapper {
   position: sticky;
   top: 0;
-  background: #0a0a0a;
+  background: linear-gradient(135deg, rgba(2, 161, 143), rgba(55, 86, 137));
+  padding-bottom: 0.5rem;
   z-index: 10;
 }
 
@@ -449,12 +607,14 @@ export default {
   border-radius: 50%;
   border: 1px solid #fff;
   object-fit: cover;
+  margin-left: 20px;
 }
 
 .author-username {
   font-size: 1.2rem;
   margin-top: 0.5rem;
-  font-weight: 300;
+  font-weight: 400;
+  margin-left: 20px;
 }
 
 .trip-info {
@@ -481,20 +641,22 @@ export default {
 .trip-actions {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.2rem;
   flex-shrink: 0;
 }
 
 .action-button {
   display: flex;
   align-items: center;
-  gap: .5rem;
+  gap: .2rem;
   background: transparent;
   border: none;
   color: #fff;
   cursor: pointer;
   transition: opacity .2s;
   padding: .5rem;
+  font-size: 1.2rem;
+  line-height: 1;
 }
 
 .action-button:hover {
@@ -503,16 +665,18 @@ export default {
 
 .action-icon,
 .like-icon {
-  display: inline-block;
-  width: 20px;
-  height: 20px
+  display: flex;
+  justify-content: center; 
+  align-items: center; 
+  width: 30px;
+  height: 30px
 }
 
 .stops-route {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 0 2rem 2rem 2rem;
+  padding: 2rem 1rem 1rem 1rem;
 }
 
 .stop-card-wrapper {
@@ -531,18 +695,23 @@ export default {
   justify-content: space-between;
   align-items: flex-start;
   max-width: 850px;
+  min-width: 600px;
   margin: 0;
   min-height: 300px;
-  animation: fadeIn .6s ease-in
+  animation: fadeIn .6s ease-in;
+  gap: 1.5rem;
 }
 
 .stop-images {
   flex: 1;
+  min-width: 0;
   position: relative;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  width: 350px
+  width: 400px;
+  padding: 0 10px;
+  margin-bottom: 0.6rem;
 }
 
 .stop-image {
@@ -551,32 +720,48 @@ export default {
   object-fit: cover;
   border-radius: 8px;
   border: 1px solid rgba(255, 255, 255, 0.3);
+  display: block;
+  z-index: 0;
+  aspect-ratio: 1;
 }
 
 .nav-arrow {
-  background: rgba(10, 10, 10, 0.7);
-  border: 1px solid #fff;
+  background: rgba(11, 47, 74, 0.8);
+  border: 0.5px solid rgba(255, 255, 255, 0.2);
   border-radius: 50%;
   color: #fff;
   cursor: pointer;
   padding: 1rem;
   opacity: 0.9;
-  transition: opacity .2s;
+  transition: opacity 0.2s;
   width: 50px;
   height: 50px;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin: 0 10px;
+  z-index: 1;
 }
 
 .nav-arrow:hover {
   opacity: 1;
 }
 
+.nav-arrow.left {
+  margin-right: 10px;
+}
+
+.nav-arrow.right {
+  margin-left: 10px;
+}
+
 .nav-arrow:disabled {
   opacity: 0.3;
   cursor: not-allowed;
+}
+
+.nav-arrow svg {
+  width: 24px;
+  height: 24px;
 }
 
 .stop-details {
@@ -590,7 +775,12 @@ export default {
 
 .stop-title {
   font-size: 1.5rem;
-  margin-bottom: 1rem
+  margin-bottom: 1rem;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  white-space: normal;
+  max-width: 200px;
+  hyphens: auto;
 }
 
 .stop-info p {
@@ -605,7 +795,7 @@ export default {
   background: #fff;
   opacity: 0.7;
   height: 9rem;
-  left: 175px;
+  left: 195px; /* Centered under the image  */
   top: calc(250px + 1px); /* Bottom of image + outline */
   transform: translateX(-50%);
 }
@@ -617,7 +807,8 @@ export default {
   left: calc(50% + 400px);
   top: 0;
   width: 300px;
-  background: #0a0a0a;
+  background: linear-gradient(to bottom, rgba(11, 47, 74, 0.8), rgba(39, 45, 45, 0.8));
+  box-shadow: 10px 0px 15px rgba(0, 0, 0, 0.3);
   padding: 1.5rem;
   overflow-y: hidden;
   display: flex;
@@ -849,11 +1040,4 @@ color: white;
 background: #ff3333;
 }
 
-.separator {
-  border: none;
-  border-top: 1px solid #fff;
-  opacity: 0.5;
-  margin: 2rem 2rem 2rem 2rem;
-  width: calc(100% - 4rem);
-}
 </style>
