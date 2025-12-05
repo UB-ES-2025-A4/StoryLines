@@ -39,26 +39,21 @@
       <!-- VIAJES -->
       <div class="recent-trips-section">
         <div class="recent-trips-header">
-          <div class="tabs">
-            <button :class="{ active: currentTab === 'published' }" @click="currentTab = 'published'">
-              Viajes publicados
-            </button>
-
-            <span class="separator">|</span>
-
-            <button :class="{ active: currentTab === 'drafts' }" @click="currentTab = 'drafts'">
-              Borradores
-            </button>
-
-            <span class="separator">|</span>
-            <button :class="{ active: currentTab === 'saved' }" @click="currentTab = 'saved'">
-              Viajes guardados
-            </button>
+          <div class="tabs" :class="`tab-${currentTab}`">
+            <button :class="{ active: currentTab === 'published' }" @click="currentTab = 'published'">Viajes
+              publicados</button><!--
+    --><button :class="{ active: currentTab === 'drafts' }" @click="currentTab = 'drafts'">Borradores</button><!--
+    --><button :class="{ active: currentTab === 'saved' }" @click="currentTab = 'saved'">Viajes guardados</button>
           </div>
         </div>
 
         <div class="trips-container">
-          <div v-if="currentTrips.length > 0" class="trip-cards-wrapper">
+
+          <div v-if="loadingTrips" class="no-trips-message">
+            Cargando...
+          </div>
+
+          <div v-else-if="currentTrips.length > 0" class="trip-cards-wrapper">
             <div class="trip-card" v-for="trip in currentTrips" :key="trip.id" @click="goToTrip(trip.id)">
               <div class="trip-image-container">
                 <img :src="trip.image" alt="Foto del viaje" class="trip-image"
@@ -67,26 +62,27 @@
               </div>
 
               <div class="trip-info">
-                <div class="trip-details" style="margin-top: 1.2rem" v-if="currentTab === 'saved'">
+                <div class="trip-details" style="margin-top: 0.4rem" v-if="currentTab === 'saved'">
                   <h4>{{ truncateText(trip.title, 20) }}</h4>
                   <p>{{ truncateText(trip.description, 30) }}</p>
                 </div>
 
-                <div class="trip-details" v-if="currentTab !== 'saved'">
+                <div class="trip-details" style="margin-top: 0.4rem" v-if="currentTab !== 'saved'">
                   <h4>{{ truncateText(trip.title, 30) }}</h4>
                   <p>{{ truncateText(trip.description, 45) }}</p>
                 </div>
 
-
-                <p class="trip-views" style="margin-top: 0.5rem;"
-                  v-if="currentTab !== 'saved' && currentTab !== 'drafts'">
-                  <span v-html="viewsIcon"></span> {{ formatCount(trip.views) }}
-                </p>
-
-                <div class="trip-author" v-if="currentTab === 'saved' && trip.author">
-                  <p class="trip-views" style="margin-bottom: 0.5rem;" v-if="currentTab === 'saved'">
+                <div class="trip-stats" v-if="currentTab === 'published'">
+                  <p class="trip-views">
                     <span v-html="viewsIcon"></span> {{ formatCount(trip.views) }}
                   </p>
+
+                  <p class="trip-likes">
+                    <span v-html="likesIcon"></span> {{ formatCount(trip.likes) }}
+                  </p>
+                </div>
+
+                <div class="trip-author" v-if="currentTab === 'saved' && trip.author">
                   <span class="published-by">Publicado por</span>
                   <div class="author-info" @click.stop="goToUser(trip.author.id)">
                     <div class="avatar-container" style="width:30px; height:30px; margin-right:8px;">
@@ -199,7 +195,8 @@
 
         <div class="edit-form">
           <label>Nombre de usuario:</label>
-          <input type="text" v-model="editUsername" @input="checkUsernameAvailability($event.target.value)" placeholder="Nombre de usuario" />
+          <input type="text" v-model="editUsername" @input="checkUsernameAvailability($event.target.value)"
+            placeholder="Nombre de usuario" />
           <div style="margin-top: 0.8rem; min-height: 28px;">
             <small v-if="checkingUsername" style="color:#888;">Comprobando disponibilidad...</small>
             <small v-else-if="usernameStatus === 'available'" style="color:#4ade80; font-weight:600;">Disponible</small>
@@ -273,6 +270,7 @@ export default {
     const editDisplayName = ref('')
     const editBio = ref('')
     const loading = ref(true)
+    const loadingTrips = ref(true)
     const saving = ref(false)
     const error = ref('')
     const success = ref('')
@@ -599,7 +597,8 @@ export default {
           image:
             trip.cover_image ||
             'https://jkfenner.com/wp-content/uploads/2019/11/default-450x450.jpg',
-          views: trip.views || 0
+          views: trip.views || 0,
+          likes: trip.likes || 0
         }))
       } catch (err) {
         console.error('Error cargando viajes:', err)
@@ -635,7 +634,8 @@ export default {
             username: t.userName,
             avatar_url: t.userAvatar
           },
-          views: t.views || 0
+          views: t.views || 0,
+          likes: t.likes || 0
         }))
 
       } catch (err) {
@@ -740,11 +740,13 @@ export default {
     }
 
     onMounted(async () => {
+      loadingTrips.value = true
       await loadProfile()
       await loadFriends()
       await loadTrips()
       await loadDrafts()
       await loadSavedTrips()
+      loadingTrips.value = false
       document.addEventListener('click', handleClickOutside)
     })
 
@@ -753,12 +755,13 @@ export default {
     })
 
     const viewsIcon = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 15a3 3 0 100-6 3 3 0 000 6z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
-
+    const likesIcon = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
 
     return {
       user,
       profileData,
       loading,
+      loadingTrips,
       saving,
       error,
       success,
@@ -796,7 +799,7 @@ export default {
       handleImageUpdated,
       formatCount,
       saveProfileAndClose,
-      viewsIcon,
+      viewsIcon, likesIcon,
       checkingUsername,
       usernameAvailable,
       isValidUsername,
@@ -957,19 +960,24 @@ export default {
   padding: 1rem 2rem;
   background: linear-gradient(135deg, rgba(2, 161, 143, 0.8), rgba(55, 86, 137, 0.8));
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  border-radius: 10px 10px 0 0;
+  height: 75px;
 }
 
 .tabs {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 1rem;
+  gap: 3rem;
+  height: 100%;
+  position: relative;
 }
 
 .tabs button {
   background: none;
   border: none;
   color: #fff;
+  opacity: 0.5;
   font-size: 1.3rem;
   font-weight: 500;
   padding: 0;
@@ -979,7 +987,33 @@ export default {
 }
 
 .tabs button.active {
-  border-bottom: 2px solid #fff;
+  opacity: 1;
+}
+
+/* LÍNEA ANIMADA */
+.tabs::after {
+  content: '';
+  position: absolute;
+  bottom: -5px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 150px;
+  height: 3px;
+  background:  rgba(2, 161, 143);
+  border-radius: 3px;
+  box-shadow: 0 0 12px rgba(2, 161, 143, 0.7);
+  transition: all 0.45s cubic-bezier(0.4, 0, 0.2, 1);
+}
+    
+/* Movimiento exacto */
+.tabs.tab-published::after { 
+  left: calc(100% / 6 + 10px);
+}
+.tabs.tab-drafts::after { 
+  left: 50%;
+}
+.tabs.tab-saved::after { 
+  left: calc(100% / 6 * 5 - 10px);
 }
 
 .separator {
@@ -1415,11 +1449,28 @@ export default {
   border: 1px solid rgba(0, 0, 0, 0.2);
 }
 
+.trip-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  margin-top: 0.5rem;
+  margin-left: -0.5rem;
+}
+
 .trip-views {
   display: flex;
   align-items: center;
   gap: 0.3rem;
-  margin-left: 0.8rem;
+  margin: 0;
+  font-size: 0.85rem;
+  color: #555;
+}
+
+.trip-likes {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  margin: 0;
   font-size: 0.85rem;
   color: #555;
 }

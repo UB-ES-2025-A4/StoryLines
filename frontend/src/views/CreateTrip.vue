@@ -293,11 +293,8 @@ export default {
     const loadTrip = async () => {
       if (!tripId.value) {
         // Nuevo viaje
-        loading.value = false
         return
       }
-
-      loading.value = true
       error.value = []
 
       try {
@@ -375,9 +372,11 @@ export default {
     }, { immediate: false })
 
     onMounted(async () => {
+      loading.value = true
       await loadUser()
       await loadCountries()
       await loadTrip()
+      loading.value = false
       window.addEventListener('click', closeAllDropdowns)
     })
 
