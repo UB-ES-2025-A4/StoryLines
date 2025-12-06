@@ -250,6 +250,8 @@ import ChangePicture from '@/components/Profile/ChangePicture.vue'
 import Sidebar from '@/components/Sidebar.vue'
 import { useCustomization } from '@/composables/useCustomization'
 import { getItemById } from '@/data/shopThemes'
+import { getItems } from '@/data/shopThemes'
+
 
 export default {
   name: 'Profile',
@@ -289,15 +291,30 @@ export default {
       'https://upload.wikimedia.org/wikipedia/commons/a/ac/Default_pfp.jpg'
 
     // Sistema de personalización de fondo
+    // Sistema de personalización de fondo
     const { getEquippedItem } = useCustomization()
+
+    const defaultProfileBg =
+      "https://images.unsplash.com/photo-1604608672516-f1b9b1d37076?ixlib=rb-4.1.0"
+
     const bgStyle = computed(() => {
-      const equippedBgId = getEquippedItem('profileBg')
-      const bgItem = equippedBgId ? getItemById(equippedBgId) : null
-      const bgUrl = bgItem?.bgUrl || 'https://images.unsplash.com/photo-1604608672516-f1b9b1d37076?ixlib=rb-4.1.0'
+      const equippedBgId = getEquippedItem("profileBg")
+
+      if (!equippedBgId || allItems.value.length === 0) {
+        return {
+          background: `url('${defaultProfileBg}') center/cover no-repeat`
+        }
+      }
+
+      const item = allItems.value.find(i => i.id === equippedBgId)
+
+      const bgUrl = item?.bgUrl || item?.imageUrl || defaultProfileBg
+
       return {
         background: `url('${bgUrl}') center/cover no-repeat`
       }
     })
+
 
 
     const showConfirmDeleteFriend = ref(false)
@@ -739,16 +756,22 @@ export default {
       }
     }
 
+    const allItems = ref([])
+
     onMounted(async () => {
-      loadingTrips.value = true
+      const { data: { session } } = await supabase.auth.getSession()
+      user.value = session?.user
+
+      // ⬇️ CARGA TODOS LOS ITEMS DE LA TIENDA
+      allItems.value = await getItems()
+
       await loadProfile()
       await loadFriends()
       await loadTrips()
       await loadDrafts()
       await loadSavedTrips()
-      loadingTrips.value = false
-      document.addEventListener('click', handleClickOutside)
     })
+
 
     onUnmounted(() => {
       document.removeEventListener('click', handleClickOutside)

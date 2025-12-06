@@ -7,7 +7,6 @@
       <div class="shop-header">
         <div class="header-left">
           <h1>Tienda</h1>
-          <button @click="showTextureTester = true" class="btn-test">Probar Texturas</button>
         </div>
         <BalanceDisplay @click="showRechargeModal = true" />
       </div>

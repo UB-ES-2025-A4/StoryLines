@@ -80,4 +80,40 @@ router.get('/items/:id', async (req, res) => {
   }
 })
 
-export default router
+export async function ensureDefaultItems(userId) {
+  const { data: freeItems, error } = await supabaseAdmin
+    .from("shop_items")
+    .select("id")
+    .or("price.eq.0,is_default.eq.true");
+
+  if (error) throw error;
+  if (!freeItems || freeItems.length === 0) return;
+
+  const freeIds = freeItems.map(i => i.id);
+
+  const { data: owned, error: ownedErr } = await supabaseAdmin
+    .from("user_items")
+    .select("item_id")
+    .eq("user_id", userId);
+
+  if (ownedErr) throw ownedErr;
+
+  const ownedIds = owned.map(x => x.item_id);
+  const missing = freeIds.filter(id => !ownedIds.includes(id));
+  if (missing.length === 0) return;
+
+  const inserts = missing.map(id => ({
+    user_id: userId,
+    item_id: id,
+  }));
+
+  const { error: insertError } = await supabaseAdmin
+    .from("user_items")
+    .insert(inserts);
+
+  if (insertError) throw insertError;
+}
+
+export default router;
+
+
