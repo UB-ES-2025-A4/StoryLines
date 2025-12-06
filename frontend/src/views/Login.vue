@@ -7,34 +7,29 @@
       <form @submit.prevent="handleLogin" class="form-content">
         <div class="form-group">
           <label for="email">Correo Electrónico:</label>
-          <input
-            type="email"
-            id="email"
-            v-model="email"
-            required
-            placeholder=" "
-          />
+          <input type="email" id="email" v-model="email" required placeholder=" " />
         </div>
 
-        <div class="form-group">
+        <div class="form-group" style="position: relative;">
           <label for="password">Contraseña:</label>
-          <input
-            type="password"
-            id="password"
-            v-model="password"
-            required
-            placeholder=" "
-          />
+          <input :type="showPassword ? 'text' : 'password'" id="password" v-model="password" required placeholder=" "
+            style="padding-right: 2.5rem;" />
+          <button type="button" @click="showPassword = !showPassword" class="toggle-btn"
+            v-html="showPassword ? eyeSlashIcon : eyeIcon">
+          </button>
         </div>
 
-        <!-- Checkbox Recordarme -->
-        <div class="checkbox-group">
-          <input
-            type="checkbox"
-            id="rememberMe"
-            v-model="rememberMe"
-          />
-          <label for="rememberMe">Recordarme</label>
+        <div class="checkbox-row">
+          <!-- Checkbox Recordarme -->
+          <div class="checkbox-group">
+            <input type="checkbox" id="rememberMe" v-model="rememberMe" />
+            <label for="rememberMe">Recordarme</label>
+          </div>
+
+          <p class="forgot-password" @click="openResetModal">
+            ¿Has olvidado tu contraseña?
+          </p>
+
         </div>
 
         <p v-if="error" class="error">{{ error }}</p>
@@ -49,6 +44,31 @@
         <router-link to="/register">Registrarse</router-link>
       </p>
     </div>
+
+    <!-- Modal para restablecer contraseña-->
+    <div v-if="showResetModal" class="modal-overlay" @click.self="closeResetModal">
+      <div class="modal">
+
+        <h3>Restablecer contraseña</h3>
+
+        <div class="form-group">
+          <label for="resetEmail">Introduce tu correo electrónico</label>
+          <input type="email" id="resetEmail" v-model="resetEmail" required placeholder=" " class="login-input" />
+        </div>
+
+        <p v-if="resetMessage" class="success-msg">{{ resetMessage }}</p>
+        <p v-if="resetError" class="error-msg">{{ resetError }}</p>
+
+        <button class="login-btn" @click="sendResetEmail" :disabled="resetLoading">
+          {{ resetLoading ? 'Enviando...' : 'Enviar enlace' }}
+        </button>
+
+        <button class="cancel-btn" @click="closeResetModal">
+          Cancelar
+        </button>
+      </div>
+    </div>
+
   </div>
 </template>
 
@@ -102,6 +122,43 @@ export default {
       }
     }
 
+    const showResetModal = ref(false)
+    const resetEmail = ref('')
+    const resetLoading = ref(false)
+    const resetError = ref('')
+    const resetMessage = ref('')
+
+    const openResetModal = () => {
+      resetEmail.value = email.value
+      resetMessage.value = ''
+      resetError.value = ''
+      showResetModal.value = true
+    }
+
+    const closeResetModal = () => {
+      showResetModal.value = false
+    }
+
+    const sendResetEmail = async () => {
+      resetError.value = ''
+      resetMessage.value = ''
+      resetLoading.value = true
+
+      try {
+        const { error: resetErr } = await supabase.auth.resetPasswordForEmail(resetEmail.value, {
+          redirectTo: window.location.origin + '/reset-password'
+        })
+
+        if (resetErr) throw resetErr
+
+        resetMessage.value = 'Te hemos enviado un correo de restablecimiento.'
+      } catch (err) {
+        resetError.value = 'Error al enviar el correo de restablecimiento.'
+      } finally {
+        resetLoading.value = false
+      }
+    }
+
     // Al montar, recuperar datos guardados
     onMounted(() => {
       const savedEmail = localStorage.getItem('rememberedEmail')
@@ -114,13 +171,40 @@ export default {
       }
     })
 
+    const eyeIcon = `
+<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+    <circle cx="12" cy="12" r="3"/>
+</svg>
+`
+
+    const eyeSlashIcon = `
+<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">     
+    <path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>     
+    <path d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>     
+    <line x1="3" y1="3" x2="21" y2="21"/> </svg>
+`
+
+    const showPassword = ref(false)
+
     return {
       email,
       password,
       rememberMe,
       error,
       loading,
-      handleLogin
+      handleLogin,
+      showResetModal,
+      openResetModal,
+      closeResetModal,
+      resetEmail,
+      resetLoading,
+      resetError,
+      resetMessage,
+      sendResetEmail,
+      eyeIcon,
+      eyeSlashIcon,
+      showPassword
     }
   }
 }
@@ -180,6 +264,31 @@ export default {
   width: 100%;
 }
 
+.toggle-btn {
+    position: absolute;
+    right: 1rem;
+    top: 1.9rem;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: #777b7e;
+    padding: 0;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+
+.toggle-btn:hover {
+    color: #bebdb8 !important;
+    background: none !important;
+    transform: translateY(-50%) !important;
+    border-color: transparent !important;
+}
+
 label {
   margin-bottom: 0.4rem;
   font-weight: 500;
@@ -190,7 +299,8 @@ label {
 
 /* Inputs */
 input[type="email"],
-input[type="password"] {
+input[type="password"],
+input[type="text"] {
   width: 100%;
   padding: 0.7rem;
   border: 1px solid transparent;
@@ -283,4 +393,140 @@ a {
 a:hover {
   color: #ccc;
 }
+
+/* Row del checkbox + link */
+.checkbox-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 0.6rem 0 1rem;
+}
+
+.forgot-password {
+  color: #fff;
+  opacity: 0.85;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.forgot-password:hover {
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+/* MODAL RESTABLECER – ESTILO EXACTAMENTE IGUAL QUE EL LOGIN */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(4px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+}
+
+.modal {
+  background: #1a1a1a;
+  padding: 2.5rem 2rem;
+  border-radius: 15px;
+  width: 90%;
+  max-width: 420px;
+  color: #fff;
+  position: relative;
+  box-shadow: 0 0 20px rgba(255, 255, 255, 0.08);
+  text-align: center;
+}
+
+.modal h3 {
+  margin: 0 0 1.8rem 0;
+  font-size: 1.4rem;
+  font-weight: 600;
+}
+
+
+.modal .form-group {
+  margin-bottom: 1.5rem;
+}
+
+.modal label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+  text-align: left;
+  padding-left: 0.3rem;
+}
+
+.modal input {
+  width: 100%;
+  padding: 0.75rem;
+  background: #000;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  color: white;
+  font-size: 1rem;
+  transition: border 0.3s ease;
+}
+
+.modal input:focus,
+.modal input:not(:placeholder-shown) {
+  border-color: #fff;
+}
+
+.login-btn {
+  width: 100%;
+  padding: 1rem;
+  background: #fff;
+  color: #000;
+  border: none;
+  border-radius: 10px;
+  font-size: 1rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin-top: 0.8rem;
+}
+
+.login-btn:hover:not(:disabled) {
+  background: #e0e0e0;
+  transform: scale(1.02);
+}
+
+.login-btn:disabled {
+  background: #888;
+  cursor: not-allowed;
+}
+
+.cancel-btn {
+  width: 100%;
+  margin-top: 0.8rem;
+  padding: 0.9rem;
+  background: transparent;
+  color: #aaa;
+  border: 1px solid #444;
+  border-radius: 10px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.cancel-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+  color: rgba(255, 255, 255, 0.05);
+  border-color: #666;
+}
+
+/* Mensajes */
+.success-msg {
+  color: #4ade80;
+  margin: 1rem 0 0;
+  font-size: 0.95rem;
+}
+
+.error-msg {
+  color: #ff6b6b;
+  margin: 1rem 0 0;
+  font-size: 0.95rem;
+}
+
 </style>
