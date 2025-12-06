@@ -36,7 +36,8 @@
                   </div>
                 </div>
                 <label>Descripción </label>
-                <textarea v-model="trip.description" rows="3" placeholder="Añade una breve descripción del viaje..."></textarea>
+                <textarea v-model="trip.description" rows="3"
+                  placeholder="Añade una breve descripción del viaje..."></textarea>
               </div>
             </div>
             <div class="step-actions">
@@ -115,7 +116,29 @@
                     <label>Descripción</label>
                     <textarea v-model="stop.description" rows="3" placeholder="Descripción de la parada..."></textarea>
                   </div>
-                  <button v-if="index > 0" class="remove-stop-btn" @click="removeStop(index)">X</button>
+                  <!-- Botones de orden -->
+                  <div class="order-controls-left">
+                    <button class="order-btn up" @click="moveStopUp(index)" :disabled="index === 0"
+                      title="Subir parada">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                        <path d="M12 19V5M5 12l7-7 7 7" />
+                      </svg>
+                    </button>
+
+                    <button class="order-btn down" @click="moveStopDown(index)"
+                      :disabled="index === trip.stops.length - 1" title="Bajar parada">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                        <path d="M12 5v14m7-7l-7 7-7-7" />
+                      </svg>
+                    </button>
+                  </div>
+                  <!-- Botón para eliminar -->
+                  <button v-if="index > 0" class="remove-stop-btn" @click="removeStop(index)" title="Eliminar parada">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M18 6L6 18M6 6l12 12" />
+                    </svg>
+                  </button>
+
                 </div>
                 <div v-if="index < trip.stops.length - 1" class="route-line"></div>
               </div>
@@ -270,11 +293,8 @@ export default {
     const loadTrip = async () => {
       if (!tripId.value) {
         // Nuevo viaje
-        loading.value = false
         return
       }
-
-      loading.value = true
       error.value = []
 
       try {
@@ -352,9 +372,11 @@ export default {
     }, { immediate: false })
 
     onMounted(async () => {
+      loading.value = true
       await loadUser()
       await loadCountries()
       await loadTrip()
+      loading.value = false
       window.addEventListener('click', closeAllDropdowns)
     })
 
@@ -768,13 +790,33 @@ export default {
       } finally { savingPublish.value = false }
     }
 
+    const moveStopUp = (i) => {
+      if (i === 0) return;
+      const arr = trip.value.stops;
+      [arr[i - 1], arr[i]] = [arr[i], arr[i - 1]];
+
+      // mover también el input file correspondiente
+      const filesArr = stopFileInputs.value;
+      [filesArr[i - 1], filesArr[i]] = [filesArr[i], filesArr[i - 1]];
+    };
+
+    const moveStopDown = (i) => {
+      const arr = trip.value.stops;
+      if (i >= arr.length - 1) return;
+      [arr[i], arr[i + 1]] = [arr[i + 1], arr[i]];
+
+      const filesArr = stopFileInputs.value;
+      [filesArr[i], filesArr[i + 1]] = [filesArr[i + 1], filesArr[i]];
+    };
+
+
 
 
 
     return {
       trip, error, success, coverPreview, countries,
       filteredCountries, selectCountry, clearCountry, getCountryNameById,
-      addStop, removeStop, changeStopImage, removeCurrentStopImage,
+      addStop, removeStop, changeStopImage, removeCurrentStopImage, moveStopDown, moveStopUp,
       stopFileInputs, openStopFile, handleStopImagesUpload,
       handleCoverUpload,
       saveDraft, saveChanges, publishTrip, cancelTrip,
@@ -789,7 +831,7 @@ export default {
 .create-trip {
   display: flex;
   min-height: 100vh;
-  background: url('https://images.unsplash.com/photo-1451187580459-43490279c0fa?ixlib=rbahoo4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&q=80&w=1172') no-repeat center center/cover;
+  background: url('//unpkg.com/three-globe/example/img/night-sky.png');
   background-attachment: fixed;
   color: #fff;
 }
@@ -1280,5 +1322,96 @@ export default {
   margin-bottom: 1rem;
   text-align: center;
 }
+
+.order-controls-left {
+  position: absolute;
+  left: -70px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  z-index: 10;
+}
+
+.order-btn {
+  width: 48px;
+  height: 48px;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  backdrop-filter: blur(6px);
+}
+
+.order-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.25);
+  transform: translateY(-3px) scale(1.05);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+}
+
+.order-btn:disabled {
+  opacity: 0.25;
+  cursor: not-allowed;
+  transform: none !important;
+}
+
+.order-btn svg {
+  width: 22px;
+  height: 22px;
+}
+
+.remove-stop-btn {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: rgba(231, 76, 60, 0.9);
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  z-index: 11;
+}
+
+.remove-stop-btn:hover {
+  background: #c0392b;
+  transform: scale(1.1);
+}
+
+.remove-stop-btn svg {
+  width: 18px;
+  height: 18px;
+}
+
+@media (max-width: 900px) {
+  .order-controls-left {
+    position: static;
+    transform: none;
+    flex-direction: row;
+    justify-content: center;
+    gap: 16px;
+    margin-bottom: 1rem;
+  }
+  
+  .stop-card {
+  }
+  
+  .remove-stop-btn {
+    top: 8px;
+    right: 8px;
+  }
+}
+
 
 </style>

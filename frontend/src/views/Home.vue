@@ -12,7 +12,7 @@
         <h1>StoryLines</h1>
       </div>
       
-      <nav class="nav">
+      <nav class="nav" :disabled="loading">
         <div v-if="!user" class="guest-menu">
           <p class="explore-text">Explora viajes alrededor del mundo</p>
           <router-link to="/login" class="btn btn-primary">Iniciar Sesión</router-link>
@@ -33,11 +33,13 @@ import Sidebar from '@/components/Sidebar.vue'
 
 const router = useRouter()
 const user = ref(null)
+const loading = ref(true)
 
 // Obtener usuario actual
 onMounted(async () => {
   const { data: { session } } = await supabase.auth.getSession()
   user.value = session?.user || null
+  loading.value = false
 })
 
 // Escuchar cambios en la autenticación

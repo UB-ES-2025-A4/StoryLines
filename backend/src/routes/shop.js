@@ -10,8 +10,6 @@ router.get('/items', async (req, res) => {
       .from('shop_items')
       .select('*')
 
-    console.log("Supabase devolvió:", data ?? [])
-
 
     if (error) {
       console.error('Error supabase shop_items:', error)
