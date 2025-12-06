@@ -151,7 +151,7 @@ export default {
 
         if (resetErr) throw resetErr
 
-        resetMessage.value = 'Se ha enviado un enlace de restablecimiento a tu correo.'
+        resetMessage.value = 'Te hemos enviado un correo de restablecimiento.'
       } catch (err) {
         resetError.value = 'Error al enviar el correo de restablecimiento.'
       } finally {
