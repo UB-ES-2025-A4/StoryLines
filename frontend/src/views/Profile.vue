@@ -759,18 +759,26 @@ export default {
     const allItems = ref([])
 
     onMounted(async () => {
+      loading.value = true
+
       const { data: { session } } = await supabase.auth.getSession()
       user.value = session?.user
 
-      // ⬇️ CARGA TODOS LOS ITEMS DE LA TIENDA
+      await Promise.all([
+        loadProfile(),
+        loadFriends(),
+        loadTrips(),
+        loadDrafts(),
+        loadSavedTrips()
+      ])
+
+      loadingTrips.value = false   // ✅ ESTA LÍNEA ARREGLA TU PROBLEMA
+
       allItems.value = await getItems()
 
-      await loadProfile()
-      await loadFriends()
-      await loadTrips()
-      await loadDrafts()
-      await loadSavedTrips()
+      loading.value = false
     })
+
 
 
     onUnmounted(() => {
