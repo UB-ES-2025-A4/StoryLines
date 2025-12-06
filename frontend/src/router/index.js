@@ -82,6 +82,11 @@ const routes = [
     component: Customization,
     meta: { requiresAuth: true }
   },
+  {
+    path: '/reset-password',
+    name: 'ResetPassword',
+    component: () => import('@/views/ResetPassword.vue')
+  }
 ]
 
 
@@ -92,6 +97,11 @@ const router = createRouter({
 
 // Guard de navegación para proteger rutas
 router.beforeEach(async (to, from, next) => {
+
+  if (to.path === '/reset-password') {
+    return next()
+  }
+
   // Obtener sesión actual
   const { data: { session } } = await supabase.auth.getSession()
   

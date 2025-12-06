@@ -9,22 +9,30 @@
 
         <div class="form-group">
           <label for="email">Correo Electrónico:</label>
-          <input type="email" id="email" v-model="email" required placeholder="" />
+          <input type="email" id="email" v-model="email" required placeholder="" autocomplete="off" />
         </div>
 
         <div class="form-group">
           <label for="confirmEmail">Confirmar Correo Electrónico:</label>
-          <input type="email" id="confirmEmail" v-model="confirmEmail" required placeholder="" />
+          <input type="email" id="confirmEmail" v-model="confirmEmail" required placeholder="" autocomplete="new-email" />
         </div>
-
-        <div class="form-group">
+        
+        <div class="form-group" style="position: relative;">
           <label for="password">Contraseña:</label>
-          <input type="password" id="password" v-model="password" required minlength="8" placeholder="" />
+          <input :type="showPassword ? 'text' : 'password'" id="password" v-model="password" required minlength="8" placeholder=""  autocomplete="new-password"
+            style="padding-right: 2.5rem;" />
+          <button type="button" @click="showPassword = !showPassword" class="toggle-btn"
+            v-html="showPassword ? eyeSlashIcon : eyeIcon">
+          </button>
         </div>
 
-        <div class="form-group">
-          <label for="confirmPassword">Confirmar Contraseña:</label>
-          <input type="password" id="confirmPassword" v-model="confirmPassword" required placeholder="" />
+        <div class="form-group" style="position: relative;">
+          <label for="passwordConfirm">Confirmar contraseña:</label>
+          <input :type="showPasswordConfirm ? 'text' : 'password'" id="passwordConfirm" v-model="passwordConfirm" required placeholder=" " autocomplete="off"
+            style="padding-right: 2.5rem;" />
+          <button type="button" @click="showPasswordConfirm = !showPasswordConfirm" class="toggle-btn"
+            v-html="showPasswordConfirm ? eyeSlashIcon : eyeIcon">
+          </button>
         </div>
 
         <div class="checkbox-group">
@@ -108,6 +116,9 @@ export default {
     const usernameAvailable = ref(null)
     const tempUsername = ref('')
     const rememberMe = ref(false)
+
+    const showPassword = ref(false)
+    const showPasswordConfirm = ref(false)
 
     const handleRegister = async () => {
 
@@ -244,6 +255,20 @@ export default {
       return `${nouns[Math.floor(Math.random()*nouns.length)]}${adjectives[Math.floor(Math.random()*adjectives.length)]}${number}`
     }
 
+        const eyeIcon = `
+<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+    <circle cx="12" cy="12" r="3"/>
+</svg>
+`
+
+    const eyeSlashIcon = `
+<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">     
+    <path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>     
+    <path d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>     
+    <line x1="3" y1="3" x2="21" y2="21"/> </svg>
+`
+
     return {
       username,
       email,
@@ -262,7 +287,11 @@ export default {
       generateRandomUsername,
       tempUsername,
       rememberMe,
-      isValidUsername
+      showPassword,
+      showPasswordConfirm,
+      isValidUsername,
+      eyeIcon,
+      eyeSlashIcon
     }
   }
 }
@@ -320,6 +349,30 @@ export default {
   display: flex;
   flex-direction: column;
   width: 100%;
+}
+
+button.toggle-btn {
+    position: absolute;
+    right: 1rem;
+    top: 1.9rem;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: #777b7e;
+    padding: 0;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+
+button.toggle-btn:hover {
+    color: #bebdb8 !important;
+    background: none !important;
+    transform: translateY(-50%) !important;
 }
 
 label {
