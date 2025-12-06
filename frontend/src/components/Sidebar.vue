@@ -8,20 +8,12 @@
           <span>Home</span>
         </router-link>
 
-        <div 
-          class="nav-item" 
-          :class="{ 'active': showSearcher }"
-          @click="toggleSearcher"
-        >
+        <div class="nav-item" :class="{ 'active': showSearcher }" @click="toggleSearcher">
           <svg class="icon" v-html="searchIcon"></svg>
           <span>Buscar</span>
         </div>
 
-        <div 
-          class="nav-item" 
-          :class="{ 'active': showNotifications }"
-          @click="toggleNotifications"
-        >
+        <div class="nav-item" :class="{ 'active': showNotifications, 'disabled': !user }" @click="toggleNotifications">
           <svg class="icon" v-html="notificationsIcon"></svg>
           <span>Notificaciones</span>
         </div>
@@ -36,9 +28,13 @@
           <span>Tienda</span>
         </router-link>
 
-        <div class="nav-item">
+        <div class="nav-item" :class="{ 'active': showMessages, 'disabled': !user }" @click="toggleMessages">
           <svg class="icon" v-html="messagesIcon"></svg>
           <span>Mensajes</span>
+
+          <span v-if="unreadMessageCount > 0" class="badge">
+            {{ unreadMessageCount > 99 ? '99+' : unreadMessageCount }}
+          </span>
         </div>
 
         <router-link to="/profile" class="nav-item" :class="{ 'active': $route.path === '/profile' }">
@@ -54,11 +50,14 @@
     </div>
 
     <div class="notification-panel" :class="{ 'show': showNotifications }">
-    <Notifications :isVisible="showNotifications" @close="showNotifications = false" />
+      <Notifications :isVisible="showNotifications" @close="showNotifications = false" />
     </div>
     <div class="searcher-panel" :class="{ 'show': showSearcher }">
       <Searcher :isOpen="showSearcher" @close="showSearcher = false" />
-
+    </div>
+    <div class="messages-panel" :class="{ 'show': showMessages }">
+      <Messages :isOpen="showMessages" @close="showMessages = false"
+        @update-unread-count="unreadMessageCount = $event" />
     </div>
   </div>
 </template>
@@ -68,13 +67,16 @@ import { onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import Searcher from '@/components/Friends/Searcher.vue'
 import Notifications from './Friends/Notifications.vue'
+import Messages from './Friends/Messages.vue'
 import { supabase } from '@/config/supabase'
 
 const route = useRoute()
 const showNotifications = ref(false)
 const showSearcher = ref(false)
+const showMessages = ref(false)
 const user = ref(null)
 const user_avatar_url = ref(localStorage.getItem('user_avatar_url') || null)
+const unreadMessageCount = ref(0)
 
 // Obtener sesión y avatar del usuario
 onMounted(async () => {
@@ -93,7 +95,6 @@ onMounted(async () => {
       user_avatar_url.value = avatar
       localStorage.setItem('user_avatar_url', avatar)
     } else {
-      // 🔥 Si hay error, usar inmediatamente el avatar por defecto
       user_avatar_url.value = defaultAvatar
     }
   }
@@ -111,6 +112,7 @@ const toggleNotifications = () => {
   showNotifications.value = !showNotifications.value
   if (showNotifications.value) {
     showSearcher.value = false
+    showMessages.value = false
   }
 }
 
@@ -118,6 +120,15 @@ const toggleSearcher = () => {
   showSearcher.value = !showSearcher.value
   if (showSearcher.value) {
     showNotifications.value = false
+    showMessages.value = false
+  }
+}
+
+const toggleMessages = () => {
+  showMessages.value = !showMessages.value
+  if (showMessages.value) {
+    showNotifications.value = false
+    showSearcher.value = false
   }
 }
 
@@ -158,19 +169,30 @@ const settingsIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="26" height=
 }
 
 .notification-panel.show {
-  width: 350px;
+  width: 400px;
+  transform: translateX(0);
 }
 
 .searcher-panel {
   width: 0;
   overflow: hidden;
   transition: width 0.3s ease;
-  background: #0a0a0a;
-  border-left: 1px solid #333;
 }
 
 .searcher-panel.show {
-  width: 350px;
+  width: 400px;
+  transform: translateX(0);
+}
+
+.messages-panel {
+  width: 0;
+  overflow: hidden;
+  transition: width 0.3s ease;
+}
+
+.messages-panel.show {
+  width: 400px;
+  transform: translateX(0);
 }
 
 .logo {
@@ -208,6 +230,11 @@ const settingsIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="26" height=
   background: rgba(0, 0, 0, 0.1);
 }
 
+.nav-item.disabled {
+  pointer-events: none;
+  cursor: default;
+}
+
 .icon {
   width: 26px;
   height: 26px;
@@ -230,4 +257,26 @@ const settingsIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="26" height=
   object-fit: cover;
   flex-shrink: 0;
 }
+
+.badge {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 23px;
+  height: 23px;
+  min-width: 23px;
+  background: #e63946;
+  color: white;
+  font-size: 0.9rem;
+  font-weight: bold;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: 1 / 1;
+  padding: 0 !important;
+}
+
+
 </style>

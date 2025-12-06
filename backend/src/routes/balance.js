@@ -6,26 +6,31 @@ const router = express.Router()
 
 // Helper: asegura que el usuario tenga fila en user_balance
 async function ensureBalanceRow(userId) {
-  // 1) buscamos si ya existe
+  // 1) Buscar si existe
   const { data, error } = await supabaseAdmin
-    .from('user_balance')
-    .select('*')
-    .eq('user_id', userId)
-    .maybeSingle()
+    .from("user_balance")
+    .select("*")
+    .eq("user_id", userId)
+    .maybeSingle();
 
-  if (error) throw error
-  if (data) return data
+  if (error) throw error;
+  if (data) return data;
 
-  // 2) si no existe, la creamos con el default (5000)
-  const { data: inserted, error: insertError } = await supabaseAdmin
-    .from('user_balance')
-    .insert({ user_id: userId })
-    .select('*')
-    .single()
+  // 2) Si no existe, crearla manualmente (mock no mete balance por defecto)
+  const newRow = {
+    user_id: userId,
+    balance: 5000,
+  };
 
-  if (insertError) throw insertError
-  return inserted
+  const { error: insertError } = await supabaseAdmin
+    .from("user_balance")
+    .insert(newRow);
+
+  if (insertError) throw insertError;
+
+  return newRow;
 }
+
 
 /* ============================================
    GET /api/balance/:userId  → ver saldo
@@ -95,9 +100,7 @@ router.post('/deduct', async (req, res) => {
     const row = await ensureBalanceRow(userId)
 
     if (row.balance < amount) {
-      return res
-        .status(400)
-        .json({ ok: false, error: 'Balance insuficiente', balance: row.balance })
+      return res.status(400).json({ ok: false, error: "Saldo insuficiente" });
     }
 
     const newBalance = row.balance - amount

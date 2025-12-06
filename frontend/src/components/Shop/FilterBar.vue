@@ -15,10 +15,10 @@
 
 <script setup>
 const filters = [
-  { id: 'all', label: 'Todos', icon: '🌐' },
-  { id: 'globe', label: 'Globos', icon: '🌍' },
-  { id: 'homeBg', label: 'Fondos Home', icon: '🏠' },
-  { id: 'profileBg', label: 'Fondos Perfil', icon: '👤' }
+  { id: 'all', label: 'Todos'},
+  { id: 'globe', label: 'Globos'},
+  { id: 'homeBg', label: 'Fondos Home'},
+  { id: 'profileBg', label: 'Fondos Perfil'},
 ]
 
 defineProps({

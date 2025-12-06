@@ -5,6 +5,10 @@ import { supabase } from "@/config/supabase";
 
 const purchasedItems = ref([]);
 let initialized = false;
+export function resetPurchases() {
+  purchasedItems.value = [];
+  initialized = false;
+}
 
 export function usePurchases() {
   const { deductBalance, hasEnoughBalance, loadBalance } = useBalance();
@@ -14,6 +18,10 @@ export function usePurchases() {
   // 🔥 SIEMPRE reiniciar compras al entrar con otro usuario
   initialized = false;
   purchasedItems.value = [];
+  
+  // Asegurar ítems default para el usuario
+  await fetch(`/api/default-items/${userId}`);
+
 
   // cargar items del backend
   const res = await fetch(`/api/purchases/${userId}`);
@@ -32,7 +40,7 @@ export function usePurchases() {
   function isPurchased(itemId) {
     return purchasedItems.value.includes(itemId);
   }
-
+  
   async function purchaseItem(item, userId) {
     if (isPurchased(item.id)) {
       return { success: false, message: "Ya comprado", type: "error" };

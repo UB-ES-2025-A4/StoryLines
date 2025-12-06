@@ -11,6 +11,7 @@ import VisitProfile from '@/views/VisitProfile.vue'
 import CreateTrip from '@/views/CreateTrip.vue'
 import Settings from '@/views/Settings.vue'
 import Shop from '@/views/Shop.vue'
+import Customization from '@/views/Customization.vue'
 
 const routes = [
   {
@@ -74,6 +75,17 @@ const routes = [
     name: 'Shop',
     component: Shop,
     meta: { requiresAuth: true }
+  },
+  {
+    path: '/customization',
+    name: 'Customization',
+    component: Customization,
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/reset-password',
+    name: 'ResetPassword',
+    component: () => import('@/views/ResetPassword.vue')
   }
 ]
 
@@ -85,6 +97,11 @@ const router = createRouter({
 
 // Guard de navegación para proteger rutas
 router.beforeEach(async (to, from, next) => {
+
+  if (to.path === '/reset-password') {
+    return next()
+  }
+
   // Obtener sesión actual
   const { data: { session } } = await supabase.auth.getSession()
   

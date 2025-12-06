@@ -49,6 +49,7 @@ router.get("/", async (_req, res) => {
       endDate: t.end_date,
       stops: grouped[t.id] || [],
       views: t.views || 0,
+      likes: t.likes || 0,
     }));
 
     return res.json({ ok: true, trips: formatted });
@@ -90,7 +91,8 @@ router.get("/saved/:userId", async (req, res) => {
         *,
         country:countries!trip_stops_country_id_fkey(id, name, latitude, longitude)
       `)
-      .in("trip_id", tripIds);
+      .in("trip_id", tripIds)
+      .order('position', { ascending: true });
 
     if (stopsError) return res.status(500).json({ error: stopsError.message });
     
@@ -151,10 +153,11 @@ router.get("/:id", async (req, res) => {
     const { data: stops } = await supabaseAdmin
       .from("trip_stops")
       .select(`
-        id, city, description, images,
+        id, city, description, images, position,
         country:countries!trip_stops_country_id_fkey(id, name, latitude, longitude)
       `)
-      .eq("trip_id", tripId);
+      .eq("trip_id", tripId)
+      .order('position', { ascending: true });
 
     const formattedStops = stops.map((stop) => ({
       title: stop.city || "Stop",
@@ -165,6 +168,7 @@ router.get("/:id", async (req, res) => {
       lat: stop.country?.latitude,
       lng: stop.country?.longitude,
       currentImageIndex: 0,
+      position: stop.position ?? 0,
     }));
 
     const { data: commentsData } = await supabaseAdmin
@@ -279,15 +283,18 @@ router.post("/", async (req, res) => {
 
     const tripId = trip.id;
 
-    for (const stop of stops) {
+    for (let i = 0; i < stops.length; i++) {
+      const stop = stops[i];
       await supabaseAdmin.from("trip_stops").insert({
         trip_id: tripId,
         city: stop.city,
         country_id: stop.country_id,
         images: stop.images || [],
         description: stop.description || null,
+        position: i,
       });
     }
+
 
     return res.json({ ok: true, tripId });
   } catch (e) {
@@ -378,8 +385,8 @@ router.post("/:tripId/comments", async (req, res) => {
 
     await supabaseAdmin
       .from("trip_comments")
-      .insert({ trip_id: tripId, user_id: userId, text });
-
+      .insert({ trip_id: tripId, user_id: userId, text })
+      .select(`id, text, created_at`);
     await supabaseAdmin.rpc("increment_trip_comments", {
       trip_id_input: tripId,
     });
@@ -389,7 +396,13 @@ router.post("/:tripId/comments", async (req, res) => {
       .select("*", { head: true, count: "exact" })
       .eq("trip_id", tripId);
 
-    return res.json({ ok: true, commentsCount: count });
+    const formattedComment = {
+      id: tripId,
+      text: text,
+      createdAt: new Date().toISOString(),
+    };
+
+    return res.json({ ok: true, commentsCount: count, comment: formattedComment });
   } catch (e) {
     console.error("[COMMENT ERROR]", e);
     return res.status(500).json({ error: "Error interno" });

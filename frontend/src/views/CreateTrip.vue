@@ -35,12 +35,13 @@
                     <input type="date" v-model="trip.end_date" />
                   </div>
                 </div>
-                <label>Descripción breve</label>
-                <textarea v-model="trip.description" rows="3"></textarea>
+                <label>Descripción </label>
+                <textarea v-model="trip.description" rows="3"
+                  placeholder="Añade una breve descripción del viaje..."></textarea>
               </div>
             </div>
             <div class="step-actions">
-              <button class="next-btn" @click="goToStops" :disabled="!canProceedToStops">Siguiente</button>
+              <button class="next-btn" @click="goToStops">Siguiente</button>
               <button class="cancel" @click="cancelTrip">Cancelar</button>
             </div>
           </div>
@@ -113,9 +114,31 @@
                       </li>
                     </ul>
                     <label>Descripción</label>
-                    <textarea v-model="stop.description" rows="3"></textarea>
+                    <textarea v-model="stop.description" rows="3" placeholder="Descripción de la parada..."></textarea>
                   </div>
-                  <button v-if="index > 0" class="remove-stop-btn" @click="removeStop(index)">X</button>
+                  <!-- Botones de orden -->
+                  <div class="order-controls-left">
+                    <button class="order-btn up" @click="moveStopUp(index)" :disabled="index === 0"
+                      title="Subir parada">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                        <path d="M12 19V5M5 12l7-7 7 7" />
+                      </svg>
+                    </button>
+
+                    <button class="order-btn down" @click="moveStopDown(index)"
+                      :disabled="index === trip.stops.length - 1" title="Bajar parada">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                        <path d="M12 5v14m7-7l-7 7-7-7" />
+                      </svg>
+                    </button>
+                  </div>
+                  <!-- Botón para eliminar -->
+                  <button v-if="index > 0" class="remove-stop-btn" @click="removeStop(index)" title="Eliminar parada">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M18 6L6 18M6 6l12 12" />
+                    </svg>
+                  </button>
+
                 </div>
                 <div v-if="index < trip.stops.length - 1" class="route-line"></div>
               </div>
@@ -147,7 +170,11 @@
         </div>
 
         <!-- Messages -->
-        <p v-if="error" class="error">{{ error }}</p>
+        <div v-if="error.length" class="error">
+          <ul>
+            <li v-for="(err, idx) in error" :key="idx">{{ err }}</li>
+          </ul>
+        </div>
         <p v-if="success" class="success">{{ success }}</p>
       </div>
     </div>
@@ -170,7 +197,7 @@ export default {
     const user = ref(null)
     const loading = ref(false)
     const saving = ref(false)
-    const error = ref('')
+    const error = ref([])
     const success = ref('')
     const currentStep = ref(1) // 1 for cover, 2 for stops
 
@@ -242,9 +269,10 @@ export default {
         status: ''
       }
       coverPreview.value = ''
-      error.value = ''
+      error.value = []
       success.value = ''
       currentStep.value = 1
+      removedStops.value = []
     }
 
     const loadUser = async () => {
@@ -258,19 +286,16 @@ export default {
         .select('id, name, latitude, longitude')
         .order('name', { ascending: true })
 
-      if (cErr) { error.value = 'No se pudieron cargar los países'; return }
+      if (cErr) { error.value.push('No se pudieron cargar los países'); return }
       countries.value = data || []
     }
 
     const loadTrip = async () => {
       if (!tripId.value) {
         // Nuevo viaje
-        loading.value = false
         return
       }
-
-      loading.value = true
-      error.value = ''
+      error.value = []
 
       try {
         // 1. Cargar viaje
@@ -281,7 +306,7 @@ export default {
           .single()
 
         if (tripErr || !tripData) {
-          error.value = 'No se pudo cargar el viaje'
+          error.value.push('No se pudo cargar el viaje')
           loading.value = false
           return
         }
@@ -301,10 +326,10 @@ export default {
           .from('trip_stops')
           .select('*')
           .eq('trip_id', tripId.value)
-          .order('id', { ascending: true })
+          .order('position', { ascending: true })
 
         if (stopsErr) {
-          error.value = 'No se pudieron cargar las paradas del viaje'
+          error.value.push('No se pudieron cargar las paradas del viaje')
           loading.value = false
           return
         }
@@ -312,7 +337,7 @@ export default {
         console.log('Cargando stops del tripId:', tripId.value)
 
         // Mapear paradas existentes
-        trip.value.stops = (stopsData || []).map(s => ({
+        trip.value.stops = (stopsData || []).map((s, idx) => ({
           id: s.id, // muy importante para edición y borrado
           city: s.city || '',
           country_id: s.country_id || '',
@@ -320,14 +345,14 @@ export default {
           countryOpen: false,
           description: s.description || '',
           images: s.images || [],
-          currentImageIndex: 0
+          currentImageIndex: 0,
+          position: s.position || idx
         }))
-
         // Inicializar refs de inputs de fotos por parada
         stopFileInputs.value = new Array(trip.value.stops.length).fill(null)
 
       } catch (err) {
-        error.value = 'Error cargando el viaje'
+        error.value.push('Error cargando el viaje')
         console.error(err)
       } finally {
         loading.value = false
@@ -347,9 +372,11 @@ export default {
     }, { immediate: false })
 
     onMounted(async () => {
+      loading.value = true
       await loadUser()
       await loadCountries()
       await loadTrip()
+      loading.value = false
       window.addEventListener('click', closeAllDropdowns)
     })
 
@@ -377,7 +404,7 @@ export default {
 
       if (!user.value) {
         const { data: { session } } = await supabase.auth.getSession()
-        if (!session?.user) { error.value = 'Debes iniciar sesión para subir imágenes'; return }
+        if (!session?.user) { error.value.push('Debes iniciar sesión para subir imágenes'); return }
         user.value = session.user
       }
 
@@ -386,7 +413,7 @@ export default {
       const path = `trips/covers/${filename}`
 
       const { error: err } = await supabase.storage.from('trips-pictures').upload(path, file)
-      if (err) { error.value = 'Error subiendo portada'; return }
+      if (err) { error.value.push('Error subiendo portada'); return }
 
       const { data } = supabase.storage.from('trips-pictures').getPublicUrl(path)
       trip.value.cover_image = data.publicUrl
@@ -401,26 +428,32 @@ export default {
 
       if (!user.value) {
         const { data: { session } } = await supabase.auth.getSession()
-        if (!session?.user) { error.value = 'Debes iniciar sesión para subir imágenes'; return }
+        if (!session?.user) { error.value.push('Debes iniciar sesión para subir imágenes'); return }
         user.value = session.user
       }
 
       for (const file of files) {
-        if (!file.type.startsWith('image/')) { error.value = 'Archivo no válido: debe ser imagen'; continue }
-        if (file.size > 8 * 1024 * 1024) { error.value = 'La imagen no puede superar 8MB'; continue }
+        if (!file.type.startsWith('image/')) { error.value.push('Archivo no válido: debe ser imagen'); continue }
+        if (file.size > 8 * 1024 * 1024) { error.value.push('La imagen no puede superar 8MB'); continue }
 
         const ext = file.name.split('.').pop()
         const filename = `${user.value.id}-stop-${stopIndex + 1}-${Date.now()}.${ext}`
         const path = `trips/stops/${filename}`
 
         const { error: err } = await supabase.storage.from('trips-pictures').upload(path, file)
-        if (err) { error.value = 'Error subiendo una imagen de la parada'; continue }
+        if (err) { error.value.push('Error subiendo una imagen de la parada'); continue } 
 
         const { data } = supabase.storage.from('trips-pictures').getPublicUrl(path)
         trip.value.stops[stopIndex].images.push(data.publicUrl)
       }
 
-      if (stopFileInputs.value[stopIndex]) stopFileInputs.value[stopIndex].value = ''
+      // Reset input
+      resetStopInput(stopIndex)
+    }
+
+    const resetStopInput = (index) => {
+      const input = stopFileInputs.value[index]
+      if (input) input.value = ''
     }
 
     const changeStopImage = (stop, delta) => {
@@ -442,47 +475,36 @@ export default {
 
     // Validaciones publicar
     const validateRequiredFields = () => {
+
+      if (!trip.value.cover_image) { error.value.push('La foto de portada es obligatoria.');}
+      if (!trip.value.trip_name.trim()) { error.value.push('El nombre del viaje es obligatorio.');}
+      if (!trip.value.start_date || !trip.value.end_date) { error.value.push('Las fechas de inicio y fin son obligatorias.'); }
+      const start = new Date(trip.value.start_date), end = new Date(trip.value.end_date)
+      if (isNaN(start) || isNaN(end)) { error.value.push('Las fechas no son válidas.');}
+      if (end < start) { error.value.push('La fecha de fin no puede ser anterior a la de inicio.');}
+
       for (const [i, s] of trip.value.stops.entries()) {
         if (!s.country_id) {
-          error.value = `En la parada ${i + 1} el país es obligatorio.`;
-          return false;
+          error.value.push(`En la parada ${i + 1} el país es obligatorio.`);
         }
         if (!s.images || s.images.length === 0) {
-          error.value = `Debes subir al menos una foto en la parada ${i + 1}.`;
-          return false;
+          error.value.push(`Debes subir al menos una foto en la parada ${i + 1}.`);
         }
       }
 
       if (trip.value.stops.length < 2) {
-        error.value = 'Debes añadir al menos 2 paradas para publicar.';
-        return false;
+        error.value.push('Debes añadir al menos 2 paradas para publicar.');
       }
 
-      if (!trip.value.cover_image) {
-        error.value = 'Debes añadir una foto de portada antes de publicar.';
-        return false;
-      }
+      if (error.value.length > 0) return false
 
-      error.value = '';
+      error.value = [];
       return true;
     };
 
-    // Validaciones para pasar a paradas
-    const canProceedToStops = () => {
-      if (!trip.value.cover_image) { error.value = 'La foto de portada es obligatoria.'; return false }
-      if (!trip.value.trip_name.trim()) { error.value = 'El nombre del viaje es obligatorio.'; return false }
-      if (!trip.value.start_date || !trip.value.end_date) { error.value = 'Las fechas de inicio y fin son obligatorias.'; return false }
-      const start = new Date(trip.value.start_date), end = new Date(trip.value.end_date)
-      if (isNaN(start) || isNaN(end)) { error.value = 'Las fechas no son válidas.'; return false }
-      if (end < start) { error.value = 'La fecha de fin no puede ser anterior a la de inicio.'; return false }
-      error.value = ''; return true
-    }
-
     // Navegación entre pasos
     const goToStops = () => {
-      if (canProceedToStops()) {
-        currentStep.value = 2
-      }
+      currentStep.value = 2
     }
 
     const goToCover = () => {
@@ -491,7 +513,17 @@ export default {
 
     // Paradas
     const addStop = () => {
-      trip.value.stops.push({ city: '', country_id: '', countrySearch: '', countryOpen: false, description: '', images: [], currentImageIndex: 0 })
+      const pos = trip.value.stops.length;
+      trip.value.stops.push({
+        city: '',
+        country_id: '',
+        countrySearch: '',
+        countryOpen: false,
+        description: '',
+        images: [],
+        currentImageIndex: 0,
+        position: pos
+      });
       stopFileInputs.value.push(null)
     }
 
@@ -514,6 +546,18 @@ export default {
     const savingPublish = ref(false)
 
     const saveTripWithStops = async (status) => {
+
+      trip.value.stops.forEach((s, idx) => {
+        s.position = idx;
+      });
+
+      if (status === 'draft') {
+        // trip name obligatorio en draft
+        if (!trip.value.trip_name.trim()) {
+          throw new Error('El nombre del viaje es obligatorio para guardar el borrador.');
+        }
+      }
+
       let tripRecord = null;
 
       try {
@@ -527,9 +571,9 @@ export default {
             .from('trips')
             .update({
               trip_name: trip.value.trip_name,
-              cover_image: trip.value.cover_image,
-              start_date: trip.value.start_date,
-              end_date: trip.value.end_date,
+              cover_image: trip.value.cover_image || null,
+              start_date: trip.value.start_date || null,
+              end_date: trip.value.end_date || null,
               description: trip.value.description || null,
               status
             })
@@ -569,7 +613,8 @@ export default {
                 city: stop.city || null,
                 country_id: stop.country_id || null,
                 description: stop.description || null,
-                images: stop.images || [] 
+                images: stop.images || [],
+                position: stop.position ?? 0
               })
               .eq('id', stop.id);
 
@@ -587,7 +632,25 @@ export default {
               (!stop.description || stop.description.trim() === "") &&
               (!stop.images || stop.images.length === 0);
 
-            if (isEmpty) continue; // evitar insertar “paradas fantasma”
+            if (status ==="draft" && isEmpty) {
+              // En borrador, permitir paradas vacías
+              const { data: newStop, error: insErr } = await supabase
+                .from('trip_stops')
+                .insert({
+                  trip_id: tripId.value,
+                  city: stop.city || null,
+                  country_id: stop.country_id || null,
+                  description: stop.description || null,
+                  images: stop.images || [],
+                  position: stop.position ?? trip.value.stops.indexOf(stop)
+                })
+                .select()
+                .single();
+
+              continue;
+            }
+
+            if (status ==="published" && isEmpty) continue; // evitar insertar “paradas fantasma”
 
             const { data: newStop, error: insErr } = await supabase
               .from('trip_stops')
@@ -596,7 +659,8 @@ export default {
                 city: stop.city || null,
                 country_id: stop.country_id || null,
                 description: stop.description || null,
-                images: stop.images || []
+                images: stop.images || [],
+                position: stop.position ?? trip.value.stops.indexOf(stop)
               })
               .select()
               .single();
@@ -667,7 +731,8 @@ export default {
                 city: stop.city || null,
                 country_id: stop.country_id || null,
                 description: stop.description || null,
-                images: stop.images || []
+                images: stop.images || [],
+                position: stop.position ?? trip.value.stops.indexOf(stop)
               })
               .select()
               .single();
@@ -678,11 +743,11 @@ export default {
         }
 
         success.value = "Cambios guardados correctamente";
-        error.value = "";
+        error.value = [];
 
       } catch (err) {
         console.error(err);
-        error.value = "Error guardando el viaje";
+        error.value.push("Error guardando el viaje");
       }
     };
 
@@ -692,38 +757,58 @@ export default {
 
     // Acciones
     const saveDraft = async () => {
-      error.value = ''; success.value = ''; savingDraft.value = true
+      error.value = []; success.value = ''; savingDraft.value = true
       try {
         await saveTripWithStops('draft')
         success.value = 'Borrador guardado correctamente'
         router.push('/profile')
       } catch (err) {
-        error.value = err.message || 'Error al guardar borrador'
+        error.value.push(err.message || 'Error al guardar borrador')
       } finally { savingDraft.value = false }
     }
 
     const saveChanges = async () => {
-      error.value = ''; success.value = ''; savingDraft.value = true
+      error.value = []; success.value = ''; savingDraft.value = true
       try {
         await saveTripWithStops('published')
         success.value = 'Cambios guardados correctamente'
         router.push('/profile')
       } catch (err) {
-        error.value = err.message || 'Error al guardar cambios'
+        error.value.push(err.message || 'Error al guardar cambios')
       } finally { savingDraft.value = false }
     }
 
     const publishTrip = async () => {
-      error.value = ''; success.value = ''; savingPublish.value = true
+      error.value = []; success.value = ''; savingPublish.value = true
       if (!validateRequiredFields()) { savingPublish.value = false; return }
       try {
         await saveTripWithStops('published')
         success.value = 'Viaje publicado correctamente'
         router.push('/')
       } catch (err) {
-        error.value = err.message || 'Error al publicar el viaje'
+        error.value.push(err.message || 'Error al publicar el viaje')
       } finally { savingPublish.value = false }
     }
+
+    const moveStopUp = (i) => {
+      if (i === 0) return;
+      const arr = trip.value.stops;
+      [arr[i - 1], arr[i]] = [arr[i], arr[i - 1]];
+
+      // mover también el input file correspondiente
+      const filesArr = stopFileInputs.value;
+      [filesArr[i - 1], filesArr[i]] = [filesArr[i], filesArr[i - 1]];
+    };
+
+    const moveStopDown = (i) => {
+      const arr = trip.value.stops;
+      if (i >= arr.length - 1) return;
+      [arr[i], arr[i + 1]] = [arr[i + 1], arr[i]];
+
+      const filesArr = stopFileInputs.value;
+      [filesArr[i], filesArr[i + 1]] = [filesArr[i + 1], filesArr[i]];
+    };
+
 
 
 
@@ -731,12 +816,12 @@ export default {
     return {
       trip, error, success, coverPreview, countries,
       filteredCountries, selectCountry, clearCountry, getCountryNameById,
-      addStop, removeStop, changeStopImage, removeCurrentStopImage,
+      addStop, removeStop, changeStopImage, removeCurrentStopImage, moveStopDown, moveStopUp,
       stopFileInputs, openStopFile, handleStopImagesUpload,
       handleCoverUpload,
       saveDraft, saveChanges, publishTrip, cancelTrip,
-      loading, saving,
-      currentStep, goToStops, goToCover, canProceedToStops
+      loading, saving, savingDraft, savingPublish,
+      currentStep, goToStops, goToCover, resetStopInput
     }
   }
 }
@@ -746,20 +831,9 @@ export default {
 .create-trip {
   display: flex;
   min-height: 100vh;
-  background: url('https://images.unsplash.com/photo-1451187580459-43490279c0fa?ixlib=rbahoo4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&q=80&w=1172') no-repeat center center/cover;
+  background: url('//unpkg.com/three-globe/example/img/night-sky.png');
   background-attachment: fixed;
-  opacity: 0.9;
   color: #fff;
-}
-
-.sidebar {
-  width: 250px;
-  background: #0A0A0A;
-  padding: 1.5rem 1.5rem;
-  display: flex;
-  flex-direction: column;
-  height: 100vh;
-  position: fixed;
 }
 
 .logo {
@@ -767,13 +841,6 @@ export default {
   height: auto;
   margin-bottom: 2rem;
   align-self: left;
-}
-
-.sidebar nav {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
 }
 
 .nav-item {
@@ -851,7 +918,7 @@ export default {
 }
 
 .section-card {
-  border: 1.5px solid #fff;
+  border: 0.5px solid rgba(255, 255, 255, 0.2);
   border-radius: 12px;
   padding: 1.5rem;
   margin-bottom: 1.5rem;
@@ -872,9 +939,10 @@ export default {
 
 .stop-card {
   padding: 2rem;
-  border: 1.5px solid #fff;
+  border: 0.5px solid rgba(255, 255, 255, 0.2);
   border-radius: 12px;
   background: #0A0A0A;
+  opacity: 0.9;
   position: relative;
   min-height: 300px;
   max-width: 1100px;
@@ -898,7 +966,7 @@ export default {
   height: 300px;
   object-fit: cover;
   border-radius: 10px;
-  border: 2px solid #fff;
+  border: 0.5px solid rgba(255, 255, 255, 0.2);
   margin-bottom: 0.6rem;
   display: block;
   margin-left: auto;
@@ -939,7 +1007,7 @@ export default {
   width: 100%;
   padding: 0.6rem;
   margin-bottom: 0.6rem;
-  border: 1.5px solid #fff;
+  border: 0.5px solid rgba(255, 255, 255, 0.2);
   border-radius: 6px;
   background: rgba(10, 10, 10, 0.7);
   color: #fff;
@@ -947,6 +1015,7 @@ export default {
   margin-left: auto;
   margin-right: auto;
   font-size: 1.1rem;
+  font-family: inherit;
 }
 
 .date-fields {
@@ -973,7 +1042,7 @@ export default {
   max-width: 280px;
   overflow-y: auto;
   background: #fff;
-  border: 1px solid #ddd;
+  border: 0.5px solid rgba(255, 255, 255, 0.2);
   margin-top: 4px;
   border-radius: 6px;
   list-style: none;
@@ -1003,7 +1072,7 @@ export default {
 }
 
 .add-stop-btn {
-  background: #375689;
+  background: #02a18f;
   color: white;
   padding: 0.6rem 1.2rem;
   border-radius: 6px;
@@ -1090,7 +1159,7 @@ export default {
 }
 
 .step-actions .next-btn {
-  background: #375689;
+  background: #02a18f;
 }
 
 .step-actions .cancel {
@@ -1140,7 +1209,7 @@ export default {
 
 .stop-card-wrapper {
   position: relative;
-  margin-bottom: 3rem;
+  margin-bottom: 4rem;
   display: inline-block;
   vertical-align: top;
 }
@@ -1149,7 +1218,7 @@ export default {
   position: absolute;
   width: 2px;
   background: #fff;
-  height: 100px;
+  height: 4rem;
   left: 50%;
   transform: translateX(-50%);
   top: 100%;
@@ -1174,7 +1243,7 @@ export default {
   height: 250px;
   object-fit: cover;
   border-radius: 8px;
-  border: 1px solid #fff;
+  border: 0.5px solid rgba(255, 255, 255, 0.2);
   display: block;
   z-index: 0;
 }
@@ -1188,7 +1257,7 @@ export default {
 
 .nav-arrow {
   background: rgba(10, 10, 10, 0.8);
-  border: 1px solid #fff;
+  border: 0.5px solid rgba(255, 255, 255, 0.2);
   border-radius: 50%;
   color: #fff;
   cursor: pointer;
@@ -1253,4 +1322,96 @@ export default {
   margin-bottom: 1rem;
   text-align: center;
 }
+
+.order-controls-left {
+  position: absolute;
+  left: -70px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  z-index: 10;
+}
+
+.order-btn {
+  width: 48px;
+  height: 48px;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  backdrop-filter: blur(6px);
+}
+
+.order-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.25);
+  transform: translateY(-3px) scale(1.05);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+}
+
+.order-btn:disabled {
+  opacity: 0.25;
+  cursor: not-allowed;
+  transform: none !important;
+}
+
+.order-btn svg {
+  width: 22px;
+  height: 22px;
+}
+
+.remove-stop-btn {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: rgba(231, 76, 60, 0.9);
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  z-index: 11;
+}
+
+.remove-stop-btn:hover {
+  background: #c0392b;
+  transform: scale(1.1);
+}
+
+.remove-stop-btn svg {
+  width: 18px;
+  height: 18px;
+}
+
+@media (max-width: 900px) {
+  .order-controls-left {
+    position: static;
+    transform: none;
+    flex-direction: row;
+    justify-content: center;
+    gap: 16px;
+    margin-bottom: 1rem;
+  }
+  
+  .stop-card {
+  }
+  
+  .remove-stop-btn {
+    top: 8px;
+    right: 8px;
+  }
+}
+
+
 </style>
