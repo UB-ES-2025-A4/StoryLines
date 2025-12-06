@@ -14,6 +14,10 @@ export function usePurchases() {
   // 🔥 SIEMPRE reiniciar compras al entrar con otro usuario
   initialized = false;
   purchasedItems.value = [];
+  
+  // Asegurar ítems default para el usuario
+  await fetch(`/api/default-items/${userId}`);
+
 
   // cargar items del backend
   const res = await fetch(`/api/purchases/${userId}`);

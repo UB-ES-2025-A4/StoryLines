@@ -96,12 +96,14 @@ export default {
       loading.value = true
 
       try {
-        const { error: signInError } = await supabase.auth.signInWithPassword({
+        const { data, error: signInError } = await supabase.auth.signInWithPassword({
           email: email.value,
           password: password.value
         })
 
         if (signInError) throw signInError
+
+        await fetch(`/api/default-items/${data.user.id}`);
 
         // Guardar credenciales si se marca "Recordarme"
         if (rememberMe.value) {

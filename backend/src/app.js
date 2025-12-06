@@ -36,8 +36,9 @@ import shopRouter from './routes/shop.js';
 import balanceRouter from './routes/balance.js'; 
 import purchasesRouter from "./routes/purchases.js";
 import messagesRouter from "./routes/messages.js";
+import customizationRouter from "./routes/customization.js";
+import defaultItemsRoute from "./routes/defaultItems.js";
 
-// ❗ LAS QUE FALTABAN
 import avatarRouter from "./routes/avatar.js";
 import friendRequestRouter from "./routes/friendRequest.js";
 
@@ -58,6 +59,8 @@ app.use("/api/users", usersRouter);
 app.use('/api/shop', shopRouter);
 app.use('/api/balance', balanceRouter);
 app.use("/api/purchases", purchasesRouter);
+app.use("/api/customization", customizationRouter);
+app.use("/api/default-items", defaultItemsRoute);
 
 app.use("/api/avatar", avatarRouter);
 app.use("/api/friend-request", friendRequestRouter);

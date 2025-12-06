@@ -23,7 +23,7 @@
               </div>
               <div class="current-item">{{ equippedItems.globe || 'Sin equipar' }}</div>
               <button 
-                v-if="getEquippedItemByType('globe')" 
+                v-if="getEquippedItem('globe')" 
                 @click="unequipItem('globe')" 
                 class="unequip-btn"
               >
@@ -40,7 +40,7 @@
               </div>
               <div class="current-item">{{ equippedItems.homeBg || 'Sin equipar' }}</div>
               <button 
-                v-if="getEquippedItemByType('homeBg')" 
+                v-if="getEquippedItem('homeBg')" 
                 @click="unequipItem('homeBg')" 
                 class="unequip-btn"
               >
@@ -57,7 +57,7 @@
               </div>
               <div class="current-item">{{ equippedItems.profileBg || 'Sin equipar' }}</div>
               <button 
-                v-if="getEquippedItemByType('profileBg')" 
+                v-if="getEquippedItem('profileBg')" 
                 @click="unequipItem('profileBg')" 
                 class="unequip-btn"
               >
@@ -146,7 +146,7 @@ const user = ref(null)
 
 // Personalización
 const { isPurchased } = usePurchases()
-const { getEquippedItemByType, equipItem } = useCustomization()
+const { getEquippedItem, equipItem, unequipItem: unequipSlot } = useCustomization()
 const purchasedItems = ref([])
 const equippedItems = ref({})
 const currentFilter = ref('all')
@@ -198,10 +198,11 @@ async function loadCustomizationData() {
         }
         
         equippedItems.value = {
-            globe: getItemName(getEquippedItemByType('globe'), allItems.value),
-            homeBg: getItemName(getEquippedItemByType('homeBg'), allItems.value),
-            profileBg: getItemName(getEquippedItemByType('profileBg'), allItems.value)
+          globe: getItemName(getEquippedItem('globe'), allItems.value),
+          homeBg: getItemName(getEquippedItem('homeBg'), allItems.value),
+          profileBg: getItemName(getEquippedItem('profileBg'), allItems.value)
         }
+
     } catch (error) {
         console.error('Error loading customization data:', error)
         purchasedItems.value = []
@@ -218,12 +219,13 @@ function getTypeName(type) {
 }
 
 function getEquippedPreview(slotType) {
-    const equippedId = getEquippedItemByType(slotType)
-    if (!equippedId) return null
-    
-    const item = allItems.value.find(i => i.id === equippedId)
-    return item ? item.imageUrl : null
+  const equippedId = getEquippedItem(slotType)
+  if (!equippedId) return null
+  
+  const item = allItems.value.find(i => i.id === equippedId)
+  return item ? item.imageUrl : null
 }
+
 
 function getItemName(itemId, allItems) {
     if (!itemId) return 'Sin equipar'
@@ -235,7 +237,7 @@ function handleDragStart(event, item) {
     event.dataTransfer.setData('text/plain', JSON.stringify(item))
 }
 
-function handleDrop(event, slotType) {
+async function handleDrop(event, slotType) {
     event.preventDefault()
     const itemData = JSON.parse(event.dataTransfer.getData('text/plain'))
     
@@ -243,15 +245,24 @@ function handleDrop(event, slotType) {
         return
     }
     
-    equipItem(itemData.id, slotType)
+    await equipItem(itemData.id, slotType)
     equippedItems.value[slotType] = itemData.name
+
 }
 
-function unequipItem(slotType) {
-    const { unequipItem: unequip } = useCustomization()
-    unequip(slotType)
-    equippedItems.value[slotType] = 'Sin equipar'
+async function unequipItem(slotType) {
+  await unequipSlot(slotType)
+
+  // Actualiza UI (nombre del item)
+  equippedItems.value[slotType] = 'Sin equipar'
+
+  // 🔥 Forzar recomputación de previews
+  // (porque getEquippedItem(slotType) ha cambiado)
+  // Esto funciona porque hará que el computed se recalcule:
+  equippedItems.value = { ...equippedItems.value }
 }
+
+
 </script>
   
 <style scoped>

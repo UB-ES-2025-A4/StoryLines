@@ -28,7 +28,7 @@
 
         <div class="form-group" style="position: relative;">
           <label for="passwordConfirm">Confirmar contraseña:</label>
-          <input :type="showPasswordConfirm ? 'text' : 'password'" id="passwordConfirm" v-model="passwordConfirm" required placeholder=" " autocomplete="off"
+          <input :type="showPasswordConfirm ? 'text' : 'password'" id="passwordConfirm" v-model="confirmPassword" required placeholder=" " autocomplete="off"
             style="padding-right: 2.5rem;" />
           <button type="button" @click="showPasswordConfirm = !showPasswordConfirm" class="toggle-btn"
             v-html="showPasswordConfirm ? eyeSlashIcon : eyeIcon">
@@ -119,7 +119,7 @@ export default {
 
     const showPassword = ref(false)
     const showPasswordConfirm = ref(false)
-
+    
     const handleRegister = async () => {
 
       console.log({
@@ -226,6 +226,9 @@ export default {
           email: email.value,
           password: password.value
         })
+        // ⭐ Añadir ítems gratuitos por defecto al nuevo usuario
+        await fetch(`/api/default-items/${authUser.user.id}`)
+
 
         if (signInError) throw signInError
 
