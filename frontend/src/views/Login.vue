@@ -77,6 +77,11 @@ import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { supabase } from '@/config/supabase'
 import { useBalance } from '@/composables/useBalance'
+import { resetPurchases } from "@/composables/usePurchases"
+import { resetCustomization } from "@/composables/useCustomization"
+import { usePurchases } from "@/composables/usePurchases"
+import { useCustomization } from "@/composables/useCustomization"
+
 
 
 export default {
@@ -89,40 +94,93 @@ export default {
     const error = ref('')
     const loading = ref(false)
     const { loadBalance } = useBalance()
+    const { initialize: initializePurchases } = usePurchases()
+    const { initialize: initializeCustomization } = useCustomization()
+
 
 
     const handleLogin = async () => {
-      error.value = ''
-      loading.value = true
+  error.value = ''
+  loading.value = true
 
-      try {
-        const { data, error: signInError } = await supabase.auth.signInWithPassword({
-          email: email.value,
-          password: password.value
-        })
+  try {
+    // 1️⃣ LOGIN
+    const { data, error: signInError } = await supabase.auth.signInWithPassword({
+      email: email.value.trim(),
+      password: password.value
+    })
 
-        if (signInError) throw signInError
-
-        await fetch(`/api/default-items/${data.user.id}`);
-
-        // Guardar credenciales si se marca "Recordarme"
-        if (rememberMe.value) {
-          localStorage.setItem('rememberedEmail', email.value)
-          localStorage.setItem('rememberedPassword', password.value)
-          localStorage.setItem('rememberMe', 'true')
-        } else {
-          localStorage.removeItem('rememberedEmail')
-          localStorage.removeItem('rememberedPassword')
-          localStorage.removeItem('rememberMe')
-        }
-        await loadBalance();
-        router.push('/')
-      } catch (err) {
-        error.value = 'Credenciales incorrectas'
-      } finally {
-        loading.value = false
-      }
+    // Si Supabase devuelve error → credenciales malas
+    if (signInError || !data?.user) {
+      console.error('Error de login:', signInError)
+      error.value = 'Credenciales incorrectas'
+      return
     }
+
+    const userId = data.user.id
+
+    // 2️⃣ LIMPIAR ESTADO DEL USUARIO ANTERIOR
+    try {
+      resetPurchases()
+    } catch (e) {
+      console.warn('resetPurchases falló:', e)
+    }
+
+    try {
+      resetCustomization()
+    } catch (e) {
+      console.warn('resetCustomization falló:', e)
+    }
+
+    // 3️⃣ ASEGURAR ITEMS POR DEFECTO (NO ROMPER LOGIN SI FALLA)
+    try {
+      await fetch(`/api/default-items/${userId}`)
+    } catch (e) {
+      console.error('Error llamando a /api/default-items:', e)
+      // NO lanzamos error, solo log
+    }
+
+    // 4️⃣ CARGAR ESTADO DEL NUEVO USUARIO (COMPRAS + CUSTOM + SALDO)
+    try {
+      await initializePurchases(userId)
+    } catch (e) {
+      console.error('Error inicializando compras:', e)
+    }
+
+    try {
+      await initializeCustomization(userId)
+    } catch (e) {
+      console.error('Error inicializando customización:', e)
+    }
+
+    try {
+      await loadBalance()
+    } catch (e) {
+      console.error('Error cargando balance:', e)
+    }
+
+    // 5️⃣ RECORDAR CREDENCIALES (OPCIONAL)
+    if (rememberMe.value) {
+      localStorage.setItem('rememberedEmail', email.value)
+      localStorage.setItem('rememberedPassword', password.value)
+      localStorage.setItem('rememberMe', 'true')
+    } else {
+      localStorage.removeItem('rememberedEmail')
+      localStorage.removeItem('rememberedPassword')
+      localStorage.removeItem('rememberMe')
+    }
+
+    // 6️⃣ TODO OK → HOME
+    router.push('/')
+  } catch (e) {
+    console.error('Error inesperado en handleLogin:', e)
+    // Solo aquí ponemos un mensaje genérico
+    error.value = 'Ha ocurrido un error al iniciar sesión'
+  } finally {
+    loading.value = false
+  }
+}
+
 
     const showResetModal = ref(false)
     const resetEmail = ref('')

@@ -146,7 +146,7 @@ const user = ref(null)
 
 // Personalización
 const { isPurchased } = usePurchases()
-const { getEquippedItem, equipItem, unequipItem: unequipSlot } = useCustomization()
+const { getEquippedItem, equipItem, unequipItem: unequipSlot, initialize: initCustomization } = useCustomization()
 const purchasedItems = ref([])
 const equippedItems = ref({})
 const currentFilter = ref('all')
@@ -171,13 +171,16 @@ const equippedPreviews = computed(() => {
 })
 
 onMounted(async () => {
-    const { data: { session } } = await supabase.auth.getSession()
-    user.value = session?.user || null
+  const { data: { session } } = await supabase.auth.getSession()
+  user.value = session?.user || null
 
-    if (user.value) {
-        await loadCustomizationData()
-    }
+  if (user.value) {
+    // 🔥 aseguramos que el composable carga desde BD
+    await initCustomization(user.value.id)
+    await loadCustomizationData()
+  }
 })
+
 
 async function loadCustomizationData() {
     try {
@@ -238,28 +241,24 @@ function handleDragStart(event, item) {
 }
 
 async function handleDrop(event, slotType) {
-    event.preventDefault()
-    const itemData = JSON.parse(event.dataTransfer.getData('text/plain'))
-    
-    if (itemData.type !== slotType) {
-        return
-    }
-    
-    await equipItem(itemData.id, slotType)
-    equippedItems.value[slotType] = itemData.name
+  event.preventDefault()
+  const itemData = JSON.parse(event.dataTransfer.getData('text/plain'))
+  
+  if (itemData.type !== slotType) {
+    return
+  }
 
+  const ok = await equipItem(itemData.id, slotType)
+  if (!ok) return   // si el backend falla, no cambiamos la UI
+
+  equippedItems.value[slotType] = itemData.name
 }
 
 async function unequipItem(slotType) {
-  await unequipSlot(slotType)
+  const ok = await unequipSlot(slotType)
+  if (!ok) return
 
-  // Actualiza UI (nombre del item)
   equippedItems.value[slotType] = 'Sin equipar'
-
-  // 🔥 Forzar recomputación de previews
-  // (porque getEquippedItem(slotType) ha cambiado)
-  // Esto funciona porque hará que el computed se recalcule:
-  equippedItems.value = { ...equippedItems.value }
 }
 
 

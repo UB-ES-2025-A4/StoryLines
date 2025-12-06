@@ -19,10 +19,11 @@ async function ensureCustomizationRow(userId) {
 
   const emptyRow = {
     user_id: userId,
-    globe_id: null,
-    home_bg_id: null,
-    profile_bg_id: null
+    globe: null,
+    homebg: null,
+    profilebg: null
   };
+
 
   const { error: insertErr } = await supabaseAdmin
     .from("user_customization")
@@ -47,11 +48,12 @@ router.get("/:userId", async (req, res) => {
     return res.json({
       ok: true,
       equipped: {
-        globe: row.globe_id,
-        homeBg: row.home_bg_id,
-        profileBg: row.profile_bg_id
+        globe: row.globe,       
+        homeBg: row.homebg,
+        profileBg: row.profilebg
       }
     });
+
   } catch (err) {
     console.error(err);
     return res.status(500).json({ ok: false, error: "Error loading customization" });
@@ -105,9 +107,10 @@ router.post("/equip", async (req, res) => {
 
     // 4) Actualizar
     const update = {};
-    if (slot === "globe") update.globe_id = itemId;
-    if (slot === "homeBg") update.home_bg_id = itemId;
-    if (slot === "profileBg") update.profile_bg_id = itemId;
+    if (slot === "globe") update.globe = itemId;
+    if (slot === "homeBg") update.homebg = itemId;
+    if (slot === "profileBg") update.profilebg = itemId;
+
 
     await supabaseAdmin
       .from("user_customization")
@@ -131,9 +134,9 @@ router.post("/unequip", async (req, res) => {
     return res.status(400).json({ ok: false, error: "Missing data" });
 
   const update = {};
-  if (slot === "globe") update.globe_id = null;
-  if (slot === "homeBg") update.home_bg_id = null;
-  if (slot === "profileBg") update.profile_bg_id = null;
+  if (slot === "globe") update.globe = null;
+  if (slot === "homeBg") update.homebg = null;
+  if (slot === "profileBg") update.profilebg = null;
 
   try {
     await supabaseAdmin

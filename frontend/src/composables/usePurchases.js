@@ -5,6 +5,10 @@ import { supabase } from "@/config/supabase";
 
 const purchasedItems = ref([]);
 let initialized = false;
+export function resetPurchases() {
+  purchasedItems.value = [];
+  initialized = false;
+}
 
 export function usePurchases() {
   const { deductBalance, hasEnoughBalance, loadBalance } = useBalance();
@@ -36,7 +40,7 @@ export function usePurchases() {
   function isPurchased(itemId) {
     return purchasedItems.value.includes(itemId);
   }
-
+  
   async function purchaseItem(item, userId) {
     if (isPurchased(item.id)) {
       return { success: false, message: "Ya comprado", type: "error" };
