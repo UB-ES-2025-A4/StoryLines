@@ -30,6 +30,7 @@ import { useRouter } from 'vue-router'
 import { supabase } from '@/config/supabase'
 import GlobeView from '@/components/Globe/GlobeView.vue'
 import Sidebar from '@/components/Sidebar.vue'
+import { initialize, resetCustomization } from '@/composables/useCustomization'
 
 const router = useRouter()
 const user = ref(null)
@@ -38,16 +39,27 @@ const loading = ref(true)
 // Obtener usuario actual
 onMounted(async () => {
   const { data: { session } } = await supabase.auth.getSession()
+
   user.value = session?.user || null
+
+  // ⭐ SI YA HAY USER → CARGA CUSTOMIZATION INMEDIATAMENTE
+  if (user.value) {
+    await initialize(user.value.id)
+  }
+
   loading.value = false
 })
 
-// Escuchar cambios en la autenticación
-supabase.auth.onAuthStateChange((event, session) => {
+// 🔥 Detecta login y logout
+supabase.auth.onAuthStateChange(async (event, session) => {
   user.value = session?.user || null
-  
-  // Limpiar localStorage al cerrar sesión
+
+  if (event === 'SIGNED_IN' && session?.user) {
+    await initialize(session.user.id)
+  }
+
   if (event === 'SIGNED_OUT') {
+    resetCustomization()
     localStorage.removeItem('user_balance')
     localStorage.removeItem('purchased_items')
     localStorage.removeItem('equipped_items')

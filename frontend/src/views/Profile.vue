@@ -1,5 +1,5 @@
 <template>
-  <div class="profile-page" :style="bgStyle">
+  <div v-if="bgLoaded" class="profile-page" :style="bgStyle">
     <!-- Sidebar -->
     <Sidebar />
 
@@ -249,8 +249,9 @@ import { useRouter } from 'vue-router'
 import ChangePicture from '@/components/Profile/ChangePicture.vue'
 import Sidebar from '@/components/Sidebar.vue'
 import { useCustomization } from '@/composables/useCustomization'
-import { getItemById } from '@/data/shopThemes'
 import { getItems } from '@/data/shopThemes'
+import { initialize } from '@/composables/useCustomization'
+
 
 
 export default {
@@ -286,6 +287,8 @@ export default {
     const showFriends = ref(false)
     const checkingUsername = ref(false)
     const usernameAvailable = ref(null)
+    const bgLoaded = ref(false)
+
 
     const defaultAvatar =
       'https://upload.wikimedia.org/wikipedia/commons/a/ac/Default_pfp.jpg'
@@ -755,22 +758,54 @@ export default {
         }
       }
     }
+    function preloadImage(src) {
+      return new Promise((resolve) => {
+        const img = new Image()
+        img.onload = resolve
+        img.onerror = resolve
+        img.src = src
+      })
+    }
+
 
     const allItems = ref([])
 
     onMounted(async () => {
+      loading.value = true
+
       const { data: { session } } = await supabase.auth.getSession()
       user.value = session?.user
 
-      // ⬇️ CARGA TODOS LOS ITEMS DE LA TIENDA
+      // ⭐ 1. Inicializar personalización ANTES DE CARGAR PROFILE
+      if (user.value) {
+        await initialize(user.value.id)
+      }
+
+      // ⭐ 2. Cargar items antes de calcular el fondo
       allItems.value = await getItems()
 
-      await loadProfile()
-      await loadFriends()
-      await loadTrips()
-      await loadDrafts()
-      await loadSavedTrips()
+      // ⭐ 3. Precargar la imagen efectiva del background
+      const equippedBgId = getEquippedItem("profileBg")
+      const bgItem = allItems.value.find(i => i.id === equippedBgId)
+      const bgUrl = bgItem?.bgUrl || defaultProfileBg
+
+      await preloadImage(bgUrl)
+
+      bgLoaded.value = true
+
+      await Promise.all([
+        loadProfile(),
+        loadFriends(),
+        loadTrips(),
+        loadDrafts(),
+        loadSavedTrips()
+      ])
+
+      loadingTrips.value = false
+      loading.value = false
     })
+
+
 
 
     onUnmounted(() => {
@@ -802,6 +837,7 @@ export default {
       saveProfile,
       friends,
       bgStyle,
+      bgLoaded, //  <<<<<<  AÑADE ESTO AQUÍ
       showFriends,
       goToUser,
       defaultAvatar,
@@ -822,13 +858,15 @@ export default {
       handleImageUpdated,
       formatCount,
       saveProfileAndClose,
-      viewsIcon, likesIcon,
+      viewsIcon,
+      likesIcon,
       checkingUsername,
       usernameAvailable,
       isValidUsername,
       checkUsernameAvailability,
       usernameStatus,
     }
+
   }
 }
 </script>

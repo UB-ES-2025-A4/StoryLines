@@ -107,6 +107,8 @@ import { supabase } from '@/config/supabase.js'
 import { useRouter } from 'vue-router'
 import { useCustomization } from '@/composables/useCustomization'
 import { getItems } from '@/data/shopThemes'
+import { initialize as initCustomization } from "@/composables/useCustomization"
+
 
 const allShopItems = ref([])
 
@@ -248,6 +250,14 @@ function closeAuthModal() {
     rebuildGlobeData()
   }
 }
+function preloadTexture(url) {
+  return new Promise(resolve => {
+    const img = new Image()
+    img.onload = resolve
+    img.onerror = resolve
+    img.src = url
+  })
+}
 
 
 onMounted(async () => {
@@ -270,14 +280,39 @@ onMounted(async () => {
   console.log('Usuario logueado:', user.id)
   currentUserId.value = user.id
 
-  await Promise.all([
-      fetchTrips(),
-      fetchFriends(user.id)
-    ])
+  // 1) Inicializar sistema de items del usuario
+  await initCustomization(user.id)
 
+  // 2) Cargar tienda completa
   allShopItems.value = await getItems()
+
+  // 3) Cargar trips y amigos
+  await Promise.all([
+    fetchTrips(),
+    fetchFriends(user.id)
+  ])
+
+  // 4) Esperar DOM
   await nextTick()
+
+  // ⭐ 4.5 PRELOAD de texturas antes de crear el globo
+  const { getEquippedItem } = useCustomization()
+
+  // TEXTURA DEL GLOBO
+  const equippedGlobeId = getEquippedItem('globe')
+  const globeItem = equippedGlobeId ? findItemById(equippedGlobeId) : null
+  const globeTexture = globeItem?.textureUrl || '//unpkg.com/three-globe/example/img/earth-night.jpg'
+  await preloadTexture(globeTexture)
+
+  // BACKGROUND DEL HOME
+  const equippedHomeBgId = getEquippedItem('homeBg')
+  const homeBgItem = equippedHomeBgId ? findItemById(equippedHomeBgId) : null
+  const homeBackground = homeBgItem?.bgUrl || '//unpkg.com/three-globe/example/img/night-sky.png'
+  await preloadTexture(homeBackground)
+
+  // 5) Iniciar globo con la textura correcta desde el primer frame
   initializeGlobe()
+
   window.addEventListener('resize', handleResize)
   document.addEventListener('click', handleDocumentClick)
   // rebuild globe when filteredTrips changes (mode switch)
