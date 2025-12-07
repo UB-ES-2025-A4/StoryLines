@@ -12,12 +12,8 @@
         <h1>StoryLines</h1>
       </div>
       
-      <nav class="nav">
-        <div v-if="user" class="user-menu">
-          <span class="user-email">{{ user.email }}</span>
-          <button @click="handleLogout" class="btn btn-outline">Cerrar Sesión</button>
-        </div>
-        <div v-else class="guest-menu">
+      <nav class="nav" :disabled="loading">
+        <div v-if="!user" class="guest-menu">
           <p class="explore-text">Explora viajes alrededor del mundo</p>
           <router-link to="/login" class="btn btn-primary">Iniciar Sesión</router-link>
           <router-link to="/register" class="btn btn-outline">Registrarse</router-link>
@@ -34,25 +30,41 @@ import { useRouter } from 'vue-router'
 import { supabase } from '@/config/supabase'
 import GlobeView from '@/components/Globe/GlobeView.vue'
 import Sidebar from '@/components/Sidebar.vue'
+import { initialize, resetCustomization } from '@/composables/useCustomization'
 
 const router = useRouter()
 const user = ref(null)
+const loading = ref(true)
 
 // Obtener usuario actual
 onMounted(async () => {
   const { data: { session } } = await supabase.auth.getSession()
+
   user.value = session?.user || null
+
+  // ⭐ SI YA HAY USER → CARGA CUSTOMIZATION INMEDIATAMENTE
+  if (user.value) {
+    await initialize(user.value.id)
+  }
+
+  loading.value = false
 })
 
-// Escuchar cambios en la autenticación
-supabase.auth.onAuthStateChange((event, session) => {
+// 🔥 Detecta login y logout
+supabase.auth.onAuthStateChange(async (event, session) => {
   user.value = session?.user || null
-})
 
-const handleLogout = async () => {
-  await supabase.auth.signOut()
-  router.push('/login')
-}
+  if (event === 'SIGNED_IN' && session?.user) {
+    await initialize(session.user.id)
+  }
+
+  if (event === 'SIGNED_OUT') {
+    resetCustomization()
+    localStorage.removeItem('user_balance')
+    localStorage.removeItem('purchased_items')
+    localStorage.removeItem('equipped_items')
+  }
+})
 
 </script>
 
@@ -100,7 +112,6 @@ const handleLogout = async () => {
   align-items: center;
 }
 
-.user-menu,
 .guest-menu {
   display: flex;
   gap: 12px;
@@ -259,7 +270,6 @@ const handleLogout = async () => {
     padding: 15px;
   }
   
-  .user-menu,
   .guest-menu {
     flex-wrap: wrap;
     justify-content: center;

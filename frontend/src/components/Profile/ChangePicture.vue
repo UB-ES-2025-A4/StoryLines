@@ -1,6 +1,6 @@
 <template>
   <div class="photo-adjuster">
-    <h1 class="photo-title">Selecciona y Ajusta tu Fotografía</h1>
+    <h1 class="photo-title">Selecciona y ajusta tu fotografía</h1>
     <input type="file" @change="onFileChange" accept="image/png, image/jpeg, image/jpg, image/webp" />
 
 
@@ -217,7 +217,7 @@ export default {
 
         const base64 = await blobToBase64(blob);
 
-        const res = await fetch(`${API_URL}/api/upload-avatar`, {
+        const res = await fetch(`${API_URL}/api/avatar/upload`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -254,7 +254,7 @@ export default {
       success.value = "";
 
       try {
-        const res = await fetch(`${API_URL}/api/delete-avatar`, {
+        const res = await fetch(`${API_URL}/api/avatar/delete`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ userId: user.value.id }),
@@ -268,6 +268,7 @@ export default {
         ctx.clearRect(0, 0, canvas.value.width, canvas.value.height);
 
         success.value = "Imagen eliminada correctamente!";
+        localStorage.setItem('profile_avatar_url', null);
         emit("image-updated", null);
       } catch (err) {
         error.value = err.message;
@@ -297,7 +298,6 @@ export default {
 <style scoped>
 .photo-adjuster {
   font-family: Arial, sans-serif;
-  background: #f2f2f251;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -309,7 +309,7 @@ h1 {
 }
 
 .photo-title {
-  font-size: 1.9rem;
+  font-size: 1rem;
   font-weight: 500;
   margin-bottom: 10px;
 }

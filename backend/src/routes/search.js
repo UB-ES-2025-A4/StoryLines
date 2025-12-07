@@ -1,31 +1,41 @@
 import { Router } from "express";
 import { searchUsers, getFriendshipStatus } from "../services/searchService.js";
+import { supabaseAdmin } from "../config/supabase.js";
 
 const router = Router();
 
 // Buscar usuarios
 router.get("/users", async (req, res) => {
-  try {
-    const { q, userId } = req.query;
+  const { q, userId } = req.query;
 
-    if (!q) return res.status(400).json({ error: "Falta q" });
-    if (!userId) return res.status(400).json({ error: "Falta userId" });
+  if (!q) return res.status(400).json({ error: "Missing query q" });
+  if (!userId) return res.status(400).json({ error: "Missing userId" });
 
-    const results = await searchUsers(q, userId);
+  const term = q.trim().toLowerCase();
 
-    const withStatus = await Promise.all(
-      results.map(async (u) => ({
-        ...u,
-        friendshipStatus: await getFriendshipStatus(userId, u.id),
-      }))
-    );
-
-    res.json({ users: withStatus });
-  } catch (e) {
-    console.error("[SEARCH ERROR]", e);
-    res.status(500).json({ error: "Error interno" });
+  if (term === "") {
+    return res.status(404).json({ error: "Empty query" });
   }
+
+  // Buscar en supabase mock
+  const { data, error } = await supabaseAdmin
+    .from("users")
+    .select("*");
+
+  if (error) return res.status(500).json({ error });
+
+  const results = data.filter(u =>
+    u.username?.toLowerCase().includes(term) ||
+    u.display_name?.toLowerCase().includes(term)
+  );
+
+  if (results.length === 0) {
+    return res.status(404).json({ error: "Not found" });
+  }
+
+  return res.json({ ok: true, users: results });
 });
+
 
 // Estado de amistad
 router.get("/friend-status/:targetUserId", async (req, res) => {

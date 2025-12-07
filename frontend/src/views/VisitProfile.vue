@@ -11,64 +11,64 @@
       <!-- CABECERA -->
       <div class="profile-header">
         <div class="avatar-container">
-          <img
-            class="avatar"
-            :src="profile.avatar_url || defaultAvatar"
-            alt="Foto de perfil"
-          />
+          <img class="avatar" :src="profile.avatar_url || defaultAvatar" alt="Foto de perfil" />
         </div>
 
         <div class="profile-text">
           <!-- NOMBRE + BOTÓN AMIGOS -->
           <div class="name-friends-row">
             <h2 class="username">{{ profile.username }}</h2>
-
-            <button class="friends-btn" @click="showFriends = true">
-              Amigos | {{ friends.length }} 
-            </button>
           </div>
 
           <h1 class="display-name">{{ profile.display_name }}</h1>
           <p class="bio">{{ profile.bio }}</p>
 
-          <!-- NUEVO BOTÓN DE ESTADO DE AMISTAD -->
-          <button
-            v-if="currentUserId && !isOwnProfile"
-            class="friend-action-btn"
-            :disabled="friendActionLoading"
-            @click="onFriendButtonClick"
-          >
-            {{ friendButtonLabel }}
-          </button>
+          <div class="button-row">
+            <button class="friends-btn" @click="showFriends = true">
+              Amigos ({{ formatCount(friends.length) }})
+            </button>
+
+
+            <!-- NUEVO BOTÓN DE ESTADO DE AMISTAD -->
+            <button v-if="currentUserId && !isOwnProfile" class="friend-action-btn" :disabled="friendActionLoading"
+              @click="onFriendButtonClick">
+              {{ friendButtonLabel }}
+            </button>
+          </div>
         </div>
       </div>
 
       <!-- VIAJES PUBLICADOS -->
       <div class="recent-trips-section">
         <div class="recent-trips-header">
-          <h2 style="text-align:center; color:white">Viajes publicados</h2>
+          <div class="tabs">Viajes publicados</div>
         </div>
 
         <div class="trips-container">
           <!-- Tarjetas como en Profile.vue (SIN menú) -->
           <div v-if="trips.length > 0" class="trip-cards-wrapper">
-            <div
-              class="trip-card"
-              v-for="trip in trips"
-              :key="trip.id"
-              @click="goToTrip(trip.id)"
-            >
-              <img
-                :src="trip.coverImage || trip.cover_image || defaultImg"
-                alt="Foto del viaje"
-                class="trip-image"
-              />
+            <div class="trip-card" v-for="trip in trips" :key="trip.id" @click="goToTrip(trip.id)">
+              <div class="trip-image-container">
+                <img :src="trip.coverImage || trip.cover_image || defaultImg" alt="Foto del viaje" class="trip-image" />
+              </div>
               <div class="trip-info">
                 <div class="trip-details">
                   <h4>{{ trip.tripName || trip.trip_name || 'Sin título' }}</h4>
                   <p>{{ truncateText(trip.description, 120) }}</p>
                 </div>
+
+                <div class="trip-stats">
+                  <p class="trip-views">
+                    <span v-html="viewsIcon"></span> {{ formatCount(trip.views) }}
+                  </p>
+
+                  <p class="trip-likes">
+                    <span v-html="likesIcon"></span> {{ formatCount(trip.likes) }}
+                  </p>
+                </div>
+
               </div>
+
             </div>
           </div>
 
@@ -80,11 +80,7 @@
     </div>
 
     <!-- POPUP AMIGOS -->
-    <div
-      v-if="showFriends"
-      class="modal-overlay"
-      @click.self="showFriends = false"
-    >
+    <div v-if="showFriends" class="modal-overlay" @click.self="showFriends = false">
       <div class="modal-box">
         <button class="modal-close-x" @click="showFriends = false">✕</button>
         <h2 class="modal-title">Amigos</h2>
@@ -94,26 +90,17 @@
         </div>
 
         <div class="friends-list-scroll">
-        <div
-          v-for="f in friends"
-          :key="f.id"
-          class="friend-item"
-          @click="goToUser(f.id)"
-        >
-          <img :src="f.avatar_url || defaultAvatar" class="friend-avatar" />
-          <span class="friend-username">{{ f.username }}</span>
+          <div v-for="f in friends" :key="f.id" class="friend-item" @click="goToUser(f.id)">
+            <img :src="f.avatar_url || defaultAvatar" class="friend-avatar" />
+            <span class="friend-username">{{ f.username }}</span>
+          </div>
         </div>
-      </div>
 
       </div>
     </div>
 
     <!-- POPUP CONFIRMAR ELIMINAR AMIGO -->
-    <div
-      v-if="showConfirmUnfriend"
-      class="modal-overlay"
-      @click.self="showConfirmUnfriend = false"
-    >
+    <div v-if="showConfirmUnfriend" class="modal-overlay" @click.self="showConfirmUnfriend = false">
       <div class="modal-box">
         <button class="modal-close-x" @click="showConfirmUnfriend = false">
           ✕
@@ -171,7 +158,7 @@ const defaultImg =
 const loadProfile = async () => {
   try {
     const res = await fetch(`${API_BASE}/api/profile/data?userId=${userId.value}`)
-  if (!res.ok) throw new Error('Error HTTP')
+    if (!res.ok) throw new Error('Error HTTP')
 
     const body = await res.json()
     if (body.ok) {
@@ -399,6 +386,24 @@ const goToUser = (id) => {
 }
 
 
+    const formatCount = (count) => {
+      if (count < 1000) return count;
+      if (count < 1000000){
+        if (count % 1000 < 100){
+          return (count / 1000).toFixed(0) + 'K';
+        } else {
+          return (count / 1000).toFixed(1) + 'K';
+        }
+      }
+      if (count < 1000000000){
+        if (count % 1000000 < 100000){
+          return (count / 1000000).toFixed(0) + 'M';
+        } else {
+          return (count / 1000000).toFixed(1) + 'M';
+        }
+      }
+    };
+
 /* ===============================
    LOAD
 ================================ */
@@ -424,14 +429,17 @@ watch(
     loading.value = false
   }
 )
+
+const viewsIcon = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 15a3 3 0 100-6 3 3 0 000 6z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+const likesIcon = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+
 </script>
 
 <style scoped>
 /* === Layout General === */
 .profile-page {
   min-height: 100vh;
-  background: url('https://images.unsplash.com/photo-1604608672516-f1b9b1d37076')
-    center/cover no-repeat;
+  background: url('https://images.unsplash.com/photo-1604608672516-f1b9b1d37076') center/cover no-repeat;
   display: flex;
   justify-content: center;
   align-items: flex-start;
@@ -445,27 +453,28 @@ watch(
 
 /* Tarjeta central */
 .profile-card {
-  background: linear-gradient(
-    to bottom,
-    rgba(11, 47, 74, 0.6),
-    rgba(39, 45, 45, 0.6)
-  );
+  background: linear-gradient(to bottom, rgba(11, 47, 74, 0.6), rgba(39, 45, 45, 0.6));
   backdrop-filter: blur(14px);
   width: 100%;
   max-width: 700px;
+  border-radius: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   padding: 3rem 1rem;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
   min-height: 100vh;
 }
 
 /* === Header === */
 .profile-header {
-    display: flex;
-    align-items: center;
-    text-align: left;
-    gap: 2rem;
-    margin-bottom: 2rem;
-    justify-content: flex-start;
-    margin-left: 80px; /* mueve TODO hacia la derecha */
+  display: flex;
+  align-items: center;
+  text-align: left;
+  gap: 2rem;
+  margin-bottom: 2rem;
+  justify-content: flex-start;
+  /* mueve TODO hacia la derecha */
 }
 
 .avatar {
@@ -476,11 +485,14 @@ watch(
   object-fit: cover;
 }
 
- .profile-text {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-  }
+.profile-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  max-width: 300px;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
 
 
 
@@ -513,6 +525,7 @@ watch(
   cursor: pointer;
   transition: 0.2s;
   font-size: 0.9rem;
+  width: 150px;
 }
 
 .friends-btn:hover {
@@ -531,6 +544,7 @@ watch(
   cursor: pointer;
   transition: 0.2s;
   font-size: 0.9rem;
+  width: 150px;
 }
 
 .friend-action-btn[disabled] {
@@ -544,20 +558,43 @@ watch(
 
 /* === Trips === */
 .recent-trips-section {
-  width: 100%;
-  max-width: 750px;   /* MISMA ANCHURA QUE PROFILE */
-  margin: 0 auto;     /* CENTRAR */
+  width: 95%;
+  border-radius: 0;
+  overflow: hidden;
+  padding-bottom: 2rem;
+  padding-top: 1.5rem;
 }
 
 
 .recent-trips-header {
+  text-align: left;
   padding: 1rem 2rem;
-  background: linear-gradient(135deg, #02a18f, #375689);
+  background: linear-gradient(135deg, rgba(2, 161, 143, 0.8), rgba(55, 86, 137, 0.8));
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  border-radius: 10px 10px 0 0;
+  height: 75px;
+}
+
+.tabs {
+  margin-left: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: left;
+  gap: 3rem;
+  height: 100%;
+  position: relative;
+  font-size: 1.3rem;
+  font-weight: 500;
+  color: #fff;
 }
 
 .trips-container {
+  display: flex;
+  flex-direction: column;
   padding: 1.5rem 2rem;
   background: rgba(11, 47, 74, 0.3);
+  border-radius: 0;
+  min-height: 200px;
 }
 
 /* Tarjetas estilo Profile.vue */
@@ -573,25 +610,38 @@ watch(
   display: flex;
   align-items: center;
   gap: 1.5rem;
+  padding: 0;
+  transition: all 0.3s ease;;
   height: 150px;
   cursor: pointer;
-  transition: 0.2s;
+  position: relative;
 }
 
 .trip-card:hover {
+  cursor: pointer;
   background: #f0f0f0;
 }
 
-.trip-image {
+.trip-image-container {
+  position: relative;
   width: 150px;
+  height: 100%;
+  flex-shrink: 0;
+}
+
+.trip-image {
+  width: 100%;
   height: 100%;
   border-radius: 12px 0 0 12px;
   object-fit: cover;
 }
 
 .trip-info {
-  width: 100%;
   display: flex;
+  justify-content: space-between;
+  width: 100%;
+  align-items: flex-start;
+  padding: 1rem;
 }
 
 .trip-details {
@@ -606,9 +656,9 @@ watch(
 }
 
 .trip-details p {
-  margin: 0.3rem 0 0;
-  color: #222;
+  font-size: 0.95rem;
   opacity: 0.9;
+  color: #0a0a0a;
 }
 
 .no-trips-message {
@@ -718,7 +768,8 @@ watch(
 
 /* Scroll para lista de amigos (máx. 5 amigos visibles) */
 .friends-list-scroll {
-  max-height: 320px;      /* ≈ 5 amigos (5 × ~60px) */
+  max-height: 320px;
+  /* ≈ 5 amigos (5 × ~60px) */
   overflow-y: auto;
   padding-right: 0.5rem;
 }
@@ -735,6 +786,38 @@ watch(
 
 .friends-list-scroll::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.5);
+}
+
+.button-row {
+  display: flex;
+  gap: 1rem;     /* separación entre botones */
+  align-items: center;
+}
+
+.trip-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  margin-top: 0.5rem;
+  margin-left: -0.5rem;
+}
+
+.trip-views {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  margin: 0;
+  font-size: 0.85rem;
+  color: #555;
+}
+
+.trip-likes {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  margin: 0;
+  font-size: 0.85rem;
+  color: #555;
 }
 
 </style>
