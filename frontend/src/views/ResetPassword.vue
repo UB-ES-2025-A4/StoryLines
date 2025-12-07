@@ -25,6 +25,11 @@
           </button>
         </div>
 
+        <div class="checkbox-group">
+            <input type="checkbox" id="rememberMe" v-model="rememberMe" />
+            <label for="rememberMe">Recordarme</label>
+        </div>
+
         <p v-if="error" class="error">{{ error }}</p>
         <p v-if="success" class="success-msg">{{ success }}</p>
 
@@ -60,6 +65,8 @@ export default {
     const showPassword = ref(false)
     const showPasswordConfirm = ref(false)
 
+    const rememberMe = ref(false)
+
     
 
     const updatePassword = async () => {
@@ -73,7 +80,18 @@ export default {
 
       loading.value = true
 
-      const { error: updateError } = await supabase.auth.updateUser(
+      
+      if (password.value !== passwordConfirm.value) {
+        error.value = 'Las contraseñas no coinciden'
+        return
+      }
+
+      if (password.value.length < 8) {
+        error.value = 'La contraseña debe tener al menos 8 caracteres'
+        return
+      }
+
+        const { error: updateError } = await supabase.auth.updateUser(
         { password: password.value },
         { accessToken: token }
       )
@@ -85,17 +103,14 @@ export default {
         return
       }
 
-      
-      if (password.value !== passwordConfirm.value) {
-        error.value = 'Las contraseñas no coinciden'
-        return
-      }
-
-      if (password.value.length < 8) {
-        error.value = 'La contraseña debe tener al menos 8 caracteres'
-        return
-      }
-      
+      // Si hay credenciales guardadas, actualizarlas
+      if (rememberMe.value) {
+        localStorage.setItem('rememberedPassword', password.value)
+        localStorage.setItem('rememberMe', 'true')
+    } else {
+        localStorage.removeItem('rememberedPassword')
+        localStorage.removeItem('rememberMe')
+    }
 
       success.value = 'Contraseña actualizada correctamente'
 
@@ -144,7 +159,8 @@ export default {
       showPassword,
       showPasswordConfirm,
       eyeIcon,
-      eyeSlashIcon
+      eyeSlashIcon,
+      rememberMe
     }
   }
 }
@@ -311,6 +327,28 @@ a:hover {
     color: #bebdb8 !important;
     background: none !important;
     transform: translateY(-50%) !important;
+}
+
+.checkbox-group {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin: 0.6rem 0 1rem;
+  color: #fff;
+  font-size: 0.95rem;
+}
+
+/* Ajuste visual del texto */
+.checkbox-group label {
+  position: relative;
+  top: 2.5px; /* baja ligeramente el texto para centrarlo visualmente */
+}
+
+.checkbox-group input[type='checkbox'] {
+  width: 18px;
+  height: 18px;
+  accent-color: #fff; /* color del check */
+  cursor: pointer;
 }
 
 </style>
