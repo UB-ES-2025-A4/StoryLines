@@ -48,7 +48,9 @@
           <!-- Tarjetas como en Profile.vue (SIN menú) -->
           <div v-if="trips.length > 0" class="trip-cards-wrapper">
             <div class="trip-card" v-for="trip in trips" :key="trip.id" @click="goToTrip(trip.id)">
-              <img :src="trip.coverImage || trip.cover_image || defaultImg" alt="Foto del viaje" class="trip-image" />
+              <div class="trip-image-container">
+                <img :src="trip.coverImage || trip.cover_image || defaultImg" alt="Foto del viaje" class="trip-image" />
+              </div>
               <div class="trip-info">
                 <div class="trip-details">
                   <h4>{{ trip.tripName || trip.trip_name || 'Sin título' }}</h4>
@@ -620,8 +622,15 @@ const likesIcon = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" x
   background: #f0f0f0;
 }
 
-.trip-image {
+.trip-image-container {
+  position: relative;
   width: 150px;
+  height: 100%;
+  flex-shrink: 0;
+}
+
+.trip-image {
+  width: 100%;
   height: 100%;
   border-radius: 12px 0 0 12px;
   object-fit: cover;
