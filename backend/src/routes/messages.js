@@ -42,6 +42,8 @@ router.get('/recents', async (req, res) => {
   try {
     const userId = req.query.userId;
 
+    if(!userId) return res.status(400).json({ error: 'Falta userId' });
+
     // Obtener amistades del usuario
     const { data: friendships, error: fError } = await supabaseAdmin
       .from('friends')
