@@ -334,6 +334,20 @@ router.post("/:tripId/like", async (req, res) => {
     }
 
     if (!existing) {
+      // Obtener información del viaje y su dueño
+      const { data: trip } = await supabaseAdmin
+        .from("trips")
+        .select("user_id, trip_name")
+        .eq("id", tripId)
+        .single();
+
+      // Obtener información del usuario que da like
+      const { data: liker } = await supabaseAdmin
+        .from("users")
+        .select("username, display_name")
+        .eq("id", userId)
+        .single();
+
       const { error: likeError } = await supabaseAdmin
         .from("trip_likes")
         .insert({ 
@@ -345,6 +359,20 @@ router.post("/:tripId/like", async (req, res) => {
       if (likeError) {
         console.error('[LIKE] Insert error:', likeError);
         return res.status(500).json({ error: likeError.message });
+      }
+
+      // Enviar notificación al dueño del viaje (si no es el mismo usuario)
+      if (trip && trip.user_id !== userId) {
+        const likerName = liker?.display_name || liker?.username || 'Alguien';
+        await supabaseAdmin
+          .from("notifications")
+          .insert({
+            receptor_id: trip.user_id,
+            sender_id: userId,
+            type: 'trip-like',
+            message: `A ${likerName} le ha gustado tu viaje "${trip.trip_name}".`,
+            read: false
+          });
       }
     }
 
@@ -402,6 +430,20 @@ router.post("/:tripId/comments", async (req, res) => {
     if (!tripId || !userId || !text)
       return res.status(400).json({ error: "Faltan datos" });
 
+    // Obtener información del viaje y su dueño
+    const { data: trip } = await supabaseAdmin
+      .from("trips")
+      .select("user_id, trip_name")
+      .eq("id", tripId)
+      .single();
+
+    // Obtener información del usuario que comenta
+    const { data: commenter } = await supabaseAdmin
+      .from("users")
+      .select("username, display_name")
+      .eq("id", userId)
+      .single();
+
     await supabaseAdmin
       .from("trip_comments")
       .insert({ trip_id: tripId, user_id: userId, text })
@@ -409,6 +451,20 @@ router.post("/:tripId/comments", async (req, res) => {
     await supabaseAdmin.rpc("increment_trip_comments", {
       trip_id_input: tripId,
     });
+
+    // Enviar notificación al dueño del viaje (si no es el mismo usuario)
+    if (trip && trip.user_id !== userId) {
+      const commenterName = commenter?.display_name || commenter?.username || 'Alguien';
+      await supabaseAdmin
+        .from("notifications")
+        .insert({
+          receptor_id: trip.user_id,
+          sender_id: userId,
+          type: 'trip-comment',
+          message: `${commenterName} ha comentado en tu viaje "${trip.trip_name}".`,
+          read: false
+        });
+    }
 
     const { count } = await supabaseAdmin
       .from("trip_comments")
