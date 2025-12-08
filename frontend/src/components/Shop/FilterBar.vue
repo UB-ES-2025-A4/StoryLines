@@ -63,10 +63,9 @@ defineEmits(['filter-change'])
 }
 
 .filter-button.active {
-  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-  border-color: #3b82f6;
+  background: linear-gradient(135deg, rgba(2, 161, 143, 0.8), rgba(55, 86, 137, 0.8));
+  border-color: rgba(2, 161, 143, 0.8);
   color: white;
-  box-shadow: 0 4px 16px rgba(59, 130, 246, 0.4);
 }
 
 .filter-icon {
