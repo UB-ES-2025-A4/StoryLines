@@ -16,6 +16,10 @@
         <div class="nav-item" :class="{ 'active': showNotifications, 'disabled': !user }" @click="toggleNotifications">
           <svg class="icon" v-html="notificationsIcon"></svg>
           <span>Notificaciones</span>
+
+          <span v-if="unreadNotificationCount > 0" class="badge">
+            {{ unreadNotificationCount > 99 ? '99+' : unreadNotificationCount }}
+          </span>
         </div>
 
         <router-link to="/createtrip" class="nav-item" :class="{ 'active': $route.path === '/create' }">
@@ -50,7 +54,8 @@
     </div>
 
     <div class="notification-panel" :class="{ 'show': showNotifications }">
-      <Notifications :isVisible="showNotifications" @close="showNotifications = false" />
+      <Notifications :isVisible="showNotifications" @close="showNotifications = false" 
+        @update-notification-count="unreadNotificationCount = $event" />
     </div>
     <div class="searcher-panel" :class="{ 'show': showSearcher }">
       <Searcher :isOpen="showSearcher" @close="showSearcher = false" />
@@ -77,6 +82,7 @@ const showMessages = ref(false)
 const user = ref(null)
 const user_avatar_url = ref(localStorage.getItem('user_avatar_url') || null)
 const unreadMessageCount = ref(0)
+const unreadNotificationCount = ref(0)
 
 // Obtener sesión y avatar del usuario
 onMounted(async () => {
@@ -97,6 +103,9 @@ onMounted(async () => {
     } else {
       user_avatar_url.value = defaultAvatar
     }
+    
+    // Cargar conteo de notificaciones
+    loadNotificationCount()
   }
 })
 
@@ -113,6 +122,21 @@ const toggleNotifications = () => {
   if (showNotifications.value) {
     showSearcher.value = false
     showMessages.value = false
+  }
+}
+
+const loadNotificationCount = async () => {
+  if (!user.value) return
+  
+  try {
+    const res = await fetch(`/api/notifications?userId=${user.value.id}`)
+    const data = await res.json()
+    if (data.ok) {
+      // Contar notificaciones no leídas
+      unreadNotificationCount.value = data.notifications.filter(n => !n.read).length
+    }
+  } catch (e) {
+    console.error('Error loading notification count:', e)
   }
 }
 
@@ -260,7 +284,7 @@ const settingsIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="26" height=
 
 .badge {
   position: absolute;
-  right: 12px;
+  right: -8px;
   top: 50%;
   transform: translateY(-50%);
   width: 23px;
