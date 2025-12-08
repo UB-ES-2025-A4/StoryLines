@@ -1,5 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import { supabase } from '@/config/supabase'
+import { getSupabase } from '@/config/supabase'
 
 // Importar vistas/componentes (crearemos estos después)
 import Home from '@/views/Home.vue'
@@ -9,6 +9,9 @@ import Profile from '@/views/Profile.vue'
 import Post from '@/views/Post.vue' 
 import VisitProfile from '@/views/VisitProfile.vue'
 import CreateTrip from '@/views/CreateTrip.vue'
+import Settings from '@/views/Settings.vue'
+import Shop from '@/views/Shop.vue'
+import Customization from '@/views/Customization.vue'
 
 const routes = [
   {
@@ -59,6 +62,30 @@ const routes = [
     name: 'CreateTrip',
     component: CreateTrip,
     meta: { requiresAuth: true }
+  },
+
+  {
+    path: '/settings',
+    name: 'Settings',
+    component: Settings,
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/shop',
+    name: 'Shop',
+    component: Shop,
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/customization',
+    name: 'Customization',
+    component: Customization,
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/reset-password',
+    name: 'ResetPassword',
+    component: () => import('@/views/ResetPassword.vue')
   }
 ]
 
@@ -70,7 +97,13 @@ const router = createRouter({
 
 // Guard de navegación para proteger rutas
 router.beforeEach(async (to, from, next) => {
+
+  if (to.path === '/reset-password') {
+    return next()
+  }
+
   // Obtener sesión actual
+  const supabase = await getSupabase()
   const { data: { session } } = await supabase.auth.getSession()
   
   // Si la ruta requiere autenticación y no hay sesión

@@ -22,7 +22,7 @@
         <div class="notification-content">
           <div class="text">
             <p>{{ n.message }}</p>
-            <small>{{ new Date(n.created_at).toLocaleDateString() }}</small>
+            <small>{{ formatDate(n.created_at) }}</small>
           </div>
 
           <div v-if="n.type === 'friend-approval'" class="actions">
@@ -41,7 +41,7 @@ import { ref, onMounted, watch } from "vue"
 import { supabase } from "@/config/supabase"
 
 const props = defineProps(['isVisible'])
-defineEmits(['close'])
+const emit = defineEmits(['close', 'update-notification-count'])
 
 const currentUserId = ref("")
 const notifications = ref([])
@@ -54,11 +54,26 @@ async function loadNotifications() {
     const data = await res.json()
     if (data.ok) {
       notifications.value = data.notifications
+      // Emitir conteo de notificaciones no leídas
+      const unreadCount = data.notifications.filter(n => !n.read).length
+      emit('update-notification-count', unreadCount)
     }
   } catch (e) {
     console.error(e)
   }
   loading.value = false
+}
+
+async function markAsRead() {
+  try {
+    await fetch('/api/notifications/mark-read', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId: currentUserId.value })
+    })
+  } catch (e) {
+    console.error(e)
+  }
 }
 
 async function acceptRequest(notif) {
@@ -97,6 +112,27 @@ async function rejectRequest(notif) {
   }
 }
 
+const formatDate = (dateStr) => {
+      if (!dateStr) return "";
+      
+      //how long ago was created
+      const date = new Date(dateStr);
+      const now = new Date();
+      const diff = now - date; // diferencia en milisegundos
+      const seconds = Math.floor(diff / 1000);
+      const minutes = Math.floor(seconds / 60);
+      const hours = Math.floor(minutes / 60);
+      const days = Math.floor(hours / 24);
+      const weeks = Math.floor(days / 7);
+
+      if (weeks > 0) return `${weeks} semana${weeks > 1 ? 's' : ''}`;
+      if (days > 0) return `${days}d`;
+      if (hours > 0) return `${hours}h`;
+      if (minutes > 0) return `${minutes}m`;
+      if (seconds > 0) return `${seconds}s`;
+      return "justo ahora";
+    };
+
 onMounted(async () => {
   const { data: { session } } = await supabase.auth.getSession()
   currentUserId.value = session?.user?.id || ""
@@ -105,8 +141,9 @@ onMounted(async () => {
   }
 })
 
-watch(() => props.isVisible, (newValue) => {
+watch(() => props.isVisible, async (newValue) => {
   if (newValue && currentUserId.value) {
+    await markAsRead()
     loadNotifications()
   }
 })
@@ -114,7 +151,7 @@ watch(() => props.isVisible, (newValue) => {
 
 <style scoped>
 .notifications-panel {
-  width: 350px;
+  width: 400px;
   background: #0a0a0a;
   height: 100vh;
   display: flex;

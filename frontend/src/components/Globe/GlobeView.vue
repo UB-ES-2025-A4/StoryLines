@@ -100,12 +100,17 @@
 
 
 <script setup>
-import { ref, onMounted, onUnmounted, computed, watch } from 'vue'
+import { ref, onMounted, onUnmounted, computed, watch, nextTick } from 'vue'
 import Globe from 'globe.gl'
 import {  convertTripsToArcs, processDestinationsFromTrips } from '@/data/dummyTrips.js'
 import { supabase } from '@/config/supabase.js'
 import { useRouter } from 'vue-router'
+import { useCustomization } from '@/composables/useCustomization'
+import { getItems } from '@/data/shopThemes'
+import { initialize as initCustomization } from "@/composables/useCustomization"
 
+
+const allShopItems = ref([])
 
 const globeEl = ref(null)
 let myGlobe = null
@@ -121,6 +126,10 @@ const suggestedUsers = ref([])
 const allSuggestedUsers = ref([])
 
 const defaultAvatar = '/default-avatar.png'
+
+function findItemById(id) {
+  return allShopItems.value.find(i => i.id === id) || null
+}
 
 const friendUserIds = computed(() => {
   return friends.value
@@ -241,6 +250,14 @@ function closeAuthModal() {
     rebuildGlobeData()
   }
 }
+function preloadTexture(url) {
+  return new Promise(resolve => {
+    const img = new Image()
+    img.onload = resolve
+    img.onerror = resolve
+    img.src = url
+  })
+}
 
 
 onMounted(async () => {
@@ -263,11 +280,39 @@ onMounted(async () => {
   console.log('Usuario logueado:', user.id)
   currentUserId.value = user.id
 
+  // 1) Inicializar sistema de items del usuario
+  await initCustomization(user.id)
+
+  // 2) Cargar tienda completa
+  allShopItems.value = await getItems()
+
+  // 3) Cargar trips y amigos
   await Promise.all([
-      fetchTrips(),
-      fetchFriends(user.id)
-    ])
+    fetchTrips(),
+    fetchFriends(user.id)
+  ])
+
+  // 4) Esperar DOM
+  await nextTick()
+
+  // ⭐ 4.5 PRELOAD de texturas antes de crear el globo
+  const { getEquippedItem } = useCustomization()
+
+  // TEXTURA DEL GLOBO
+  const equippedGlobeId = getEquippedItem('globe')
+  const globeItem = equippedGlobeId ? findItemById(equippedGlobeId) : null
+  const globeTexture = globeItem?.textureUrl || '//unpkg.com/three-globe/example/img/earth-night.jpg'
+  await preloadTexture(globeTexture)
+
+  // BACKGROUND DEL HOME
+  const equippedHomeBgId = getEquippedItem('homeBg')
+  const homeBgItem = equippedHomeBgId ? findItemById(equippedHomeBgId) : null
+  const homeBackground = homeBgItem?.bgUrl || '//unpkg.com/three-globe/example/img/night-sky.png'
+  await preloadTexture(homeBackground)
+
+  // 5) Iniciar globo con la textura correcta desde el primer frame
   initializeGlobe()
+
   window.addEventListener('resize', handleResize)
   document.addEventListener('click', handleDocumentClick)
   // rebuild globe when filteredTrips changes (mode switch)
@@ -624,12 +669,27 @@ function createTripPreviewTooltip(arc) {
       
       <div style="padding: 16px;">
         <div style="
-          font-weight: bold; 
-          font-size: 18px; 
-          color: white;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
           margin-bottom: 8px;
         ">
-          ${trip.tripName}
+          <div style="
+            font-weight: bold; 
+            font-size: 18px; 
+            color: white;
+          ">
+            ${trip.tripName}
+          </div>
+          <div style="
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            color: #aaa;
+            font-size: 12px;
+          ">
+            ${viewsIcon} ${formatCount(trip.views)}
+          </div>
         </div>
         
         <div style="
@@ -687,16 +747,25 @@ function createTripPreviewTooltip(arc) {
     </div>
   `
 }
-
-
 function initializeGlobe() {
   const arcs = convertTripsToArcs(filteredTrips.value)
   const stackedArcs = groupArcsByRoute(arcs)
   const destinations = processDestinationsFromTrips(filteredTrips.value)
   
+  // Obtener textura equipada del globo
+  const { getEquippedItem } = useCustomization()
+  const equippedGlobeId = getEquippedItem('globe')
+  const globeItem = equippedGlobeId ? findItemById(equippedGlobeId) : null
+  const globeTexture = globeItem?.textureUrl || '//unpkg.com/three-globe/example/img/earth-night.jpg'
+
+  const equippedHomeBgId = getEquippedItem('homeBg')
+  const homeBgItem = equippedHomeBgId ? findItemById(equippedHomeBgId) : null
+  const homeBackground = homeBgItem?.bgUrl || '//unpkg.com/three-globe/example/img/night-sky.png'
+
+  
   myGlobe = Globe()(globeEl.value)
-    .globeImageUrl('//unpkg.com/three-globe/example/img/earth-night.jpg')
-    .backgroundColor('rgba(0, 0, 0, 1)')
+    .globeImageUrl(globeTexture)
+    .backgroundImageUrl(homeBackground)
     .width(window.innerWidth)
     .height(window.innerHeight)
     
@@ -1199,6 +1268,29 @@ function handleResize() {
       .height(window.innerHeight)
   }
 }
+
+
+const formatCount = (count) => {
+  if (count < 1000) return count;
+  if (count < 1000000) {
+    if (count % 1000 < 100) {
+      return (count / 1000).toFixed(0) + 'K';
+    } else {
+      return (count / 1000).toFixed(1) + 'K';
+    }
+  }
+  if (count < 1000000000) {
+    if (count % 1000000 < 100000) {
+      return (count / 1000000).toFixed(0) + 'M';
+    } else {
+      return (count / 1000000).toFixed(1) + 'M';
+    }
+  }
+};
+
+const viewsIcon = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 15a3 3 0 100-6 3 3 0 000 6z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+
+
 </script>
 
 <style scoped>

@@ -31,8 +31,16 @@ import deleteFriendRouter from "./routes/deleteFriend.js";
 import notificationsRouter from "./routes/notifications.js";
 import searchRouter from "./routes/search.js";
 import tripsRouter from "./routes/trips.js";
+import usersRouter from "./routes/users.js";
+import shopRouter from './routes/shop.js';
+import balanceRouter from './routes/balance.js'; 
+import purchasesRouter from "./routes/purchases.js";
+import messagesRouter from "./routes/messages.js";
+import customizationRouter from "./routes/customization.js";
+import defaultItemsRoute from "./routes/defaultItems.js";
+import userRoutes from "./routes/user.js";
+import configRouter from "./routes/config.js";
 
-// ❗ LAS QUE FALTABAN
 import avatarRouter from "./routes/avatar.js";
 import friendRequestRouter from "./routes/friendRequest.js";
 
@@ -49,9 +57,19 @@ app.use("/api/delete-friend", deleteFriendRouter);
 app.use("/api/notifications", notificationsRouter);
 app.use("/api/search", searchRouter);
 app.use("/api/trips", tripsRouter);
+app.use("/api/users", usersRouter);
+app.use('/api/shop', shopRouter);
+app.use('/api/balance', balanceRouter);
+app.use("/api/purchases", purchasesRouter);
+app.use("/api/customization", customizationRouter);
+app.use("/api/default-items", defaultItemsRoute);
+app.use("/api/user", userRoutes);
+app.use("/api/config", configRouter);
 
 app.use("/api/avatar", avatarRouter);
 app.use("/api/friend-request", friendRequestRouter);
+
+app.use("/api/messages", messagesRouter);
 
 // ============================================================
 // FRONTEND STATIC FILES
