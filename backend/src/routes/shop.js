@@ -81,12 +81,19 @@ router.get('/items/:id', async (req, res) => {
 })
 
 export async function ensureDefaultItems(userId) {
+  console.log('[DEFAULT_ITEMS] Starting for user:', userId);
+  
   const { data: freeItems, error } = await supabaseAdmin
     .from("shop_items")
     .select("id")
     .or("price.eq.0,is_default.eq.true");
 
-  if (error) throw error;
+  if (error) {
+    console.error('[DEFAULT_ITEMS] Error fetching free items:', error);
+    throw error;
+  }
+  
+  console.log('[DEFAULT_ITEMS] Free items found:', freeItems?.length || 0);
   if (!freeItems || freeItems.length === 0) return;
 
   const freeIds = freeItems.map(i => i.id);
@@ -96,10 +103,15 @@ export async function ensureDefaultItems(userId) {
     .select("item_id")
     .eq("user_id", userId);
 
-  if (ownedErr) throw ownedErr;
+  if (ownedErr) {
+    console.error('[DEFAULT_ITEMS] Error fetching owned items:', ownedErr);
+    throw ownedErr;
+  }
 
-  const ownedIds = owned.map(x => x.item_id);
+  const ownedIds = owned?.map(x => x.item_id) || [];
   const missing = freeIds.filter(id => !ownedIds.includes(id));
+  
+  console.log('[DEFAULT_ITEMS] Missing items:', missing.length);
   if (missing.length === 0) return;
 
   const inserts = missing.map(id => ({
@@ -111,7 +123,12 @@ export async function ensureDefaultItems(userId) {
     .from("user_items")
     .insert(inserts);
 
-  if (insertError) throw insertError;
+  if (insertError) {
+    console.error('[DEFAULT_ITEMS] Error inserting items:', insertError);
+    throw insertError;
+  }
+  
+  console.log('[DEFAULT_ITEMS] Successfully added', missing.length, 'items');
 }
 
 export default router;

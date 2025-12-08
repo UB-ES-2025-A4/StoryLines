@@ -93,7 +93,7 @@
 <script>
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { supabase } from '@/config/supabase'
+import { getSupabase } from '@/config/supabase'
 import { useBalance } from '@/composables/useBalance'
 
 export default {
@@ -171,6 +171,7 @@ export default {
       usernameAvailable.value = null
 
       try {
+        const supabase = await getSupabase()
         const { data, error } = await supabase
           .from('users')
           .select('id')
@@ -201,6 +202,7 @@ export default {
 
       try {
         // Crear usuario en auth
+        const supabase = await getSupabase()
         const { data: authUser, error: signUpError } = await supabase.auth.signUp({
           email: email.value,
           password: password.value
