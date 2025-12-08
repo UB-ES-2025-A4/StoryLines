@@ -336,7 +336,11 @@ router.post("/:tripId/like", async (req, res) => {
     if (!existing) {
       const { error: likeError } = await supabaseAdmin
         .from("trip_likes")
-        .insert({ trip_id: tripId, user_id: userId, created_at: new Date().toISOString() });
+        .insert({ 
+          trip_id: tripId, 
+          user_id: userId, 
+          created_at: new Date().toISOString() 
+        });
 
       if (likeError) {
         console.error('[LIKE] Insert error:', likeError);
@@ -472,7 +476,10 @@ router.post("/:tripId/save", async (req, res) => {
     if (!existing) {
       const { error: saveError } = await supabaseAdmin
         .from("trip_saves")
-        .insert({ trip_id: tripId, user_id: userId });
+        .insert({ 
+          trip_id: tripId, 
+          user_id: userId 
+        });
 
       if (saveError && saveError.code !== "23505")
         return res.status(500).json({ error: saveError.message });
