@@ -1,5 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import { supabase } from '@/config/supabase'
+import { getSupabase } from '@/config/supabase'
 
 // Importar vistas/componentes (crearemos estos después)
 import Home from '@/views/Home.vue'
@@ -103,6 +103,7 @@ router.beforeEach(async (to, from, next) => {
   }
 
   // Obtener sesión actual
+  const supabase = await getSupabase()
   const { data: { session } } = await supabase.auth.getSession()
   
   // Si la ruta requiere autenticación y no hay sesión

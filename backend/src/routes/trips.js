@@ -311,38 +311,57 @@ router.post("/:tripId/like", async (req, res) => {
     const { tripId } = req.params;
     const { userId } = req.body;
 
+    console.log('[LIKE] Request:', { tripId, userId });
+    console.log('[LIKE] Supabase config:', {
+      hasUrl: !!process.env.SUPABASE_URL,
+      hasKey: !!process.env.SUPABASE_ANON_KEY,
+      hasServiceKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY
+    });
+
     if (!tripId || !userId)
       return res.status(400).json({ error: "Faltan datos" });
 
-    const { data: existing } = await supabaseAdmin
+    const { data: existing, error: existingError } = await supabaseAdmin
       .from("trip_likes")
       .select("id")
       .eq("trip_id", tripId)
       .eq("user_id", userId)
       .maybeSingle();
 
+    if (existingError) {
+      console.error('[LIKE] Existing check error:', existingError);
+      return res.status(500).json({ error: existingError.message });
+    }
+
     if (!existing) {
       const { error: likeError } = await supabaseAdmin
         .from("trip_likes")
-        .insert({ trip_id: tripId, user_id: userId, created_at: new Date().toISOString() });
+        .insert({ 
+          trip_id: tripId, 
+          user_id: userId, 
+          created_at: new Date().toISOString() 
+        });
 
-      if (likeError && likeError.code !== "23505")
+      if (likeError) {
+        console.error('[LIKE] Insert error:', likeError);
         return res.status(500).json({ error: likeError.message });
-
-      await supabaseAdmin.rpc("increment_trip_likes", {
-        trip_id_input: tripId,
-      });
+      }
     }
 
-    const { count } = await supabaseAdmin
+    const { count, error: countError } = await supabaseAdmin
       .from("trip_likes")
       .select("*", { head: true, count: "exact" })
       .eq("trip_id", tripId);
 
+    if (countError) {
+      console.error('[LIKE] Count error:', countError);
+      return res.status(500).json({ error: countError.message });
+    }
+
     return res.json({ ok: true, userLiked: true, likes: count });
   } catch (e) {
     console.error("[LIKE ERROR]", e);
-    return res.status(500).json({ error: "Error interno" });
+    return res.status(500).json({ error: e.message });
   }
 });
 
@@ -457,7 +476,10 @@ router.post("/:tripId/save", async (req, res) => {
     if (!existing) {
       const { error: saveError } = await supabaseAdmin
         .from("trip_saves")
-        .insert({ trip_id: tripId, user_id: userId });
+        .insert({ 
+          trip_id: tripId, 
+          user_id: userId 
+        });
 
       if (saveError && saveError.code !== "23505")
         return res.status(500).json({ error: saveError.message });
