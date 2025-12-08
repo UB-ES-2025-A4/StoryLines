@@ -416,26 +416,32 @@ async function unequipItem(slotType) {
 }
 
 .filter-btn {
-  background: #2a2a2a;
-  color: #ccc;
-  border: 1px solid #444;
-  padding: 1rem 1.5rem;
-  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  background: rgba(255, 255, 255, 0.05);
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.95rem;
+  font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s;
-  font-size: 1rem;
-  font-weight: 500;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  backdrop-filter: blur(10px);
 }
 
 .filter-btn:hover {
-  background: #3a3a3a;
-  color: #fff;
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.2);
+  color: white;
+  transform: translateY(-2px);
 }
 
 .filter-btn.active {
   background: linear-gradient(135deg, rgba(2, 161, 143, 0.8), rgba(55, 86, 137, 0.8));
+  border-color: rgba(2, 161, 143, 0.8);
   color: white;
-  border-color: transparent;
 }
 
 .purchased-items {

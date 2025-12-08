@@ -746,7 +746,19 @@ export default {
       showPictureModal.value = false
       localStorage.setItem('profile_avatar_url', newUrl)
       window.dispatchEvent(new CustomEvent('avatar-updated', { detail: newUrl }))
-      await saveProfile()
+      
+      // Actualizar solo el avatar sin tocar otros campos
+      try {
+        const { data: { session } } = await supabase.auth.getSession()
+        const { error } = await supabase
+          .from('users')
+          .update({ avatar_url: newUrl })
+          .eq('id', session.user.id)
+        
+        if (error) throw error
+      } catch (err) {
+        console.error('Error actualizando avatar:', err)
+      }
     }
 
     const handleClickOutside = (event) => {
