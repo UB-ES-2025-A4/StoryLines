@@ -41,7 +41,7 @@ import { ref, onMounted, watch } from "vue"
 import { supabase } from "@/config/supabase"
 
 const props = defineProps(['isVisible'])
-defineEmits(['close'])
+const emit = defineEmits(['close', 'update-notification-count'])
 
 const currentUserId = ref("")
 const notifications = ref([])
@@ -54,11 +54,26 @@ async function loadNotifications() {
     const data = await res.json()
     if (data.ok) {
       notifications.value = data.notifications
+      // Emitir conteo de notificaciones no leídas
+      const unreadCount = data.notifications.filter(n => !n.read).length
+      emit('update-notification-count', unreadCount)
     }
   } catch (e) {
     console.error(e)
   }
   loading.value = false
+}
+
+async function markAsRead() {
+  try {
+    await fetch('/api/notifications/mark-read', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId: currentUserId.value })
+    })
+  } catch (e) {
+    console.error(e)
+  }
 }
 
 async function acceptRequest(notif) {
@@ -126,8 +141,9 @@ onMounted(async () => {
   }
 })
 
-watch(() => props.isVisible, (newValue) => {
+watch(() => props.isVisible, async (newValue) => {
   if (newValue && currentUserId.value) {
+    await markAsRead()
     loadNotifications()
   }
 })
