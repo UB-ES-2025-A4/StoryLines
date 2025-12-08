@@ -29,10 +29,6 @@ router.get("/users", async (req, res) => {
     u.display_name?.toLowerCase().includes(term)
   );
 
-  if (results.length === 0) {
-    return res.status(404).json({ error: "Not found" });
-  }
-
   return res.json({ ok: true, users: results });
 });
 

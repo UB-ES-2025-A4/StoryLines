@@ -324,7 +324,7 @@ router.post("/:tripId/like", async (req, res) => {
     if (!existing) {
       const { error: likeError } = await supabaseAdmin
         .from("trip_likes")
-        .insert({ trip_id: tripId, user_id: userId });
+        .insert({ trip_id: tripId, user_id: userId, created_at: new Date().toISOString() });
 
       if (likeError && likeError.code !== "23505")
         return res.status(500).json({ error: likeError.message });
