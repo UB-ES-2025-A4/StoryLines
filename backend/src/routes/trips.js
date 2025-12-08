@@ -311,13 +311,6 @@ router.post("/:tripId/like", async (req, res) => {
     const { tripId } = req.params;
     const { userId } = req.body;
 
-    console.log('[LIKE] Request:', { tripId, userId });
-    console.log('[LIKE] Supabase config:', {
-      hasUrl: !!process.env.SUPABASE_URL,
-      hasKey: !!process.env.SUPABASE_ANON_KEY,
-      hasServiceKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY
-    });
-
     if (!tripId || !userId)
       return res.status(400).json({ error: "Faltan datos" });
 
@@ -329,7 +322,6 @@ router.post("/:tripId/like", async (req, res) => {
       .maybeSingle();
 
     if (existingError) {
-      console.error('[LIKE] Existing check error:', existingError);
       return res.status(500).json({ error: existingError.message });
     }
 
@@ -357,7 +349,6 @@ router.post("/:tripId/like", async (req, res) => {
         });
 
       if (likeError) {
-        console.error('[LIKE] Insert error:', likeError);
         return res.status(500).json({ error: likeError.message });
       }
 
@@ -382,7 +373,6 @@ router.post("/:tripId/like", async (req, res) => {
       .eq("trip_id", tripId);
 
     if (countError) {
-      console.error('[LIKE] Count error:', countError);
       return res.status(500).json({ error: countError.message });
     }
 
