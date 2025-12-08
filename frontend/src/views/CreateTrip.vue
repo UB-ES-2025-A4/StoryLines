@@ -572,8 +572,8 @@ export default {
             .update({
               trip_name: trip.value.trip_name,
               cover_image: trip.value.cover_image || null,
-              start_date: trip.value.start_date || null,
-              end_date: trip.value.end_date || null,
+              start_date: trip.value.start_date.trim() || null,
+              end_date: trip.value.end_date.trim() || null,
               description: trip.value.description || null,
               status
             })
@@ -702,8 +702,8 @@ export default {
               user_id: user.value.id,
               trip_name: trip.value.trip_name,
               cover_image: trip.value.cover_image,
-              start_date: trip.value.start_date,
-              end_date: trip.value.end_date,
+              start_date: trip.value.start_date.trim() || null,
+              end_date: trip.value.end_date.trim() || null,
               description: trip.value.description || null,
               status
             })
