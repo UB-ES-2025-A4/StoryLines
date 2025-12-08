@@ -1,14 +1,46 @@
 import { createClient } from '@supabase/supabase-js'
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+let supabaseClient = null
+let configPromise = null
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    autoRefreshToken: true,
-    persistSession: true,
-    detectSessionInUrl: true
+// Initialize config fetch
+const initConfig = () => {
+  if (!configPromise) {
+    configPromise = fetch('/api/config/supabase')
+      .then(res => res.json())
+      .then(config => {
+        supabaseClient = createClient(config.url, config.anonKey, {
+          auth: {
+            autoRefreshToken: true,
+            persistSession: true,
+            detectSessionInUrl: true
+          }
+        })
+        return supabaseClient
+      })
+      .catch(error => {
+        console.error('Failed to load Supabase config:', error)
+        throw error
+      })
   }
+  return configPromise
+}
+
+// Start initialization immediately
+initConfig()
+
+// Export function that returns initialized client
+export const getSupabase = async () => {
+  if (supabaseClient) return supabaseClient
+  return await initConfig()
+}
+
+// For backward compatibility - will be null initially
+export let supabase = supabaseClient
+
+// Update supabase export when ready
+initConfig().then(client => {
+  supabase = client
 })
 
 export default supabase

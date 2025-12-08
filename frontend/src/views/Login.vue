@@ -75,7 +75,7 @@
 <script>
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { supabase } from '@/config/supabase'
+import { getSupabase } from '@/config/supabase'
 import { useBalance } from '@/composables/useBalance'
 import { resetPurchases } from "@/composables/usePurchases"
 import { resetCustomization } from "@/composables/useCustomization"
@@ -105,6 +105,7 @@ export default {
 
   try {
     // 1️⃣ LOGIN
+    const supabase = await getSupabase()
     const { data, error: signInError } = await supabase.auth.signInWithPassword({
       email: email.value.trim(),
       password: password.value
@@ -205,6 +206,7 @@ export default {
       resetLoading.value = true
 
       try {
+        const supabase = await getSupabase()
         const { error: resetErr } = await supabase.auth.resetPasswordForEmail(resetEmail.value, {
           redirectTo: window.location.origin + '/reset-password'
         })
