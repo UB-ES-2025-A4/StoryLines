@@ -1,10 +1,9 @@
 import { createClient } from '@supabase/supabase-js'
 
-// Fetch config from backend
-const configResponse = await fetch('/api/config/supabase')
-const config = await configResponse.json()
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 
-export const supabase = createClient(config.url, config.anonKey, {
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     autoRefreshToken: true,
     persistSession: true,
