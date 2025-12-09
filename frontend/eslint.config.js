@@ -1,6 +1,7 @@
 import js from "@eslint/js";
 import globals from "globals";
 import vue from "eslint-plugin-vue";
+import vitest from "eslint-plugin-vitest";  // 👈 IMPORT CORRECTO ESM
 import { defineConfig } from "eslint/config";
 
 export default defineConfig([
@@ -13,9 +14,9 @@ export default defineConfig([
       "vite.config.js"
     ]
   },
-  
+
   {
-    files: ["src/**/*.{js,vue}"],   // 👈 SOLO tu código real
+    files: ["src/**/*.{js,vue}"],
     languageOptions: {
       ecmaVersion: "latest",
       sourceType: "module",
@@ -26,7 +27,7 @@ export default defineConfig([
     },
     extends: [
       js.configs.recommended,
-      vue.configs["flat/essential"]   // 👈 más flexible, menos errores
+      vue.configs["flat/essential"]
     ],
     plugins: { vue },
     rules: {
@@ -40,5 +41,26 @@ export default defineConfig([
       "vue/multiline-html-element-content-newline": "off",
       "vue/attributes-order": "off"
     }
+  },
+
+  // 🔥 BLOQUE PARA TESTS (ESM CORRECTO)
+{
+  files: ["src/tests/**/*.test.js", "src/tests/**/*.spec.js"],
+  languageOptions: {
+    globals: {
+      ...globals.browser,
+      ...globals.es2021,
+      test: "readonly",
+      expect: "readonly",
+      describe: "readonly",
+      beforeEach: "readonly",
+      afterEach: "readonly",
+    }
+  },
+  plugins: { vitest },
+  rules: {
+    ...vitest.configs.recommended.rules
   }
+}
+
 ]);
