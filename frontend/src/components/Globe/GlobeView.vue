@@ -188,7 +188,22 @@ async function fetchTrips() {
     const res = await fetch('/api/trips')
     const data = await res.json()
     if (data.ok) {
-      trips.value = data.trips
+      // Actualizar el color del usuario actual en los trips
+      const { getUserColor } = useCustomization()
+      const currentColor = getUserColor()
+      
+      trips.value = data.trips.map(trip => {
+        // Si es el trip del usuario actual y no tiene color, usar el personalizado
+        if (trip.userId === currentUserId.value && !trip.userColor) {
+          return { ...trip, userColor: currentColor }
+        }
+        // Si no tiene color, usar el color por defecto gris
+        if (!trip.userColor) {
+          return { ...trip, userColor: 'rgba(128, 128, 128, 1)' }
+        }
+        return trip
+      })
+      
       console.log('Trips cargados:', trips.value)
     }
   } catch (e) {
@@ -318,6 +333,16 @@ onMounted(async () => {
   // rebuild globe when filteredTrips changes (mode switch)
   watch(filteredTrips, () => {
     rebuildGlobeData()
+  })
+
+  // Watch for user color changes
+  const { userColor } = useCustomization()
+  watch(userColor, () => {
+    if (currentUserId.value) {
+      fetchTrips().then(() => {
+        rebuildGlobeData()
+      })
+    }
   })
 })
 
