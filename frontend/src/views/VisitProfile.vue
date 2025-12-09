@@ -1,35 +1,22 @@
 <template>
-  <div class="profile-page">
-    <!-- Sidebar -->
+  <div v-if="bgLoaded" class="profile-page" :style="bgStyle">
     <Sidebar />
-
-    <!-- Loading -->
     <div v-if="loading" class="loading">Cargando...</div>
-
-    <!-- Contenido -->
     <div v-else class="profile-card">
-      <!-- CABECERA -->
       <div class="profile-header">
         <div class="avatar-container">
           <img class="avatar" :src="profile.avatar_url || defaultAvatar" alt="Foto de perfil" />
         </div>
-
         <div class="profile-text">
-          <!-- NOMBRE + BOTÓN AMIGOS -->
           <div class="name-friends-row">
             <h2 class="username">{{ profile.username }}</h2>
           </div>
-
           <h1 class="display-name">{{ profile.display_name }}</h1>
           <p class="bio">{{ profile.bio }}</p>
-
           <div class="button-row">
             <button class="friends-btn" @click="showFriends = true">
               Amigos ({{ formatCount(friends.length) }})
             </button>
-
-
-            <!-- NUEVO BOTÓN DE ESTADO DE AMISTAD -->
             <button v-if="currentUserId && !isOwnProfile" class="friend-action-btn" :disabled="friendActionLoading"
               @click="onFriendButtonClick">
               {{ friendButtonLabel }}
@@ -37,15 +24,11 @@
           </div>
         </div>
       </div>
-
-      <!-- VIAJES PUBLICADOS -->
       <div class="recent-trips-section">
         <div class="recent-trips-header">
           <div class="tabs">Viajes publicados</div>
         </div>
-
         <div class="trips-container">
-          <!-- Tarjetas como en Profile.vue (SIN menú) -->
           <div v-if="trips.length > 0" class="trip-cards-wrapper">
             <div class="trip-card" v-for="trip in trips" :key="trip.id" @click="goToTrip(trip.id)">
               <div class="trip-image-container">
@@ -56,64 +39,46 @@
                   <h4>{{ trip.tripName || trip.trip_name || 'Sin título' }}</h4>
                   <p>{{ truncateText(trip.description, 120) }}</p>
                 </div>
-
                 <div class="trip-stats">
                   <p class="trip-views">
                     <span v-html="viewsIcon"></span> {{ formatCount(trip.views) }}
                   </p>
-
                   <p class="trip-likes">
                     <span v-html="likesIcon"></span> {{ formatCount(trip.likes) }}
                   </p>
                 </div>
-
               </div>
-
             </div>
           </div>
-
           <div v-else class="no-trips-message">
             No hay viajes publicados.
           </div>
         </div>
       </div>
     </div>
-
-    <!-- POPUP AMIGOS -->
     <div v-if="showFriends" class="modal-overlay" @click.self="showFriends = false">
       <div class="modal-box">
         <button class="modal-close-x" @click="showFriends = false">✕</button>
         <h2 class="modal-title">Amigos</h2>
-
         <div v-if="friends.length === 0" class="no-friends">
           Este usuario no tiene amigos todavía.
         </div>
-
         <div class="friends-list-scroll">
           <div v-for="f in friends" :key="f.id" class="friend-item" @click="goToUser(f.id)">
             <img :src="f.avatar_url || defaultAvatar" class="friend-avatar" />
             <span class="friend-username">{{ f.username }}</span>
           </div>
         </div>
-
       </div>
     </div>
-
-    <!-- POPUP CONFIRMAR ELIMINAR AMIGO -->
     <div v-if="showConfirmUnfriend" class="modal-overlay" @click.self="showConfirmUnfriend = false">
       <div class="modal-box">
-        <button class="modal-close-x" @click="showConfirmUnfriend = false">
-          ✕
-        </button>
+        <button class="modal-close-x" @click="showConfirmUnfriend = false">✕</button>
         <h2 class="modal-title">Eliminar amigo</h2>
         <p>¿Seguro que quieres eliminar a este amigo?</p>
         <div class="modal-actions">
-          <button class="btn-secondary" @click="showConfirmUnfriend = false">
-            Cancelar
-          </button>
-          <button class="btn-danger" @click="confirmUnfriend">
-            Eliminar
-          </button>
+          <button class="btn-secondary" @click="showConfirmUnfriend = false">Cancelar</button>
+          <button class="btn-danger" @click="confirmUnfriend">Eliminar</button>
         </div>
       </div>
     </div>
@@ -125,9 +90,10 @@ import { ref, onMounted, watch, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { supabase } from '@/config/supabase'
 import Sidebar from '@/components/Sidebar.vue'
+import { getItems } from '@/data/shopThemes'
+import { useCustomization, initialize, resetCustomization } from '@/composables/useCustomization'
 
 const API_BASE = ''
-
 const route = useRoute()
 const router = useRouter()
 const userId = ref(route.params.id)
@@ -137,29 +103,75 @@ const profile = ref({})
 const trips = ref([])
 const friends = ref([])
 const showFriends = ref(false)
-
-// usuario logueado
 const currentUserId = ref(null)
-
-// estado del botón de amistad: 'none' | 'pending' | 'accepted'
 const friendStatus = ref('none')
 const friendActionLoading = ref(false)
 const showConfirmUnfriend = ref(false)
+const bgLoaded = ref(false)
+const allItems = ref([])
+const profilePageRef = ref(null)
 
-const defaultAvatar =
-  'https://upload.wikimedia.org/wikipedia/commons/a/ac/Default_pfp.jpg'
+const defaultAvatar = 'https://upload.wikimedia.org/wikipedia/commons/a/ac/Default_pfp.jpg'
+const defaultImg = 'https://jkfenner.com/wp-content/uploads/2019/11/default-450x450.jpg'
+const defaultProfileBg = "https://images.unsplash.com/photo-1604608672516-f1b9b1d37076?ixlib=rb-4.1.0"
 
-const defaultImg =
-  'https://jkfenner.com/wp-content/uploads/2019/11/default-450x450.jpg'
+const { getEquippedItem } = useCustomization()
 
-/* ===============================
-   PERFIL
-================================ */
+const bgStyle = computed(() => {
+  const equippedBgId = getEquippedItem("profileBg")
+  console.log('🔥 VISIT PROFILE - equippedBgId:', equippedBgId)
+  console.log('🔥 VISIT PROFILE - allItems length:', allItems.value.length)
+
+  if (!equippedBgId || allItems.value.length === 0) {
+    console.log('🔥 VISIT PROFILE - Usando fondo por defecto')
+    const style = {
+      background: `url('${defaultProfileBg}') center/cover no-repeat`
+    }
+    console.log('🔥 VISIT PROFILE - Estilo por defecto:', style)
+    return style
+  }
+
+  const item = allItems.value.find(i => i.id === equippedBgId)
+  console.log('🔥 VISIT PROFILE - Item encontrado:', item)
+  
+  if (!item) {
+    console.log('🔥 VISIT PROFILE - No se encontró item, usando fondo por defecto')
+    const style = {
+      background: `url('${defaultProfileBg}') center/cover no-repeat`
+    }
+    return style
+  }
+  
+  let bgUrl = item.bgUrl || item.imageUrl
+  
+  if (!bgUrl) {
+    console.log('🔥 VISIT PROFILE - Item sin URL, usando fondo por defecto')
+    const style = {
+      background: `url('${defaultProfileBg}') center/cover no-repeat`
+    }
+    return style
+  }
+  
+  // Corregir URLs locales
+  if (bgUrl.startsWith('/src/assets/')) {
+    bgUrl = bgUrl.replace('/src/assets/', '/')
+  } else if (!bgUrl.startsWith('http') && !bgUrl.startsWith('/')) {
+    bgUrl = '/' + bgUrl
+  }
+  
+  console.log('🔥 VISIT PROFILE - URL final:', bgUrl)
+
+  const style = {
+    background: `url('${bgUrl}') center/cover no-repeat`
+  }
+  console.log('🔥 VISIT PROFILE - Estilo final:', style)
+  return style
+})
+
 const loadProfile = async () => {
   try {
     const res = await fetch(`${API_BASE}/api/profile/data?userId=${userId.value}`)
     if (!res.ok) throw new Error('Error HTTP')
-
     const body = await res.json()
     if (body.ok) {
       profile.value = body.profile || {}
@@ -172,19 +184,13 @@ const loadProfile = async () => {
   }
 }
 
-/* ===============================
-   VIAJES PUBLICADOS
-================================ */
 const loadTrips = async () => {
   try {
     const res = await fetch(`${API_BASE}/api/trips?userId=${userId.value}`)
     if (!res.ok) throw new Error('Error HTTP')
-
     const body = await res.json()
     if (body.ok) {
-      trips.value = (body.trips || []).filter(
-        (t) => t.userId === userId.value
-      )
+      trips.value = (body.trips || []).filter((t) => t.userId === userId.value)
     } else {
       trips.value = []
     }
@@ -194,18 +200,14 @@ const loadTrips = async () => {
   }
 }
 
-/* ===============================
-   AMIGOS ACEPTADOS (lista + contador)
-================================ */
 const loadFriends = async () => {
   try {
     const res = await fetch(`${API_BASE}/api/friends?userId=${userId.value}`)
     if (!res.ok) throw new Error('Error HTTP')
-
     const body = await res.json()
     if (body.ok) {
       friends.value = body.friends.map(f => ({
-        id: f.friend.id,         // UUID real
+        id: f.friend.id,
         username: f.friend.username,
         avatar_url: f.friend.avatar_url
       })).filter((f) => f.id)
@@ -218,9 +220,6 @@ const loadFriends = async () => {
   }
 }
 
-/* ===============================
-   CARGAR USUARIO ACTUAL
-================================ */
 const loadCurrentUser = async () => {
   try {
     const { data: { session } } = await supabase.auth.getSession()
@@ -231,38 +230,32 @@ const loadCurrentUser = async () => {
   }
 }
 
-const isOwnProfile = computed(
-  () => currentUserId.value && currentUserId.value === userId.value
-)
+function preloadImage(src) {
+  return new Promise((resolve) => {
+    const img = new Image()
+    img.onload = resolve
+    img.onerror = resolve
+    img.src = src
+  })
+}
 
-/* ===============================
-   ESTADO DE AMISTAD (BOTÓN)
-   usa /api/friends?userId=currentUser&includePending=true
-================================ */
+const isOwnProfile = computed(() => currentUserId.value && currentUserId.value === userId.value)
+
 const loadFriendStatus = async () => {
-  // si no hay usuario logueado o es su propio perfil → sin botón
   if (!currentUserId.value || isOwnProfile.value) {
     friendStatus.value = 'none'
     return
   }
-
   try {
-    const res = await fetch(
-      `${API_BASE}/api/friends?userId=${currentUserId.value}&includePending=true`
-    )
+    const res = await fetch(`${API_BASE}/api/friends?userId=${currentUserId.value}&includePending=true`)
     if (!res.ok) throw new Error('Error HTTP')
-
     const body = await res.json()
     if (!body.ok) {
       friendStatus.value = 'none'
       return
     }
-
     const list = body.friends || []
-
-    // buscamos relación donde el otro sea el dueño del perfil
     const relation = list.find((f) => f.friend?.id === userId.value)
-
     if (!relation) {
       friendStatus.value = 'none'
     } else if (relation.status === 'pending') {
@@ -278,26 +271,18 @@ const loadFriendStatus = async () => {
   }
 }
 
-/* ===============================
-   ACCIONES DEL BOTÓN
-================================ */
 const friendButtonLabel = computed(() => {
   if (!currentUserId.value || isOwnProfile.value) return ''
-
   switch (friendStatus.value) {
-    case 'pending':
-      return 'Pendiente'
-    case 'accepted':
-      return 'Eliminar amigo'
+    case 'pending': return 'Pendiente'
+    case 'accepted': return 'Eliminar amigo'
     case 'none':
-    default:
-      return 'Añadir amigo'
+    default: return 'Añadir amigo'
   }
 })
 
 const sendFriendRequest = async () => {
   if (!currentUserId.value || isOwnProfile.value) return
-
   friendActionLoading.value = true
   try {
     const res = await fetch(`${API_BASE}/api/add-friend`, {
@@ -308,9 +293,7 @@ const sendFriendRequest = async () => {
         friend_id: userId.value
       })
     })
-
     if (!res.ok) throw new Error('Error al crear solicitud')
-
     friendStatus.value = 'pending'
   } catch (e) {
     console.error('Error al enviar solicitud de amistad:', e)
@@ -321,7 +304,6 @@ const sendFriendRequest = async () => {
 
 const deleteFriend = async () => {
   if (!currentUserId.value || isOwnProfile.value) return
-
   friendActionLoading.value = true
   try {
     const res = await fetch(`${API_BASE}/api/delete-friend`, {
@@ -332,14 +314,9 @@ const deleteFriend = async () => {
         friend_id: userId.value
       })
     })
-    console.log("🔥 Eliminando amistad...");
-    console.log("USER:", currentUserId.value);
-    console.log("FRIEND:", userId.value);
-
     if (!res.ok) throw new Error('Error al eliminar amistad')
-
     friendStatus.value = 'none'
-    await loadFriends() // actualizar contador y lista
+    await loadFriends()
   } catch (e) {
     console.error('Error al eliminar amistad:', e)
   } finally {
@@ -349,15 +326,11 @@ const deleteFriend = async () => {
 
 const onFriendButtonClick = () => {
   if (friendActionLoading.value || !currentUserId.value || isOwnProfile.value) return
-
   if (friendStatus.value === 'none') {
-    // no hay relación → crear pending
     sendFriendRequest()
   } else if (friendStatus.value === 'pending') {
-    // cancelar solicitud (delete)
     deleteFriend()
   } else if (friendStatus.value === 'accepted') {
-    // mostrar popup de confirmación
     showConfirmUnfriend.value = true
   }
 }
@@ -367,17 +340,10 @@ const confirmUnfriend = async () => {
   await deleteFriend()
 }
 
-/* ===============================
-   HELPERS
-================================ */
-const truncateText = (text, limit) =>
-  text?.length > limit ? text.slice(0, limit) + '...' : text || ''
-
+const truncateText = (text, limit) => text?.length > limit ? text.slice(0, limit) + '...' : text || ''
 const goToTrip = (id) => router.push(`/post/${id}`)
-
 const goToUser = (id) => {
   showFriends.value = false
-  // Si el usuario que clicas eres tú → ir a tu propio perfil
   if (id === currentUserId.value) {
     router.push('/profile')
   } else {
@@ -385,31 +351,53 @@ const goToUser = (id) => {
   }
 }
 
+const formatCount = (count) => {
+  if (count < 1000) return count;
+  if (count < 1000000) {
+    if (count % 1000 < 100) {
+      return (count / 1000).toFixed(0) + 'K';
+    } else {
+      return (count / 1000).toFixed(1) + 'K';
+    }
+  }
+  if (count < 1000000000) {
+    if (count % 1000000 < 100000) {
+      return (count / 1000000).toFixed(0) + 'M';
+    } else {
+      return (count / 1000000).toFixed(1) + 'M';
+    }
+  }
+};
 
-    const formatCount = (count) => {
-      if (count < 1000) return count;
-      if (count < 1000000){
-        if (count % 1000 < 100){
-          return (count / 1000).toFixed(0) + 'K';
-        } else {
-          return (count / 1000).toFixed(1) + 'K';
-        }
-      }
-      if (count < 1000000000){
-        if (count % 1000000 < 100000){
-          return (count / 1000000).toFixed(0) + 'M';
-        } else {
-          return (count / 1000000).toFixed(1) + 'M';
-        }
-      }
-    };
-
-/* ===============================
-   LOAD
-================================ */
 onMounted(async () => {
   loading.value = true
+  
   await loadCurrentUser()
+  
+  if (userId.value) {
+    console.log('🔥 VISIT PROFILE - Inicializando para usuario:', userId.value)
+    await initialize(userId.value)
+    console.log('🔥 VISIT PROFILE - Inicialización completa')
+  }
+  
+  allItems.value = await getItems()
+  
+  const equippedBgId = getEquippedItem("profileBg")
+  const bgItem = allItems.value.find(i => i.id === equippedBgId)
+  const bgUrlPreload = bgItem?.bgUrl || defaultProfileBg
+  await preloadImage(bgUrlPreload)
+  
+  bgLoaded.value = true
+  
+  // Debug: verificar que el estilo se aplica
+  setTimeout(() => {
+    if (profilePageRef.value) {
+      console.log('🔥 VISIT PROFILE - Elemento DOM:', profilePageRef.value)
+      console.log('🔥 VISIT PROFILE - Estilo aplicado:', profilePageRef.value.style.background)
+      console.log('🔥 VISIT PROFILE - Computed style:', window.getComputedStyle(profilePageRef.value).background)
+    }
+  }, 100)
+  
   await loadProfile()
   await loadTrips()
   await loadFriends()
@@ -417,29 +405,42 @@ onMounted(async () => {
   loading.value = false
 })
 
-watch(
-  () => route.params.id,
-  async (newId) => {
-    userId.value = newId
-    loading.value = true
-    await loadProfile()
-    await loadTrips()
-    await loadFriends()
-    await loadFriendStatus()
-    loading.value = false
+watch(() => route.params.id, async (newId) => {
+  userId.value = newId
+  loading.value = true
+  bgLoaded.value = false
+  
+  // Reset personalización antes de cargar nuevo usuario
+  resetCustomization()
+  
+  if (newId) {
+    console.log('🔥 VISIT PROFILE - Inicializando para nuevo usuario:', newId)
+    await initialize(newId)
+    console.log('🔥 VISIT PROFILE - Nueva inicialización completa')
   }
-)
+  
+  const equippedBgId = getEquippedItem("profileBg")
+  const bgItem = allItems.value.find(i => i.id === equippedBgId)
+  const bgUrlWatch = bgItem?.bgUrl || defaultProfileBg
+  await preloadImage(bgUrlWatch)
+  
+  bgLoaded.value = true
+  
+  await loadProfile()
+  await loadTrips()
+  await loadFriends()
+  await loadFriendStatus()
+  loading.value = false
+})
 
 const viewsIcon = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 15a3 3 0 100-6 3 3 0 000 6z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
 const likesIcon = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
-
 </script>
 
 <style scoped>
-/* === Layout General === */
 .profile-page {
   min-height: 100vh;
-  background: url('https://images.unsplash.com/photo-1604608672516-f1b9b1d37076') center/cover no-repeat;
+  background: url('https://images.unsplash.com/photo-1604608672516-f1b9b1d37076?ixlib=rb-4.1.0') center/cover no-repeat;
   display: flex;
   justify-content: center;
   align-items: flex-start;
@@ -451,7 +452,6 @@ const likesIcon = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" x
   font-size: 1.5rem;
 }
 
-/* Tarjeta central */
 .profile-card {
   background: linear-gradient(to bottom, rgba(11, 47, 74, 0.6), rgba(39, 45, 45, 0.6));
   backdrop-filter: blur(14px);
@@ -466,7 +466,6 @@ const likesIcon = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" x
   min-height: 100vh;
 }
 
-/* === Header === */
 .profile-header {
   display: flex;
   align-items: center;
@@ -474,7 +473,6 @@ const likesIcon = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" x
   gap: 2rem;
   margin-bottom: 2rem;
   justify-content: flex-start;
-  /* mueve TODO hacia la derecha */
 }
 
 .avatar {
@@ -494,8 +492,6 @@ const likesIcon = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" x
   overflow-wrap: break-word;
 }
 
-
-
 .name-friends-row {
   display: flex;
   align-items: center;
@@ -514,7 +510,6 @@ const likesIcon = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" x
   font-size: 0.9rem;
 }
 
-/* === Friends button === */
 .friends-btn {
   background: white;
   color: #111;
@@ -532,7 +527,6 @@ const likesIcon = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" x
   background: #e0e0e0;
 }
 
-/* === Botón de acción de amigo === */
 .friend-action-btn {
   margin-top: 0.3rem;
   background: #02a18f;
@@ -556,7 +550,6 @@ const likesIcon = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" x
   background: #028270;
 }
 
-/* === Trips === */
 .recent-trips-section {
   width: 95%;
   border-radius: 0;
@@ -564,7 +557,6 @@ const likesIcon = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" x
   padding-bottom: 2rem;
   padding-top: 1.5rem;
 }
-
 
 .recent-trips-header {
   text-align: left;
@@ -597,7 +589,6 @@ const likesIcon = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" x
   min-height: 200px;
 }
 
-/* Tarjetas estilo Profile.vue */
 .trip-cards-wrapper {
   display: flex;
   flex-direction: column;
@@ -611,7 +602,7 @@ const likesIcon = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" x
   align-items: center;
   gap: 1.5rem;
   padding: 0;
-  transition: all 0.3s ease;;
+  transition: all 0.3s ease;
   height: 150px;
   cursor: pointer;
   position: relative;
@@ -667,7 +658,6 @@ const likesIcon = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" x
   color: #fff;
 }
 
-/* === Modal genérico === */
 .modal-overlay {
   position: fixed;
   inset: 0;
@@ -711,7 +701,6 @@ const likesIcon = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" x
   opacity: 1;
 }
 
-/* Lista de amigos en popup */
 .friend-item {
   display: flex;
   align-items: center;
@@ -740,7 +729,6 @@ const likesIcon = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" x
   opacity: 0.8;
 }
 
-/* Botones del modal de eliminar amigo */
 .modal-actions {
   margin-top: 1.5rem;
   display: flex;
@@ -766,15 +754,12 @@ const likesIcon = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" x
   cursor: pointer;
 }
 
-/* Scroll para lista de amigos (máx. 5 amigos visibles) */
 .friends-list-scroll {
   max-height: 320px;
-  /* ≈ 5 amigos (5 × ~60px) */
   overflow-y: auto;
   padding-right: 0.5rem;
 }
 
-/* Barra de scroll bonita */
 .friends-list-scroll::-webkit-scrollbar {
   width: 6px;
 }
@@ -790,7 +775,7 @@ const likesIcon = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" x
 
 .button-row {
   display: flex;
-  gap: 1rem;     /* separación entre botones */
+  gap: 1rem;
   align-items: center;
 }
 
@@ -819,5 +804,4 @@ const likesIcon = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" x
   font-size: 0.85rem;
   color: #555;
 }
-
 </style>

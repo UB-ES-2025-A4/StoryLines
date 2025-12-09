@@ -141,7 +141,8 @@ const searchUsers = async () => {
     }
 
     const data = await response.json()
-    searchResults.value = data.users || []
+    // Filtrar al usuario actual de los resultados
+    searchResults.value = (data.users || []).filter(user => user.id !== currentUserId)
 
   } catch (error) {
     console.error('Error:', error)
