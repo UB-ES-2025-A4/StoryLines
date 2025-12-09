@@ -10,6 +10,15 @@
             </svg>
           </button>
           <h1 class="title">Personalización</h1>
+          <div class="color-selector">
+            <span class="color-label">Color de usuario</span>
+            <input 
+              type="color" 
+              :value="hexColor" 
+              @input="handleColorChange"
+              class="color-picker-small"
+            />
+          </div>
         </div>
         
         <!-- Drop zones con preview y botón eliminar -->
@@ -65,6 +74,7 @@
               </button>
             </div>
           </div>
+
         </div>
   
         <!-- Filtros -->
@@ -146,11 +156,13 @@ const user = ref(null)
 
 // Personalización
 const { isPurchased } = usePurchases()
-const { getEquippedItem, equipItem, unequipItem: unequipSlot, initialize: initCustomization } = useCustomization()
+const { getEquippedItem, equipItem, unequipItem: unequipSlot, initialize: initCustomization, getUserColor, updateUserColor } = useCustomization()
 const purchasedItems = ref([])
 const equippedItems = ref({})
 const currentFilter = ref('all')
 const allItems = ref([])
+const currentUserColor = ref(null)
+const scrollInterval = ref(null)
 
 const filteredPurchasedItems = computed(() => {
     if (currentFilter.value === 'all') {
@@ -178,6 +190,8 @@ onMounted(async () => {
     // 🔥 aseguramos que el composable carga desde BD
     await initCustomization(user.value.id)
     await loadCustomizationData()
+    // Cargar el color después de la inicialización
+    currentUserColor.value = getUserColor() || 'rgba(128, 128, 128, 1)'
   }
 })
 
@@ -205,6 +219,8 @@ async function loadCustomizationData() {
           homeBg: getItemName(getEquippedItem('homeBg'), allItems.value),
           profileBg: getItemName(getEquippedItem('profileBg'), allItems.value)
         }
+
+        // El color ya se carga en onMounted después de initCustomization
 
     } catch (error) {
         console.error('Error loading customization data:', error)
@@ -238,6 +254,47 @@ function getItemName(itemId, allItems) {
 
 function handleDragStart(event, item) {
     event.dataTransfer.setData('text/plain', JSON.stringify(item))
+    
+    // Agregar listeners para auto-scroll
+    document.addEventListener('dragover', handleDragOver)
+    document.addEventListener('dragend', handleDragEnd)
+}
+
+function handleDragOver(event) {
+    const scrollThreshold = 100
+    const scrollSpeed = 10
+    const y = event.clientY
+    const windowHeight = window.innerHeight
+    
+    // Limpiar intervalo anterior
+    if (scrollInterval.value) {
+        clearInterval(scrollInterval.value)
+        scrollInterval.value = null
+    }
+    
+    // Scroll hacia arriba
+    if (y < scrollThreshold) {
+        scrollInterval.value = setInterval(() => {
+            window.scrollBy(0, -scrollSpeed)
+        }, 16)
+    }
+    // Scroll hacia abajo
+    else if (y > windowHeight - scrollThreshold) {
+        scrollInterval.value = setInterval(() => {
+            window.scrollBy(0, scrollSpeed)
+        }, 16)
+    }
+}
+
+function handleDragEnd() {
+    // Limpiar listeners y intervalos
+    document.removeEventListener('dragover', handleDragOver)
+    document.removeEventListener('dragend', handleDragEnd)
+    
+    if (scrollInterval.value) {
+        clearInterval(scrollInterval.value)
+        scrollInterval.value = null
+    }
 }
 
 async function handleDrop(event, slotType) {
@@ -259,6 +316,34 @@ async function unequipItem(slotType) {
   if (!ok) return
 
   equippedItems.value[slotType] = 'Sin equipar'
+}
+
+function rgbaToHex(rgba) {
+  const match = rgba.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/)
+  if (!match) return '#007bff'
+  
+  const r = parseInt(match[1])
+  const g = parseInt(match[2])
+  const b = parseInt(match[3])
+  
+  return '#' + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1)
+}
+
+function hexToRgba(hex) {
+  const r = parseInt(hex.slice(1, 3), 16)
+  const g = parseInt(hex.slice(3, 5), 16)
+  const b = parseInt(hex.slice(5, 7), 16)
+  return `rgba(${r}, ${g}, ${b}, 1)`
+}
+
+const hexColor = computed(() => currentUserColor.value ? rgbaToHex(currentUserColor.value) : '#808080')
+
+async function handleColorChange(event) {
+  const newColor = hexToRgba(event.target.value)
+  const ok = await updateUserColor(newColor)
+  if (ok) {
+    currentUserColor.value = newColor
+  }
 }
 
 
@@ -610,5 +695,46 @@ async function unequipItem(slotType) {
   font-weight: 700;
   color: white;
   margin: 0 0 8px 0;
+}
+
+.color-selector {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-left: auto;
+}
+
+.color-label {
+  font-size: 1rem;
+  font-weight: 500;
+  color: #ccc;
+}
+
+.color-preview-small {
+  width: 24px;
+  height: 24px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+}
+
+.color-picker-small {
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  background: none;
+  padding: 0;
+}
+
+.color-picker-small::-webkit-color-swatch-wrapper {
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+}
+
+.color-picker-small::-webkit-color-swatch {
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
 }
 </style>
