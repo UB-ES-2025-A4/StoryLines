@@ -55,7 +55,7 @@
 
     <div class="notification-panel" :class="{ 'show': showNotifications }">
       <Notifications :isVisible="showNotifications" @close="showNotifications = false" 
-        @update-notification-count="unreadNotificationCount = $event" />
+        @update-notification-count="updateNotificationCount" />
     </div>
     <div class="searcher-panel" :class="{ 'show': showSearcher }">
       <Searcher :isOpen="showSearcher" @close="showSearcher = false" />
@@ -122,6 +122,15 @@ const toggleNotifications = () => {
   if (showNotifications.value) {
     showSearcher.value = false
     showMessages.value = false
+    // Cuando se abren las notificaciones, poner contador a 0
+    unreadNotificationCount.value = 0
+  }
+}
+
+const updateNotificationCount = (count) => {
+  // Solo actualizar el contador si las notificaciones están cerradas
+  if (!showNotifications.value) {
+    unreadNotificationCount.value = count
   }
 }
 
