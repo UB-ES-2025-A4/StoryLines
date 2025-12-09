@@ -10,6 +10,8 @@ const equippedItems = ref({
   profileBg: null
 })
 
+const userColor = ref('rgba(0, 123, 255, 1)')
+
 let initialized = false
 
 // 🔥 RESET al cambiar de usuario
@@ -19,6 +21,7 @@ export function resetCustomization() {
     homeBg: null,
     profileBg: null
   }
+  userColor.value = 'rgba(0, 123, 255, 1)'
   initialized = false
   // 🔥 limpia también el localStorage para no arrastrar datos de otro user
   localStorage.removeItem(STORAGE_KEY)
@@ -70,6 +73,7 @@ export async function initialize(userId) {
         homeBg: data.equipped.homeBg || DEFAULT_ITEMS.homeBg,
         profileBg: data.equipped.profileBg || DEFAULT_ITEMS.profileBg
       }
+      userColor.value = data.equipped.userColor || 'rgba(0, 123, 255, 1)'
 
       saveEquippedItems()
       return
@@ -141,6 +145,27 @@ export function useCustomization() {
     return null
   }
 
+  // CAMBIAR COLOR DEL USUARIO
+  async function updateUserColor(color) {
+    const userId = await getCurrentUserId()
+
+    const res = await fetch("/api/customization/color", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId, color })
+    })
+
+    const data = await res.json()
+    if (!data.ok) return false
+
+    userColor.value = color
+    return true
+  }
+
+  function getUserColor() {
+    return userColor.value
+  }
+
   return {
     initialize,
     equippedItems: computed(() => equippedItems.value),
@@ -150,6 +175,9 @@ export function useCustomization() {
     unequipItem,
     isEquipped,
     getEquippedSlot,
+    updateUserColor,
+    getUserColor,
+    userColor: computed(() => userColor.value),
     hasGlobe: computed(() => equippedItems.value.globe !== null),
     hasHomeBg: computed(() => equippedItems.value.homeBg !== null),
     hasProfileBg: computed(() => equippedItems.value.profileBg !== null),
