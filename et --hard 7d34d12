@@ -1,0 +1,94 @@
+[33mf034754[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mtesting2[m[33m)[m HEAD@{0}: reset: moving to HEAD@{1}
+[33m7d34d12[m HEAD@{1}: commit: Add coverage
+[33mf034754[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mtesting2[m[33m)[m HEAD@{2}: commit: Unit tests + e2e
+[33m17874d7[m HEAD@{3}: checkout: moving from Tests to testing2
+[33ma15155c[m[33m ([m[1;32mTests[m[33m)[m HEAD@{4}: commit: fix
+[33m5ecd8e7[m HEAD@{5}: commit: gh actions
+[33m74be4d5[m HEAD@{6}: commit: gh actions
+[33me06f9fe[m HEAD@{7}: commit: todos los tests integrales profile + github actions
+[33mede3939[m HEAD@{8}: commit: Refactoring completo
+[33m3cbadea[m HEAD@{9}: commit (merge): Merge branch 'dev' into Tests
+[33mdbeef56[m HEAD@{10}: checkout: moving from dev to Tests
+[33m60393f9[m[33m ([m[1;32mdev[m[33m)[m HEAD@{11}: checkout: moving from Tests to dev
+[33mdbeef56[m HEAD@{12}: reset: moving to origin/tests
+[33mdbeef56[m HEAD@{13}: checkout: moving from Tests to Tests
+[33mdbeef56[m HEAD@{14}: rebase (abort): returning to refs/heads/Tests
+[33m60393f9[m[33m ([m[1;32mdev[m[33m)[m HEAD@{15}: rebase (start): checkout dev
+[33mdbeef56[m HEAD@{16}: checkout: moving from dev to Tests
+[33m60393f9[m[33m ([m[1;32mdev[m[33m)[m HEAD@{17}: checkout: moving from dev to dev
+[33m60393f9[m[33m ([m[1;32mdev[m[33m)[m HEAD@{18}: pull: Fast-forward
+[33m5449c77[m HEAD@{19}: checkout: moving from Tests to dev
+[33mdbeef56[m HEAD@{20}: commit: Finish tests + routes separation
+[33m535ba8d[m HEAD@{21}: commit: Refactoring, routes y cambio tests
+[33me9427d0[m HEAD@{22}: commit: añadir amigo test
+[33m00f0bff[m HEAD@{23}: commit: trip by id test
+[33m35241ce[m HEAD@{24}: commit: trips test
+[33m2300038[m HEAD@{25}: commit: perfil test
+[33m95dc170[m HEAD@{26}: commit: Reestructura backend en app.js + server.js y añade testing
+[33m5073ced[m HEAD@{27}: checkout: moving from 5073ced2373181f065ff4dc0b248e03bce0ffb66 to Tests
+[33m5073ced[m HEAD@{28}: checkout: moving from dev to remotes/origin/Tests
+[33m5449c77[m HEAD@{29}: pull: Fast-forward
+[33ma9f1bc7[m[33m ([m[1;31morigin/42-us351-task2-post-connection-with-database[m[33m)[m HEAD@{30}: checkout: moving from US3.4-task2-view-trips-functionality to dev
+[33m3a660f3[m[33m ([m[1;32mUS3.4-task2-view-trips-functionality[m[33m)[m HEAD@{31}: commit: Feat: conexión estable con Supabase + mejoras en perfil de usuario (edición funcional, avatar, y carga de viajes publicados con menú Editar/Borrar)
+[33ma9f1bc7[m[33m ([m[1;31morigin/42-us351-task2-post-connection-with-database[m[33m)[m HEAD@{32}: checkout: moving from dev to US3.4-task2-view-trips-functionality
+[33ma9f1bc7[m[33m ([m[1;31morigin/42-us351-task2-post-connection-with-database[m[33m)[m HEAD@{33}: checkout: moving from dev to dev
+[33ma9f1bc7[m[33m ([m[1;31morigin/42-us351-task2-post-connection-with-database[m[33m)[m HEAD@{34}: checkout: moving from US3.4-task2-view-trips-functionality to dev
+[33ma9f1bc7[m[33m ([m[1;31morigin/42-us351-task2-post-connection-with-database[m[33m)[m HEAD@{35}: checkout: moving from dev to US3.4-task2-view-trips-functionality
+[33ma9f1bc7[m[33m ([m[1;31morigin/42-us351-task2-post-connection-with-database[m[33m)[m HEAD@{36}: pull: Fast-forward
+[33m8e12356[m HEAD@{37}: checkout: moving from dev to dev
+[33m8e12356[m HEAD@{38}: commit (merge): Merge branch 'dev' of https://github.com/UB-ES-2025-A4/StoryLines into dev
+[33m840ceaf[m HEAD@{39}: checkout: moving from dev to dev
+[33m840ceaf[m HEAD@{40}: merge 29-us21-create-post: Merge made by the 'ort' strategy.
+[33me96b8b1[m HEAD@{41}: checkout: moving from 29-us21-create-post to dev
+[33m79e2b73[m[33m ([m[1;31morigin/29-us21-create-post[m[33m, [m[1;32m29-us21-create-post[m[33m)[m HEAD@{42}: checkout: moving from 79e2b731aef46e222fd61ea2b01ccc9386747ba1 to 29-us21-create-post
+[33m79e2b73[m[33m ([m[1;31morigin/29-us21-create-post[m[33m, [m[1;32m29-us21-create-post[m[33m)[m HEAD@{43}: commit: Create trip complete
+[33m598f30d[m HEAD@{44}: checkout: moving from dev to remotes/origin/29-us21-create-post
+[33me96b8b1[m HEAD@{45}: checkout: moving from main to dev
+[33m4678625[m[33m ([m[1;32mmain[m[33m)[m HEAD@{46}: clone: from https://github.com/UB-ES-2025-A4/StoryLines.git
+[33mf034754[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mtesting2[m[33m)[m HEAD@{0}: reset: moving to HEAD@{1}
+[33m7d34d12[m HEAD@{1}: commit: Add coverage
+[33mf034754[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mtesting2[m[33m)[m HEAD@{2}: commit: Unit tests + e2e
+[33m17874d7[m HEAD@{3}: checkout: moving from Tests to testing2
+[33ma15155c[m[33m ([m[1;32mTests[m[33m)[m HEAD@{4}: commit: fix
+[33m5ecd8e7[m HEAD@{5}: commit: gh actions
+[33m74be4d5[m HEAD@{6}: commit: gh actions
+[33me06f9fe[m HEAD@{7}: commit: todos los tests integrales profile + github actions
+[33mede3939[m HEAD@{8}: commit: Refactoring completo
+[33m3cbadea[m HEAD@{9}: commit (merge): Merge branch 'dev' into Tests
+[33mdbeef56[m HEAD@{10}: checkout: moving from dev to Tests
+[33m60393f9[m[33m ([m[1;32mdev[m[33m)[m HEAD@{11}: checkout: moving from Tests to dev
+[33mdbeef56[m HEAD@{12}: reset: moving to origin/tests
+[33mdbeef56[m HEAD@{13}: checkout: moving from Tests to Tests
+[33mdbeef56[m HEAD@{14}: rebase (abort): returning to refs/heads/Tests
+[33m60393f9[m[33m ([m[1;32mdev[m[33m)[m HEAD@{15}: rebase (start): checkout dev
+[33mdbeef56[m HEAD@{16}: checkout: moving from dev to Tests
+[33m60393f9[m[33m ([m[1;32mdev[m[33m)[m HEAD@{17}: checkout: moving from dev to dev
+[33m60393f9[m[33m ([m[1;32mdev[m[33m)[m HEAD@{18}: pull: Fast-forward
+[33m5449c77[m HEAD@{19}: checkout: moving from Tests to dev
+[33mdbeef56[m HEAD@{20}: commit: Finish tests + routes separation
+[33m535ba8d[m HEAD@{21}: commit: Refactoring, routes y cambio tests
+[33me9427d0[m HEAD@{22}: commit: añadir amigo test
+[33m00f0bff[m HEAD@{23}: commit: trip by id test
+[33m35241ce[m HEAD@{24}: commit: trips test
+[33m2300038[m HEAD@{25}: commit: perfil test
+[33m95dc170[m HEAD@{26}: commit: Reestructura backend en app.js + server.js y añade testing
+[33m5073ced[m HEAD@{27}: checkout: moving from 5073ced2373181f065ff4dc0b248e03bce0ffb66 to Tests
+[33m5073ced[m HEAD@{28}: checkout: moving from dev to remotes/origin/Tests
+[33m5449c77[m HEAD@{29}: pull: Fast-forward
+[33ma9f1bc7[m[33m ([m[1;31morigin/42-us351-task2-post-connection-with-database[m[33m)[m HEAD@{30}: checkout: moving from US3.4-task2-view-trips-functionality to dev
+[33m3a660f3[m[33m ([m[1;32mUS3.4-task2-view-trips-functionality[m[33m)[m HEAD@{31}: commit: Feat: conexión estable con Supabase + mejoras en perfil de usuario (edición funcional, avatar, y carga de viajes publicados con menú Editar/Borrar)
+[33ma9f1bc7[m[33m ([m[1;31morigin/42-us351-task2-post-connection-with-database[m[33m)[m HEAD@{32}: checkout: moving from dev to US3.4-task2-view-trips-functionality
+[33ma9f1bc7[m[33m ([m[1;31morigin/42-us351-task2-post-connection-with-database[m[33m)[m HEAD@{33}: checkout: moving from dev to dev
+[33ma9f1bc7[m[33m ([m[1;31morigin/42-us351-task2-post-connection-with-database[m[33m)[m HEAD@{34}: checkout: moving from US3.4-task2-view-trips-functionality to dev
+[33ma9f1bc7[m[33m ([m[1;31morigin/42-us351-task2-post-connection-with-database[m[33m)[m HEAD@{35}: checkout: moving from dev to US3.4-task2-view-trips-functionality
+[33ma9f1bc7[m[33m ([m[1;31morigin/42-us351-task2-post-connection-with-database[m[33m)[m HEAD@{36}: pull: Fast-forward
+[33m8e12356[m HEAD@{37}: checkout: moving from dev to dev
+[33m8e12356[m HEAD@{38}: commit (merge): Merge branch 'dev' of https://github.com/UB-ES-2025-A4/StoryLines into dev
+[33m840ceaf[m HEAD@{39}: checkout: moving from dev to dev
+[33m840ceaf[m HEAD@{40}: merge 29-us21-create-post: Merge made by the 'ort' strategy.
+[33me96b8b1[m HEAD@{41}: checkout: moving from 29-us21-create-post to dev
+[33m79e2b73[m[33m ([m[1;31morigin/29-us21-create-post[m[33m, [m[1;32m29-us21-create-post[m[33m)[m HEAD@{42}: checkout: moving from 79e2b731aef46e222fd61ea2b01ccc9386747ba1 to 29-us21-create-post
+[33m79e2b73[m[33m ([m[1;31morigin/29-us21-create-post[m[33m, [m[1;32m29-us21-create-post[m[33m)[m HEAD@{43}: commit: Create trip complete
+[33m598f30d[m HEAD@{44}: checkout: moving from dev to remotes/origin/29-us21-create-post
+[33me96b8b1[m HEAD@{45}: checkout: moving from main to dev
+[33m4678625[m[33m ([m[1;32mmain[m[33m)[m HEAD@{46}: clone: from https://github.com/UB-ES-2025-A4/StoryLines.git
