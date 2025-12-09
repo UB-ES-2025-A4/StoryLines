@@ -78,3 +78,25 @@ describe("BALANCE API", () => {
   });
 
 });
+
+test("GET /api/balance/:userId → 500 si Supabase falla", async () => {
+  global.supabaseSelectReturnsError = true;
+
+  const res = await request(app).get("/api/balance/U1");
+
+  expect(res.status).toBe(500);
+
+  global.supabaseSelectReturnsError = false;
+});
+
+
+test("GET /api/balance/:userId → crea balance si no existe", async () => {
+  global.resetMockDB(); // No hay balance para U1
+
+  const res = await request(app).get("/api/balance/U1");
+
+  expect(res.status).toBe(200);
+  expect(res.body.ok).toBe(true);
+  expect(res.body.balance).toBe(5000); // default value
+});
+
