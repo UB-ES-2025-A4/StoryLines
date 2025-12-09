@@ -19,5 +19,12 @@ export default defineConfig({
     proxy: {
       '/api': 'http://localhost:3000'
     }
+  },
+  test: {
+  globals: true,
+  environment: 'jsdom',
+  alias: {
+    '@': fileURLToPath(new URL('./src', import.meta.url)),
+    }
   }
 })
