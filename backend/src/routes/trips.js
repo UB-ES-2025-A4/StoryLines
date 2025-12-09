@@ -49,6 +49,7 @@ router.get("/", async (_req, res) => {
       endDate: t.end_date,
       stops: grouped[t.id] || [],
       views: t.views || 0,
+      likes: t.likes || 0,
     }));
 
     return res.json({ ok: true, trips: formatted });
@@ -90,7 +91,8 @@ router.get("/saved/:userId", async (req, res) => {
         *,
         country:countries!trip_stops_country_id_fkey(id, name, latitude, longitude)
       `)
-      .in("trip_id", tripIds);
+      .in("trip_id", tripIds)
+      .order('position', { ascending: true });
 
     if (stopsError) return res.status(500).json({ error: stopsError.message });
     
@@ -151,10 +153,11 @@ router.get("/:id", async (req, res) => {
     const { data: stops } = await supabaseAdmin
       .from("trip_stops")
       .select(`
-        id, city, description, images,
+        id, city, description, images, position,
         country:countries!trip_stops_country_id_fkey(id, name, latitude, longitude)
       `)
-      .eq("trip_id", tripId);
+      .eq("trip_id", tripId)
+      .order('position', { ascending: true });
 
     const formattedStops = stops.map((stop) => ({
       title: stop.city || "Stop",
@@ -165,6 +168,7 @@ router.get("/:id", async (req, res) => {
       lat: stop.country?.latitude,
       lng: stop.country?.longitude,
       currentImageIndex: 0,
+      position: stop.position ?? 0,
     }));
 
     const { data: commentsData } = await supabaseAdmin
@@ -279,15 +283,18 @@ router.post("/", async (req, res) => {
 
     const tripId = trip.id;
 
-    for (const stop of stops) {
+    for (let i = 0; i < stops.length; i++) {
+      const stop = stops[i];
       await supabaseAdmin.from("trip_stops").insert({
         trip_id: tripId,
         city: stop.city,
         country_id: stop.country_id,
         images: stop.images || [],
         description: stop.description || null,
+        position: i,
       });
     }
+
 
     return res.json({ ok: true, tripId });
   } catch (e) {
@@ -307,35 +314,72 @@ router.post("/:tripId/like", async (req, res) => {
     if (!tripId || !userId)
       return res.status(400).json({ error: "Faltan datos" });
 
-    const { data: existing } = await supabaseAdmin
+    const { data: existing, error: existingError } = await supabaseAdmin
       .from("trip_likes")
       .select("id")
       .eq("trip_id", tripId)
       .eq("user_id", userId)
       .maybeSingle();
 
-    if (!existing) {
-      const { error: likeError } = await supabaseAdmin
-        .from("trip_likes")
-        .insert({ trip_id: tripId, user_id: userId });
-
-      if (likeError && likeError.code !== "23505")
-        return res.status(500).json({ error: likeError.message });
-
-      await supabaseAdmin.rpc("increment_trip_likes", {
-        trip_id_input: tripId,
-      });
+    if (existingError) {
+      return res.status(500).json({ error: existingError.message });
     }
 
-    const { count } = await supabaseAdmin
+    if (!existing) {
+      // Obtener información del viaje y su dueño
+      const { data: trip } = await supabaseAdmin
+        .from("trips")
+        .select("user_id, trip_name")
+        .eq("id", tripId)
+        .single();
+
+      // Obtener información del usuario que da like
+      const { data: liker } = await supabaseAdmin
+        .from("users")
+        .select("username, display_name")
+        .eq("id", userId)
+        .single();
+
+      const { error: likeError } = await supabaseAdmin
+        .from("trip_likes")
+        .insert({ 
+          trip_id: tripId, 
+          user_id: userId, 
+          created_at: new Date().toISOString() 
+        });
+
+      if (likeError) {
+        return res.status(500).json({ error: likeError.message });
+      }
+
+      // Enviar notificación al dueño del viaje (si no es el mismo usuario)
+      if (trip && trip.user_id !== userId) {
+        const likerName = liker?.display_name || liker?.username || 'Alguien';
+        await supabaseAdmin
+          .from("notifications")
+          .insert({
+            receptor_id: trip.user_id,
+            sender_id: userId,
+            type: 'trip-like',
+            message: `A ${likerName} le ha gustado tu viaje "${trip.trip_name}".`,
+            read: false
+          });
+      }
+    }
+
+    const { count, error: countError } = await supabaseAdmin
       .from("trip_likes")
       .select("*", { head: true, count: "exact" })
       .eq("trip_id", tripId);
 
+    if (countError) {
+      return res.status(500).json({ error: countError.message });
+    }
+
     return res.json({ ok: true, userLiked: true, likes: count });
   } catch (e) {
     console.error("[LIKE ERROR]", e);
-    return res.status(500).json({ error: "Error interno" });
+    return res.status(500).json({ error: e.message });
   }
 });
 
@@ -376,20 +420,54 @@ router.post("/:tripId/comments", async (req, res) => {
     if (!tripId || !userId || !text)
       return res.status(400).json({ error: "Faltan datos" });
 
+    // Obtener información del viaje y su dueño
+    const { data: trip } = await supabaseAdmin
+      .from("trips")
+      .select("user_id, trip_name")
+      .eq("id", tripId)
+      .single();
+
+    // Obtener información del usuario que comenta
+    const { data: commenter } = await supabaseAdmin
+      .from("users")
+      .select("username, display_name")
+      .eq("id", userId)
+      .single();
+
     await supabaseAdmin
       .from("trip_comments")
-      .insert({ trip_id: tripId, user_id: userId, text });
-
+      .insert({ trip_id: tripId, user_id: userId, text })
+      .select(`id, text, created_at`);
     await supabaseAdmin.rpc("increment_trip_comments", {
       trip_id_input: tripId,
     });
+
+    // Enviar notificación al dueño del viaje (si no es el mismo usuario)
+    if (trip && trip.user_id !== userId) {
+      const commenterName = commenter?.display_name || commenter?.username || 'Alguien';
+      await supabaseAdmin
+        .from("notifications")
+        .insert({
+          receptor_id: trip.user_id,
+          sender_id: userId,
+          type: 'trip-comment',
+          message: `${commenterName} ha comentado en tu viaje "${trip.trip_name}".`,
+          read: false
+        });
+    }
 
     const { count } = await supabaseAdmin
       .from("trip_comments")
       .select("*", { head: true, count: "exact" })
       .eq("trip_id", tripId);
 
-    return res.json({ ok: true, commentsCount: count });
+    const formattedComment = {
+      id: tripId,
+      text: text,
+      createdAt: new Date().toISOString(),
+    };
+
+    return res.json({ ok: true, commentsCount: count, comment: formattedComment });
   } catch (e) {
     console.error("[COMMENT ERROR]", e);
     return res.status(500).json({ error: "Error interno" });
@@ -444,7 +522,10 @@ router.post("/:tripId/save", async (req, res) => {
     if (!existing) {
       const { error: saveError } = await supabaseAdmin
         .from("trip_saves")
-        .insert({ trip_id: tripId, user_id: userId });
+        .insert({ 
+          trip_id: tripId, 
+          user_id: userId 
+        });
 
       if (saveError && saveError.code !== "23505")
         return res.status(500).json({ error: saveError.message });

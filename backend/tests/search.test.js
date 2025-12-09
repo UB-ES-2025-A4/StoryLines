@@ -1,4 +1,6 @@
 import request from "supertest";
+import { describe, it, expect, beforeEach } from "vitest";
+
 import app from "../src/app.js";
 
 beforeEach(() => {
@@ -59,7 +61,7 @@ describe("UNIT — search filtering", () => {
 
 test("404 si q es cadena vacía", async () => {
   const res = await request(app).get("/api/search?q=");
-  expect(res.status).toBe(404);
+  expect(res.status).toBe((404));
 });
 
 test("404 si no encuentra nada pero q es válido", async () => {

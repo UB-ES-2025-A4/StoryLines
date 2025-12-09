@@ -107,6 +107,8 @@ import { supabase } from '@/config/supabase.js'
 import { useRouter } from 'vue-router'
 import { useCustomization } from '@/composables/useCustomization'
 import { getItems } from '@/data/shopThemes'
+import { initialize as initCustomization } from "@/composables/useCustomization"
+
 
 const allShopItems = ref([])
 
@@ -186,7 +188,22 @@ async function fetchTrips() {
     const res = await fetch('/api/trips')
     const data = await res.json()
     if (data.ok) {
-      trips.value = data.trips
+      // Actualizar el color del usuario actual en los trips
+      const { getUserColor } = useCustomization()
+      const currentColor = getUserColor()
+      
+      trips.value = data.trips.map(trip => {
+        // Si es el trip del usuario actual y no tiene color, usar el personalizado
+        if (trip.userId === currentUserId.value && !trip.userColor) {
+          return { ...trip, userColor: currentColor }
+        }
+        // Si no tiene color, usar el color por defecto gris
+        if (!trip.userColor) {
+          return { ...trip, userColor: 'rgba(128, 128, 128, 1)' }
+        }
+        return trip
+      })
+      
       console.log('Trips cargados:', trips.value)
     }
   } catch (e) {
@@ -248,6 +265,14 @@ function closeAuthModal() {
     rebuildGlobeData()
   }
 }
+function preloadTexture(url) {
+  return new Promise(resolve => {
+    const img = new Image()
+    img.onload = resolve
+    img.onerror = resolve
+    img.src = url
+  })
+}
 
 
 onMounted(async () => {
@@ -270,19 +295,54 @@ onMounted(async () => {
   console.log('Usuario logueado:', user.id)
   currentUserId.value = user.id
 
-  await Promise.all([
-      fetchTrips(),
-      fetchFriends(user.id)
-    ])
+  // 1) Inicializar sistema de items del usuario
+  await initCustomization(user.id)
 
+  // 2) Cargar tienda completa
   allShopItems.value = await getItems()
+
+  // 3) Cargar trips y amigos
+  await Promise.all([
+    fetchTrips(),
+    fetchFriends(user.id)
+  ])
+
+  // 4) Esperar DOM
   await nextTick()
+
+  // ⭐ 4.5 PRELOAD de texturas antes de crear el globo
+  const { getEquippedItem } = useCustomization()
+
+  // TEXTURA DEL GLOBO
+  const equippedGlobeId = getEquippedItem('globe')
+  const globeItem = equippedGlobeId ? findItemById(equippedGlobeId) : null
+  const globeTexture = globeItem?.textureUrl || '//unpkg.com/three-globe/example/img/earth-night.jpg'
+  await preloadTexture(globeTexture)
+
+  // BACKGROUND DEL HOME
+  const equippedHomeBgId = getEquippedItem('homeBg')
+  const homeBgItem = equippedHomeBgId ? findItemById(equippedHomeBgId) : null
+  const homeBackground = homeBgItem?.bgUrl || '//unpkg.com/three-globe/example/img/night-sky.png'
+  await preloadTexture(homeBackground)
+
+  // 5) Iniciar globo con la textura correcta desde el primer frame
   initializeGlobe()
+
   window.addEventListener('resize', handleResize)
   document.addEventListener('click', handleDocumentClick)
   // rebuild globe when filteredTrips changes (mode switch)
   watch(filteredTrips, () => {
     rebuildGlobeData()
+  })
+
+  // Watch for user color changes
+  const { userColor } = useCustomization()
+  watch(userColor, () => {
+    if (currentUserId.value) {
+      fetchTrips().then(() => {
+        rebuildGlobeData()
+      })
+    }
   })
 })
 

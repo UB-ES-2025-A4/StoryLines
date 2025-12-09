@@ -41,23 +41,31 @@
       <!-- VIAJES PUBLICADOS -->
       <div class="recent-trips-section">
         <div class="recent-trips-header">
-          <h2 style="text-align:center; color:white; font-size: 1.3rem; font-weight: 300;">Viajes publicados</h2>
+          <div class="tabs">Viajes publicados</div>
         </div>
 
         <div class="trips-container">
           <!-- Tarjetas como en Profile.vue (SIN menú) -->
           <div v-if="trips.length > 0" class="trip-cards-wrapper">
             <div class="trip-card" v-for="trip in trips" :key="trip.id" @click="goToTrip(trip.id)">
-              <img :src="trip.coverImage || trip.cover_image || defaultImg" alt="Foto del viaje" class="trip-image" />
+              <div class="trip-image-container">
+                <img :src="trip.coverImage || trip.cover_image || defaultImg" alt="Foto del viaje" class="trip-image" />
+              </div>
               <div class="trip-info">
                 <div class="trip-details">
                   <h4>{{ trip.tripName || trip.trip_name || 'Sin título' }}</h4>
                   <p>{{ truncateText(trip.description, 120) }}</p>
                 </div>
 
-                <p class="trip-views" style="margin-top: 0.5rem;">
-                  <span v-html="viewsIcon"></span> {{ formatCount(trip.views) }}
-                </p>
+                <div class="trip-stats">
+                  <p class="trip-views">
+                    <span v-html="viewsIcon"></span> {{ formatCount(trip.views) }}
+                  </p>
+
+                  <p class="trip-likes">
+                    <span v-html="likesIcon"></span> {{ formatCount(trip.likes) }}
+                  </p>
+                </div>
 
               </div>
 
@@ -423,6 +431,7 @@ watch(
 )
 
 const viewsIcon = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 15a3 3 0 100-6 3 3 0 000 6z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+const likesIcon = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
 
 </script>
 
@@ -550,16 +559,33 @@ const viewsIcon = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" x
 /* === Trips === */
 .recent-trips-section {
   width: 95%;
-  margin: 0 auto;
-  padding-top: 1.5rem;
+  border-radius: 0;
+  overflow: hidden;
   padding-bottom: 2rem;
+  padding-top: 1.5rem;
 }
 
 
 .recent-trips-header {
-  text-align: center;
+  text-align: left;
   padding: 1rem 2rem;
-  background: linear-gradient(135deg, #02a18f, #375689);
+  background: linear-gradient(135deg, rgba(2, 161, 143, 0.8), rgba(55, 86, 137, 0.8));
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  border-radius: 10px 10px 0 0;
+  height: 75px;
+}
+
+.tabs {
+  margin-left: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: left;
+  gap: 3rem;
+  height: 100%;
+  position: relative;
+  font-size: 1.3rem;
+  font-weight: 500;
+  color: #fff;
 }
 
 .trips-container {
@@ -596,8 +622,15 @@ const viewsIcon = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" x
   background: #f0f0f0;
 }
 
-.trip-image {
+.trip-image-container {
+  position: relative;
   width: 150px;
+  height: 100%;
+  flex-shrink: 0;
+}
+
+.trip-image {
+  width: 100%;
   height: 100%;
   border-radius: 12px 0 0 12px;
   object-fit: cover;
@@ -623,9 +656,9 @@ const viewsIcon = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" x
 }
 
 .trip-details p {
-  margin: 0.3rem 0 0;
-  color: #222;
+  font-size: 0.95rem;
   opacity: 0.9;
+  color: #0a0a0a;
 }
 
 .no-trips-message {
@@ -761,11 +794,28 @@ const viewsIcon = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" x
   align-items: center;
 }
 
+.trip-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  margin-top: 0.5rem;
+  margin-left: -0.5rem;
+}
+
 .trip-views {
   display: flex;
   align-items: center;
   gap: 0.3rem;
-  margin-left: 0.8rem;
+  margin: 0;
+  font-size: 0.85rem;
+  color: #555;
+}
+
+.trip-likes {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  margin: 0;
   font-size: 0.85rem;
   color: #555;
 }

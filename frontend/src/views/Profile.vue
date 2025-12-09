@@ -1,5 +1,5 @@
 <template>
-  <div class="profile-page" :style="bgStyle">
+  <div v-if="bgLoaded" class="profile-page" :style="bgStyle">
     <!-- Sidebar -->
     <Sidebar />
 
@@ -39,26 +39,21 @@
       <!-- VIAJES -->
       <div class="recent-trips-section">
         <div class="recent-trips-header">
-          <div class="tabs">
-            <button :class="{ active: currentTab === 'published' }" @click="currentTab = 'published'">
-              Viajes publicados
-            </button>
-
-            <span class="separator">|</span>
-
-            <button :class="{ active: currentTab === 'drafts' }" @click="currentTab = 'drafts'">
-              Borradores
-            </button>
-
-            <span class="separator">|</span>
-            <button :class="{ active: currentTab === 'saved' }" @click="currentTab = 'saved'">
-              Viajes guardados
-            </button>
+          <div class="tabs" :class="`tab-${currentTab}`">
+            <button :class="{ active: currentTab === 'published' }" @click="currentTab = 'published'">Viajes
+              publicados</button><!--
+    --><button :class="{ active: currentTab === 'drafts' }" @click="currentTab = 'drafts'">Borradores</button><!--
+    --><button :class="{ active: currentTab === 'saved' }" @click="currentTab = 'saved'">Viajes guardados</button>
           </div>
         </div>
 
         <div class="trips-container">
-          <div v-if="currentTrips.length > 0" class="trip-cards-wrapper">
+
+          <div v-if="loadingTrips" class="no-trips-message">
+            Cargando...
+          </div>
+
+          <div v-else-if="currentTrips.length > 0" class="trip-cards-wrapper">
             <div class="trip-card" v-for="trip in currentTrips" :key="trip.id" @click="goToTrip(trip.id)">
               <div class="trip-image-container">
                 <img :src="trip.image" alt="Foto del viaje" class="trip-image"
@@ -67,26 +62,27 @@
               </div>
 
               <div class="trip-info">
-                <div class="trip-details" style="margin-top: 1.2rem" v-if="currentTab === 'saved'">
+                <div class="trip-details" style="margin-top: 0.4rem" v-if="currentTab === 'saved'">
                   <h4>{{ truncateText(trip.title, 20) }}</h4>
                   <p>{{ truncateText(trip.description, 30) }}</p>
                 </div>
 
-                <div class="trip-details" v-if="currentTab !== 'saved'">
+                <div class="trip-details" style="margin-top: 0.4rem" v-if="currentTab !== 'saved'">
                   <h4>{{ truncateText(trip.title, 30) }}</h4>
                   <p>{{ truncateText(trip.description, 45) }}</p>
                 </div>
 
-
-                <p class="trip-views" style="margin-top: 0.5rem;"
-                  v-if="currentTab !== 'saved' && currentTab !== 'drafts'">
-                  <span v-html="viewsIcon"></span> {{ formatCount(trip.views) }}
-                </p>
-
-                <div class="trip-author" v-if="currentTab === 'saved' && trip.author">
-                  <p class="trip-views" style="margin-bottom: 0.5rem;" v-if="currentTab === 'saved'">
+                <div class="trip-stats" v-if="currentTab === 'published'">
+                  <p class="trip-views">
                     <span v-html="viewsIcon"></span> {{ formatCount(trip.views) }}
                   </p>
+
+                  <p class="trip-likes">
+                    <span v-html="likesIcon"></span> {{ formatCount(trip.likes) }}
+                  </p>
+                </div>
+
+                <div class="trip-author" v-if="currentTab === 'saved' && trip.author">
                   <span class="published-by">Publicado por</span>
                   <div class="author-info" @click.stop="goToUser(trip.author.id)">
                     <div class="avatar-container" style="width:30px; height:30px; margin-right:8px;">
@@ -199,7 +195,16 @@
 
         <div class="edit-form">
           <label>Nombre de usuario:</label>
-          <input type="text" v-model="editUsername" placeholder="Nombre de usuario" />
+          <input type="text" v-model="editUsername" @input="checkUsernameAvailability($event.target.value)"
+            placeholder="Nombre de usuario" />
+          <div style="margin-top: 0.8rem; min-height: 28px;">
+            <small v-if="checkingUsername" style="color:#888;">Comprobando disponibilidad...</small>
+            <small v-else-if="usernameStatus === 'available'" style="color:#4ade80; font-weight:600;">Disponible</small>
+            <small v-else-if="usernameStatus === 'taken'" style="color:#ff5555; font-weight:600;">Ya está en
+              uso</small>
+            <small v-else-if="usernameStatus === 'invalid'" style="color:#ff5555; font-weight:600;">Solo se
+              permiten letras, números, "." y "_". Longitud: 3-20 caracteres.</small>
+          </div>
 
           <label>Display name:</label>
           <input type="text" v-model="editDisplayName" placeholder="Display name" />
@@ -244,7 +249,10 @@ import { useRouter } from 'vue-router'
 import ChangePicture from '@/components/Profile/ChangePicture.vue'
 import Sidebar from '@/components/Sidebar.vue'
 import { useCustomization } from '@/composables/useCustomization'
-import { getItemById } from '@/data/shopThemes'
+import { getItems } from '@/data/shopThemes'
+import { initialize } from '@/composables/useCustomization'
+
+
 
 export default {
   name: 'Profile',
@@ -265,6 +273,7 @@ export default {
     const editDisplayName = ref('')
     const editBio = ref('')
     const loading = ref(true)
+    const loadingTrips = ref(true)
     const saving = ref(false)
     const error = ref('')
     const success = ref('')
@@ -276,20 +285,39 @@ export default {
     const currentTab = ref('published')
     const friends = ref([])
     const showFriends = ref(false)
+    const checkingUsername = ref(false)
+    const usernameAvailable = ref(null)
+    const bgLoaded = ref(false)
+
 
     const defaultAvatar =
       'https://upload.wikimedia.org/wikipedia/commons/a/ac/Default_pfp.jpg'
 
     // Sistema de personalización de fondo
+    // Sistema de personalización de fondo
     const { getEquippedItem } = useCustomization()
+
+    const defaultProfileBg =
+      "https://images.unsplash.com/photo-1604608672516-f1b9b1d37076?ixlib=rb-4.1.0"
+
     const bgStyle = computed(() => {
-      const equippedBgId = getEquippedItem('profileBg')
-      const bgItem = equippedBgId ? getItemById(equippedBgId) : null
-      const bgUrl = bgItem?.bgUrl || 'https://images.unsplash.com/photo-1604608672516-f1b9b1d37076?ixlib=rb-4.1.0'
+      const equippedBgId = getEquippedItem("profileBg")
+
+      if (!equippedBgId || allItems.value.length === 0) {
+        return {
+          background: `url('${defaultProfileBg}') center/cover no-repeat`
+        }
+      }
+
+      const item = allItems.value.find(i => i.id === equippedBgId)
+
+      const bgUrl = item?.bgUrl || item?.imageUrl || defaultProfileBg
+
       return {
         background: `url('${bgUrl}') center/cover no-repeat`
       }
     })
+
 
 
     const showConfirmDeleteFriend = ref(false)
@@ -445,21 +473,22 @@ export default {
     }
 
     const formatCount = (count) => {
-      if (count < 1000) return count.toString()
+      if (count < 1000) return count;
       if (count < 1000000) {
-        if (count % 1000 === 0) {
-          return (count / 1000).toFixed(0) + 'K'
+        if (count % 1000 < 100) {
+          return (count / 1000).toFixed(0) + 'K';
         } else {
-          return (count / 1000).toFixed(1) + 'K'
-        }
-      } else {
-        if (count % 1000000 === 0) {
-          return (count / 1000000).toFixed(0) + 'M'
-        } else {
-          return (count / 1000000).toFixed(1) + 'M'
+          return (count / 1000).toFixed(1) + 'K';
         }
       }
-    }
+      if (count < 1000000000) {
+        if (count % 1000000 < 100000) {
+          return (count / 1000000).toFixed(0) + 'M';
+        } else {
+          return (count / 1000000).toFixed(1) + 'M';
+        }
+      }
+    };
 
     // === Guardar perfil ===
     const API_URL = ''
@@ -479,11 +508,6 @@ export default {
           display_name: editDisplayName.value,
           bio: editBio.value,
           avatar_url: profileData.value.avatar_url
-        }
-
-        // check if username contains spaces
-        if (/\s/.test(payload.username)) {
-          throw new Error('El nombre de usuario no puede contener espacios')
         }
 
         const res = await fetch(`${API_URL}/api/profile`, {
@@ -514,6 +538,50 @@ export default {
         error.value = err.message || 'Error al guardar el perfil'
       } finally {
         saving.value = false
+      }
+    }
+
+    const usernameStatus = computed(() => {
+      if (!editUsername.value) return "available" // Estado inicial
+      if (!isValidUsername(editUsername.value)) return "invalid"
+      if (!usernameAvailable.value) return "taken"
+      return "available"
+    })
+
+    const isValidUsername = (name) => {
+      // ^ = inicio, $ = fin, \w = [a-zA-Z0-9_], {3,15} = longitud mínima 3, máxima 15
+      return /^[a-zA-Z0-9._]{3,15}$/.test(name)
+    }
+
+
+    const checkUsernameAvailability = async (name) => {
+      name = name.trim()
+      editUsername.value = name
+      
+      if (!isValidUsername(name)) {
+        usernameAvailable.value = null
+        return false
+      }
+
+      checkingUsername.value = true
+      usernameAvailable.value = null
+
+      try {
+        const { data, error } = await supabase
+          .from('users')
+          .select('id')
+          .eq('username', name)
+          .neq('id', user.value.id)
+          .maybeSingle()
+
+        if (error) throw error
+
+        usernameAvailable.value = !data
+      } catch (err) {
+        console.error('checkUsernameAvailability error:', err)
+        
+      } finally {
+        checkingUsername.value = false
       }
     }
 
@@ -549,7 +617,8 @@ export default {
           image:
             trip.cover_image ||
             'https://jkfenner.com/wp-content/uploads/2019/11/default-450x450.jpg',
-          views: trip.views || 0
+          views: trip.views || 0,
+          likes: trip.likes || 0
         }))
       } catch (err) {
         console.error('Error cargando viajes:', err)
@@ -585,7 +654,8 @@ export default {
             username: t.userName,
             avatar_url: t.userAvatar
           },
-          views: t.views || 0
+          views: t.views || 0,
+          likes: t.likes || 0
         }))
 
       } catch (err) {
@@ -629,7 +699,11 @@ export default {
     const truncateText = (text, limit) =>
       text?.length > limit ? text.slice(0, limit) + '...' : text || ''
 
-    const goToTrip = (tripId) => router.push(`/post/${tripId}`)
+    const goToTrip = (tripId) => {
+      if(currentTab.value === 'drafts') editTrip(tripId)
+      else
+      router.push(`/post/${tripId}`)
+    }
 
     const goToUser = (id) => {
       showFriends.value = false
@@ -652,6 +726,7 @@ export default {
         error.value = ''
 
         editUsername.value = profileData.value.username
+        usernameAvailable.value = true // Asumir disponible al abrir
         editDisplayName.value = profileData.value.display_name
         editBio.value = profileData.value.bio
         showEditModal.value = true
@@ -671,7 +746,19 @@ export default {
       showPictureModal.value = false
       localStorage.setItem('profile_avatar_url', newUrl)
       window.dispatchEvent(new CustomEvent('avatar-updated', { detail: newUrl }))
-      await saveProfile()
+      
+      // Actualizar solo el avatar sin tocar otros campos
+      try {
+        const { data: { session } } = await supabase.auth.getSession()
+        const { error } = await supabase
+          .from('users')
+          .update({ avatar_url: newUrl })
+          .eq('id', session.user.id)
+        
+        if (error) throw error
+      } catch (err) {
+        console.error('Error actualizando avatar:', err)
+      }
     }
 
     const handleClickOutside = (event) => {
@@ -683,27 +770,68 @@ export default {
         }
       }
     }
+    function preloadImage(src) {
+      return new Promise((resolve) => {
+        const img = new Image()
+        img.onload = resolve
+        img.onerror = resolve
+        img.src = src
+      })
+    }
+
+
+    const allItems = ref([])
 
     onMounted(async () => {
-      await loadProfile()
-      await loadFriends()
-      await loadTrips()
-      await loadDrafts()
-      await loadSavedTrips()
-      document.addEventListener('click', handleClickOutside)
+      loading.value = true
+
+      const { data: { session } } = await supabase.auth.getSession()
+      user.value = session?.user
+
+      // ⭐ 1. Inicializar personalización ANTES DE CARGAR PROFILE
+      if (user.value) {
+        await initialize(user.value.id)
+      }
+
+      // ⭐ 2. Cargar items antes de calcular el fondo
+      allItems.value = await getItems()
+
+      // ⭐ 3. Precargar la imagen efectiva del background
+      const equippedBgId = getEquippedItem("profileBg")
+      const bgItem = allItems.value.find(i => i.id === equippedBgId)
+      const bgUrl = bgItem?.bgUrl || defaultProfileBg
+
+      await preloadImage(bgUrl)
+
+      bgLoaded.value = true
+
+      await Promise.all([
+        loadProfile(),
+        loadFriends(),
+        loadTrips(),
+        loadDrafts(),
+        loadSavedTrips()
+      ])
+
+      loadingTrips.value = false
+      loading.value = false
     })
+
+
+
 
     onUnmounted(() => {
       document.removeEventListener('click', handleClickOutside)
     })
 
     const viewsIcon = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 15a3 3 0 100-6 3 3 0 000 6z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
-
+    const likesIcon = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
 
     return {
       user,
       profileData,
       loading,
+      loadingTrips,
       saving,
       error,
       success,
@@ -721,6 +849,7 @@ export default {
       saveProfile,
       friends,
       bgStyle,
+      bgLoaded, //  <<<<<<  AÑADE ESTO AQUÍ
       showFriends,
       goToUser,
       defaultAvatar,
@@ -741,8 +870,15 @@ export default {
       handleImageUpdated,
       formatCount,
       saveProfileAndClose,
-      viewsIcon
+      viewsIcon,
+      likesIcon,
+      checkingUsername,
+      usernameAvailable,
+      isValidUsername,
+      checkUsernameAvailability,
+      usernameStatus,
     }
+
   }
 }
 </script>
@@ -855,6 +991,7 @@ export default {
   font-size: 1rem;
   background: rgba(255, 255, 255, 0.15);
   color: #fff;
+  font-family: inherit;
 }
 
 .save-btn {
@@ -896,19 +1033,24 @@ export default {
   padding: 1rem 2rem;
   background: linear-gradient(135deg, rgba(2, 161, 143, 0.8), rgba(55, 86, 137, 0.8));
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  border-radius: 10px 10px 0 0;
+  height: 75px;
 }
 
 .tabs {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 1rem;
+  gap: 3rem;
+  height: 100%;
+  position: relative;
 }
 
 .tabs button {
   background: none;
   border: none;
   color: #fff;
+  opacity: 0.5;
   font-size: 1.3rem;
   font-weight: 500;
   padding: 0;
@@ -918,7 +1060,33 @@ export default {
 }
 
 .tabs button.active {
-  border-bottom: 2px solid #fff;
+  opacity: 1;
+}
+
+/* LÍNEA ANIMADA */
+.tabs::after {
+  content: '';
+  position: absolute;
+  bottom: -5px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 150px;
+  height: 3px;
+  background:  rgba(2, 161, 143);
+  border-radius: 3px;
+  box-shadow: 0 0 12px rgba(2, 161, 143, 0.7);
+  transition: all 0.45s cubic-bezier(0.4, 0, 0.2, 1);
+}
+    
+/* Movimiento exacto */
+.tabs.tab-published::after { 
+  left: calc(100% / 6 + 10px);
+}
+.tabs.tab-drafts::after { 
+  left: 50%;
+}
+.tabs.tab-saved::after { 
+  left: calc(100% / 6 * 5 - 10px);
 }
 
 .separator {
@@ -1354,11 +1522,28 @@ export default {
   border: 1px solid rgba(0, 0, 0, 0.2);
 }
 
+.trip-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  margin-top: 0.5rem;
+  margin-left: -0.5rem;
+}
+
 .trip-views {
   display: flex;
   align-items: center;
   gap: 0.3rem;
-  margin-left: 0.8rem;
+  margin: 0;
+  font-size: 0.85rem;
+  color: #555;
+}
+
+.trip-likes {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  margin: 0;
   font-size: 0.85rem;
   color: #555;
 }

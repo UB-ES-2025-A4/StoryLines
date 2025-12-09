@@ -20,6 +20,8 @@ jobs:
         working-directory: backend
         run: npm install
 
-      - name: Run backend tests
+      - name: Run backend tests (ESM compatible)
         working-directory: backend
+        env:
+          NODE_OPTIONS: "--experimental-vm-modules"
         run: npm test

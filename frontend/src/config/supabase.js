@@ -1,16 +1,46 @@
 import { createClient } from '@supabase/supabase-js'
 
-// Configuración de Supabase
-const supabaseUrl = 'https://gpgdsidmwgtpyiuzarjq.supabase.co'
-const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdwZ2RzaWRtd2d0cHlpdXphcmpxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA5Njg4NTUsImV4cCI6MjA3NjU0NDg1NX0.onjuA5u4TPcgYr0SbuWCg_uj13foqKbcTAZ2LFYnQUI'
+let supabaseClient = null
+let configPromise = null
 
-// Crear cliente de Supabase
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    autoRefreshToken: true,
-    persistSession: true,
-    detectSessionInUrl: true
+// Initialize config fetch
+const initConfig = () => {
+  if (!configPromise) {
+    configPromise = fetch('/api/config/supabase')
+      .then(res => res.json())
+      .then(config => {
+        supabaseClient = createClient(config.url, config.anonKey, {
+          auth: {
+            autoRefreshToken: true,
+            persistSession: true,
+            detectSessionInUrl: true
+          }
+        })
+        return supabaseClient
+      })
+      .catch(error => {
+        console.error('Failed to load Supabase config:', error)
+        throw error
+      })
   }
+  return configPromise
+}
+
+// Start initialization immediately
+initConfig()
+
+// Export function that returns initialized client
+export const getSupabase = async () => {
+  if (supabaseClient) return supabaseClient
+  return await initConfig()
+}
+
+// For backward compatibility - will be null initially
+export let supabase = supabaseClient
+
+// Update supabase export when ready
+initConfig().then(client => {
+  supabase = client
 })
 
 export default supabase

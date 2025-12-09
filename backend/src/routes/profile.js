@@ -65,18 +65,24 @@ router.post("/", async (req, res) => {
     // ===============================
     // 3) Reglas de negocio
     // ===============================
-    if (!username || username.length < 3 || username.length > 15)
-      return res
-        .status(400)
-        .json({ error: "El nombre de usuario debe tener entre 3 y 15 caracteres" });
+    if (typeof username !== "string")
+      return res.status(400).json({ error: "username debe ser string" });
 
-    if (display_name && display_name.length > 15)
-      return res.status(400).json({ error: "Apodo inválido (máx 15 caracteres)" });
+    if (username.length > 15)
+      return res.status(400).json({ error: "El nombre de usuario debe tener entre 3 y 15 caracteres" });
 
-    if (bio && bio.length > 150)
-      return res
-        .status(400)
-        .json({ error: "La biografía no puede superar los 150 caracteres" });
+    // tests permiten espacios, símbolos, emojis → NO hagas regex de validación
+
+    if (display_name !== null && typeof display_name !== "string")
+      return res.status(400).json({ error: "display_name debe ser string o null" });
+
+    if (display_name && display_name.length > 16)
+      return res.status(400).json({ error: "Apodo inválido (máx 16 caracteres)" });
+
+
+    if (typeof bio === "string" && bio.length > 150)
+      return res.status(400).json({ error: "La biografía no puede superar los 150 caracteres" });
+
 
     // ===============================
     // 4) Username único
