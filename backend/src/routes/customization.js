@@ -21,7 +21,8 @@ async function ensureCustomizationRow(userId) {
     user_id: userId,
     globe: null,
     homebg: null,
-    profilebg: null
+    profilebg: null,
+    user_color: 'rgba(128, 128, 128, 1)' // Color por defecto gris
   };
 
 
@@ -42,6 +43,13 @@ router.get("/:userId", async (req, res) => {
   try {
     const row = await ensureCustomizationRow(userId);
 
+    // Obtener el color desde la tabla users
+    const { data: user } = await supabaseAdmin
+      .from("users")
+      .select("user_color")
+      .eq("id", userId)
+      .single();
+
     // ⭐ AÑADIR AQUÍ
     await ensureDefaultItems(userId);
 
@@ -50,7 +58,8 @@ router.get("/:userId", async (req, res) => {
       equipped: {
         globe: row.globe,       
         homeBg: row.homebg,
-        profileBg: row.profilebg
+        profileBg: row.profilebg,
+        userColor: user?.user_color || 'rgba(128, 128, 128, 1)'
       }
     });
 
@@ -148,6 +157,36 @@ router.post("/unequip", async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ ok: false, error: "Error unequipping" });
+  }
+});
+
+// UPDATE user color
+router.post("/color", async (req, res) => {
+  const { userId, color } = req.body;
+
+  if (!userId || !color)
+    return res.status(400).json({ ok: false, error: "Missing data" });
+
+  try {
+    await ensureCustomizationRow(userId);
+
+    // Actualizar en user_customization
+    await supabaseAdmin
+      .from("user_customization")
+      .update({ user_color: color })
+      .eq("user_id", userId);
+
+    // También actualizar en la tabla users para que aparezca en los trips
+    await supabaseAdmin
+      .from("users")
+      .update({ user_color: color })
+      .eq("id", userId);
+
+    return res.json({ ok: true });
+
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ ok: false, error: "Error updating color" });
   }
 });
 
