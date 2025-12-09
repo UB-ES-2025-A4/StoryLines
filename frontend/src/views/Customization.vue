@@ -162,6 +162,7 @@ const equippedItems = ref({})
 const currentFilter = ref('all')
 const allItems = ref([])
 const currentUserColor = ref(null)
+const scrollInterval = ref(null)
 
 const filteredPurchasedItems = computed(() => {
     if (currentFilter.value === 'all') {
@@ -253,6 +254,47 @@ function getItemName(itemId, allItems) {
 
 function handleDragStart(event, item) {
     event.dataTransfer.setData('text/plain', JSON.stringify(item))
+    
+    // Agregar listeners para auto-scroll
+    document.addEventListener('dragover', handleDragOver)
+    document.addEventListener('dragend', handleDragEnd)
+}
+
+function handleDragOver(event) {
+    const scrollThreshold = 100
+    const scrollSpeed = 10
+    const y = event.clientY
+    const windowHeight = window.innerHeight
+    
+    // Limpiar intervalo anterior
+    if (scrollInterval.value) {
+        clearInterval(scrollInterval.value)
+        scrollInterval.value = null
+    }
+    
+    // Scroll hacia arriba
+    if (y < scrollThreshold) {
+        scrollInterval.value = setInterval(() => {
+            window.scrollBy(0, -scrollSpeed)
+        }, 16)
+    }
+    // Scroll hacia abajo
+    else if (y > windowHeight - scrollThreshold) {
+        scrollInterval.value = setInterval(() => {
+            window.scrollBy(0, scrollSpeed)
+        }, 16)
+    }
+}
+
+function handleDragEnd() {
+    // Limpiar listeners y intervalos
+    document.removeEventListener('dragover', handleDragOver)
+    document.removeEventListener('dragend', handleDragEnd)
+    
+    if (scrollInterval.value) {
+        clearInterval(scrollInterval.value)
+        scrollInterval.value = null
+    }
 }
 
 async function handleDrop(event, slotType) {
