@@ -42,7 +42,7 @@
               <div>
                 <span class="username">{{ user.username }}</span>
               </div>
-              <div class="display-name">{{ user.display_name || 'Sin nombre' }}</div>
+              <div class="display-name" v-if="user.display_name">{{ user.display_name }}</div>
             </div>
           </div>
           <button 
@@ -141,8 +141,7 @@ const searchUsers = async () => {
     }
 
     const data = await response.json()
-    // Filtrar al usuario actual de los resultados
-    searchResults.value = (data.users || []).filter(user => user.id !== currentUserId)
+    searchResults.value = data.users || []
 
   } catch (error) {
     console.error('Error:', error)
@@ -463,6 +462,8 @@ border-left: 1px solid #333;
   font-size: 13px;
   margin-top: 17px;
   margin-left: 12px;
+  min-width: 120px;
+  white-space: nowrap;
   }
 
 
