@@ -29,7 +29,18 @@ router.get("/users", async (req, res) => {
     u.display_name?.toLowerCase().includes(term)
   );
 
-  return res.json({ ok: true, users: results });
+  // Agregar estado de amistad a cada resultado
+  const resultsWithStatus = await Promise.all(
+    results.map(async (user) => {
+      const friendshipStatus = await getFriendshipStatus(userId, user.id);
+      return {
+        ...user,
+        friendshipStatus
+      };
+    })
+  );
+
+  return res.json({ ok: true, users: resultsWithStatus });
 });
 
 
