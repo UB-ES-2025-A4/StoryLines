@@ -95,7 +95,7 @@ import { useRouter } from "vue-router";
 import { supabase } from "@/config/supabase";
 
 const router = useRouter();
-const emit = defineEmits(["close"]);
+const emit = defineEmits(["close", "update-unread-count"])
 const props = defineProps({ isOpen: Boolean });
 
 const userId = ref(null);

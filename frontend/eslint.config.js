@@ -55,11 +55,16 @@ export default defineConfig([
       describe: "readonly",
       beforeEach: "readonly",
       afterEach: "readonly",
+      vi: "readonly",
+global: "readonly",
+setImmediate: "readonly",
+
     }
   },
   plugins: { vitest },
   rules: {
-    ...vitest.configs.recommended.rules
+    ...vitest.configs.recommended.rules,
+    "vitest/expect-expect": "off"
   }
 }
 
