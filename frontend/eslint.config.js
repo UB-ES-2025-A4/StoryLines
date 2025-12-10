@@ -57,6 +57,8 @@ export default defineConfig([
       afterEach: "readonly",
       vi: "readonly",
 global: "readonly",
+setImmediate: "readonly",
+
     }
   },
   plugins: { vitest },
