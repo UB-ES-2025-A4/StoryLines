@@ -29,7 +29,17 @@ router.get("/users", async (req, res) => {
     u.display_name?.toLowerCase().includes(term)
   );
 
-  return res.json({ ok: true, users: results });
+  const usersWithStatus = await Promise.all(
+    results.map(async (user) => {
+      const status = await getFriendshipStatus(userId, user.id);
+      return {
+        ...user,
+        friendshipStatus: status
+      };
+    })
+  );
+
+  return res.json({ ok: true, users: usersWithStatus });
 });
 
 
