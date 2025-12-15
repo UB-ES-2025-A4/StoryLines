@@ -1,7 +1,9 @@
 <template>
+  <!-- Sidebar -->
+  <Sidebar />
+
   <div v-if="bgLoaded" class="profile-page" :style="bgStyle">
-    <!-- Sidebar -->
-    <Sidebar />
+
 
     <div v-if="loading" class="loading">Cargando...</div>
 
@@ -240,6 +242,8 @@
       </div>
     </div>
   </div>
+
+  <div v-else class="loading-screen">Cargando...</div>
 </template>
 
 <script>
@@ -790,7 +794,7 @@ export default {
 
       // ⭐ 1. Inicializar personalización ANTES DE CARGAR PROFILE
       if (user.value) {
-        await initialize(user.value.id)
+        await initialize(user.value.id, {mode: 'self'})
       }
 
       // ⭐ 2. Cargar items antes de calcular el fondo
@@ -1547,4 +1551,14 @@ export default {
   font-size: 0.85rem;
   color: #555;
 }
+
+.loading-screen {
+  min-height: 100vh;
+  background: #0a0a0a;
+  color: white;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
 </style>
