@@ -453,49 +453,57 @@ border-left: 1px solid #333;
 }
 
 .action-btn {
-  padding: 6px 16px;
-  border-radius: 8px;
-  border: none;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s;
-  font-size: 13px;
-  margin-top: 17px;
-  margin-left: 12px;
-  min-width: 120px;
-  white-space: nowrap;
-  }
+  padding: 6px 16px !important;
+  border-radius: 8px !important;
+  border: none !important;
+  font-weight: 600 !important;
+  cursor: pointer !important;
+  transition: all 0.2s !important;
+  font-size: 13px !important;
+  margin-top: 0 !important;
+  margin-left: 12px !important;
+  min-width: 120px !important;
+  white-space: nowrap !important;
+  display: inline-block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  position: relative !important;
+  z-index: 1 !important;
+}
 
 
 .btn-add {
-  background: #375689;
-  color: white;
+  background: #007bff !important;
+  color: white !important;
+  display: inline-block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
 }
 
 .btn-add:hover {
-  background: #456291;
+  background: #0056b3 !important;
   transform: scale(1.05);
 }
 
 .btn-pending {
-  background: #637171;
-  color: #ffffff;
-  cursor: not-allowed;
+  background: #637171 !important;
+  color: #ffffff !important;
+  cursor: not-allowed !important;
 }
 
 .btn-friends {
-  background: #749fe4;
-  color: #ffffff;
-  cursor: not-allowed;
+  background: #749fe4 !important;
+  color: #ffffff !important;
+  cursor: not-allowed !important;
 }
 
 .btn-accept {
-  background: #52865e;
-  color: white;
+  background: #52865e !important;
+  color: white !important;
 }
 
 .btn-accept:hover {
-  background: #218838;
+  background: #218838 !important;
   transform: scale(1.05);
 }
 
