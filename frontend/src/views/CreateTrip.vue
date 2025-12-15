@@ -60,6 +60,7 @@
             <div class="stops-route">
               <div v-for="(stop, index) in trip.stops" :key="stop.id || index" class="stop-card-wrapper">
                 <h3 v-if="index === 0" class="stop-origin-title">Origen del viaje</h3>
+                <h3 v-else class="stop-title">Parada {{ index }}</h3>
                 <div class="input-container stop-card">
                   <div class="image-upload">
                     <label>Fotos</label>
@@ -906,7 +907,7 @@ export default {
 }
 
 .title {
-  font-size: 1.5rem;
+  font-size: 2.5rem;
   margin-bottom: 2rem;
   text-align: center;
 }
@@ -1318,6 +1319,12 @@ export default {
 }
 
 .stop-origin-title {
+  font-size: 1.2rem;
+  margin-bottom: 1rem;
+  text-align: center;
+}
+
+.stop-title{
   font-size: 1.2rem;
   margin-bottom: 1rem;
   text-align: center;

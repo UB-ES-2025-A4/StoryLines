@@ -1,6 +1,7 @@
 <template>
+  <Sidebar />
   <div v-if="bgLoaded" class="profile-page" :style="bgStyle">
-    <Sidebar />
+
     <div v-if="loading" class="loading">Cargando...</div>
     <div v-else class="profile-card">
       <div class="profile-header">
@@ -83,6 +84,7 @@
       </div>
     </div>
   </div>
+  <div v-else class="loading-screen">Cargando...</div>
 </template>
 
 <script setup>
@@ -376,7 +378,7 @@ onMounted(async () => {
   
   if (userId.value) {
     console.log('🔥 VISIT PROFILE - Inicializando para usuario:', userId.value)
-    await initialize(userId.value)
+    await initialize(userId.value, {mode: 'visitor'})
     console.log('🔥 VISIT PROFILE - Inicialización completa')
   }
   
@@ -803,5 +805,14 @@ const likesIcon = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" x
   margin: 0;
   font-size: 0.85rem;
   color: #555;
+}
+
+.loading-screen {
+  min-height: 100vh;
+  background: #0a0a0a;
+  color: white;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 </style>

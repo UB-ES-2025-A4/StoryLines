@@ -4,6 +4,9 @@ import { DEFAULT_ITEMS } from "@/data/shopThemes"
 
 const STORAGE_KEY = "equipped_items"
 
+/* ======================
+   STATE GLOBAL
+====================== */
 const equippedItems = ref({
   globe: null,
   homeBg: null,
@@ -14,7 +17,9 @@ const userColor = ref('rgba(0, 123, 255, 1)')
 
 let initialized = false
 
-// 🔥 RESET al cambiar de usuario
+/* ======================
+   RESET (SOLO MEMORIA)
+====================== */
 export function resetCustomization() {
   equippedItems.value = {
     globe: null,
@@ -23,17 +28,20 @@ export function resetCustomization() {
   }
   userColor.value = 'rgba(0, 123, 255, 1)'
   initialized = false
-  // 🔥 limpia también el localStorage para no arrastrar datos de otro user
-  localStorage.removeItem(STORAGE_KEY)
 }
 
-// Obtener ID usuario actual
+/* ======================
+   HELPERS
+====================== */
 async function getCurrentUserId() {
   const { data } = await supabase.auth.getUser()
   return data.user?.id
 }
 
-// 🔥 LOAD DESDE LOCALSTORAGE SI NO HAY BD
+function saveEquippedItems() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(equippedItems.value))
+}
+
 function loadEquippedItems() {
   const saved = localStorage.getItem(STORAGE_KEY)
 
@@ -45,23 +53,26 @@ function loadEquippedItems() {
       profileBg: existing.profileBg || DEFAULT_ITEMS.profileBg
     }
   } else {
-    // Si no hay nada guardado, usar defaults
     equippedItems.value = { ...DEFAULT_ITEMS }
   }
 
   saveEquippedItems()
 }
 
-// Guardar local
-function saveEquippedItems() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(equippedItems.value))
-}
-
-// 🔥 INITIALIZE — SOLO SE LLAMA TRAS LOGIN
-export async function initialize(userId) {
+/* ======================
+   INITIALIZE CON MODO
+====================== */
+export async function initialize(
+  userId,
+  options = { mode: "self" } // self | visitor
+) {
   if (!userId) return
-  if (initialized) return
-  initialized = true
+
+  const isVisitor = options.mode === "visitor"
+
+  // 🔒 Solo bloquear en modo self
+  if (!isVisitor && initialized) return
+  if (!isVisitor) initialized = true
 
   try {
     const res = await fetch(`/api/customization/${userId}`)
@@ -73,22 +84,38 @@ export async function initialize(userId) {
         homeBg: data.equipped.homeBg || DEFAULT_ITEMS.homeBg,
         profileBg: data.equipped.profileBg || DEFAULT_ITEMS.profileBg
       }
-      userColor.value = data.equipped.userColor || 'rgba(0, 123, 255, 1)'
 
-      saveEquippedItems()
+      userColor.value =
+        data.equipped.userColor || 'rgba(0, 123, 255, 1)'
+
+      // 🔥 SOLO guardar si es el usuario propio
+      if (!isVisitor) {
+        saveEquippedItems()
+      }
+
       return
     }
   } catch (err) {
     console.error("Error cargando BD:", err)
   }
 
-  // Si BD falla → usar localStorage
+  /* ======================
+     FALLBACK
+  ====================== */
+  if (isVisitor) {
+    // ❌ visitor NO usa localStorage
+    equippedItems.value = { ...DEFAULT_ITEMS }
+    userColor.value = 'rgba(0, 123, 255, 1)'
+    return
+  }
+
+  // ✅ self usa localStorage
   loadEquippedItems()
 }
 
-// =============================
-//      COMPOSABLE PRINCIPAL
-// =============================
+/* ======================
+   COMPOSABLE
+====================== */
 export function useCustomization() {
   function getEquippedItem(slot) {
     return equippedItems.value[slot]
@@ -98,7 +125,6 @@ export function useCustomization() {
     return { ...equippedItems.value }
   }
 
-  // EQUIPAR ITEM
   async function equipItem(itemId, slot) {
     const userId = await getCurrentUserId()
 
@@ -116,7 +142,6 @@ export function useCustomization() {
     return true
   }
 
-  // DESEQUIPAR
   async function unequipItem(slot) {
     const userId = await getCurrentUserId()
 
@@ -145,7 +170,6 @@ export function useCustomization() {
     return null
   }
 
-  // CAMBIAR COLOR DEL USUARIO
   async function updateUserColor(color) {
     const userId = await getCurrentUserId()
 
@@ -168,16 +192,23 @@ export function useCustomization() {
 
   return {
     initialize,
+    resetCustomization,
+
     equippedItems: computed(() => equippedItems.value),
+    userColor: computed(() => userColor.value),
+
     getEquippedItem,
     getAllEquippedItems,
+
     equipItem,
     unequipItem,
+
     isEquipped,
     getEquippedSlot,
+
     updateUserColor,
     getUserColor,
-    userColor: computed(() => userColor.value),
+
     hasGlobe: computed(() => equippedItems.value.globe !== null),
     hasHomeBg: computed(() => equippedItems.value.homeBg !== null),
     hasProfileBg: computed(() => equippedItems.value.profileBg !== null),
