@@ -93,7 +93,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { supabase } from '@/config/supabase'
 import Sidebar from '@/components/Sidebar.vue'
 import { getItems } from '@/data/shopThemes'
-import { useCustomization, initialize, resetCustomization } from '@/composables/useCustomization'
+import { useCustomization } from '@/composables/useCustomization'
 
 const API_BASE = ''
 const route = useRoute()
@@ -117,41 +117,66 @@ const defaultAvatar = 'https://upload.wikimedia.org/wikipedia/commons/a/ac/Defau
 const defaultImg = 'https://jkfenner.com/wp-content/uploads/2019/11/default-450x450.jpg'
 const defaultProfileBg = "https://images.unsplash.com/photo-1604608672516-f1b9b1d37076?ixlib=rb-4.1.0"
 
-const { getEquippedItem } = useCustomization()
+// Estado local para la configuración del usuario visitado
+const visitedUserConfig = ref({
+  globe: null,
+  homeBg: null,
+  profileBg: null
+})
+
+// Función para cargar configuración de otro usuario
+const loadVisitedUserConfig = async (targetUserId) => {
+  try {
+    const res = await fetch(`/api/customization/${targetUserId}`)
+    const data = await res.json()
+    
+    if (data.ok) {
+      visitedUserConfig.value = {
+        globe: data.equipped.globe || null,
+        homeBg: data.equipped.homeBg || null,
+        profileBg: data.equipped.profileBg || null
+      }
+    } else {
+      // Si no tiene configuración, usar valores por defecto
+      visitedUserConfig.value = {
+        globe: null,
+        homeBg: null,
+        profileBg: null
+      }
+    }
+  } catch (err) {
+    console.error('Error cargando configuración del usuario visitado:', err)
+    visitedUserConfig.value = {
+      globe: null,
+      homeBg: null,
+      profileBg: null
+    }
+  }
+}
 
 const bgStyle = computed(() => {
-  const equippedBgId = getEquippedItem("profileBg")
-  console.log('🔥 VISIT PROFILE - equippedBgId:', equippedBgId)
-  console.log('🔥 VISIT PROFILE - allItems length:', allItems.value.length)
-
+  const equippedBgId = visitedUserConfig.value.profileBg
+  
   if (!equippedBgId || allItems.value.length === 0) {
-    console.log('🔥 VISIT PROFILE - Usando fondo por defecto')
-    const style = {
+    return {
       background: `url('${defaultProfileBg}') center/cover no-repeat`
     }
-    console.log('🔥 VISIT PROFILE - Estilo por defecto:', style)
-    return style
   }
 
   const item = allItems.value.find(i => i.id === equippedBgId)
-  console.log('🔥 VISIT PROFILE - Item encontrado:', item)
   
   if (!item) {
-    console.log('🔥 VISIT PROFILE - No se encontró item, usando fondo por defecto')
-    const style = {
+    return {
       background: `url('${defaultProfileBg}') center/cover no-repeat`
     }
-    return style
   }
   
   let bgUrl = item.bgUrl || item.imageUrl
   
   if (!bgUrl) {
-    console.log('🔥 VISIT PROFILE - Item sin URL, usando fondo por defecto')
-    const style = {
+    return {
       background: `url('${defaultProfileBg}') center/cover no-repeat`
     }
-    return style
   }
   
   // Corregir URLs locales
@@ -160,14 +185,10 @@ const bgStyle = computed(() => {
   } else if (!bgUrl.startsWith('http') && !bgUrl.startsWith('/')) {
     bgUrl = '/' + bgUrl
   }
-  
-  console.log('🔥 VISIT PROFILE - URL final:', bgUrl)
 
-  const style = {
+  return {
     background: `url('${bgUrl}') center/cover no-repeat`
   }
-  console.log('🔥 VISIT PROFILE - Estilo final:', style)
-  return style
 })
 
 const loadProfile = async () => {
@@ -377,28 +398,17 @@ onMounted(async () => {
   await loadCurrentUser()
   
   if (userId.value) {
-    console.log('🔥 VISIT PROFILE - Inicializando para usuario:', userId.value)
-    await initialize(userId.value, {mode: 'visitor'})
-    console.log('🔥 VISIT PROFILE - Inicialización completa')
+    await loadVisitedUserConfig(userId.value)
   }
   
   allItems.value = await getItems()
   
-  const equippedBgId = getEquippedItem("profileBg")
+  const equippedBgId = visitedUserConfig.value.profileBg
   const bgItem = allItems.value.find(i => i.id === equippedBgId)
   const bgUrlPreload = bgItem?.bgUrl || defaultProfileBg
   await preloadImage(bgUrlPreload)
   
   bgLoaded.value = true
-  
-  // Debug: verificar que el estilo se aplica
-  setTimeout(() => {
-    if (profilePageRef.value) {
-      console.log('🔥 VISIT PROFILE - Elemento DOM:', profilePageRef.value)
-      console.log('🔥 VISIT PROFILE - Estilo aplicado:', profilePageRef.value.style.background)
-      console.log('🔥 VISIT PROFILE - Computed style:', window.getComputedStyle(profilePageRef.value).background)
-    }
-  }, 100)
   
   await loadProfile()
   await loadTrips()
@@ -412,16 +422,11 @@ watch(() => route.params.id, async (newId) => {
   loading.value = true
   bgLoaded.value = false
   
-  // Reset personalización antes de cargar nuevo usuario
-  resetCustomization()
-  
   if (newId) {
-    console.log('🔥 VISIT PROFILE - Inicializando para nuevo usuario:', newId)
-    await initialize(newId)
-    console.log('🔥 VISIT PROFILE - Nueva inicialización completa')
+    await loadVisitedUserConfig(newId)
   }
   
-  const equippedBgId = getEquippedItem("profileBg")
+  const equippedBgId = visitedUserConfig.value.profileBg
   const bgItem = allItems.value.find(i => i.id === equippedBgId)
   const bgUrlWatch = bgItem?.bgUrl || defaultProfileBg
   await preloadImage(bgUrlWatch)
