@@ -14,7 +14,7 @@ const userColor = ref('rgba(0, 123, 255, 1)')
 
 let initialized = false
 
-// 🔥 RESET al cambiar de usuario
+// Reset al cambiar de usuario
 export function resetCustomization() {
   equippedItems.value = {
     globe: null,
@@ -23,7 +23,7 @@ export function resetCustomization() {
   }
   userColor.value = 'rgba(0, 123, 255, 1)'
   initialized = false
-  // 🔥 limpia también el localStorage para no arrastrar datos de otro user
+  // Limpia también el localStorage para no arrastrar datos de otro usuario
   localStorage.removeItem(STORAGE_KEY)
 }
 
@@ -33,7 +33,7 @@ async function getCurrentUserId() {
   return data.user?.id
 }
 
-// 🔥 LOAD DESDE LOCALSTORAGE SI NO HAY BD
+// Cargar desde localStorage si no hay base de datos
 function loadEquippedItems() {
   const saved = localStorage.getItem(STORAGE_KEY)
 
@@ -57,10 +57,9 @@ function saveEquippedItems() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(equippedItems.value))
 }
 
-// 🔥 INITIALIZE — SOLO SE LLAMA TRAS LOGIN
+// Inicializar - solo se llama tras login
 export async function initialize(userId) {
   if (!userId) return
-  if (initialized) return
   initialized = true
 
   try {
@@ -82,13 +81,11 @@ export async function initialize(userId) {
     console.error("Error cargando BD:", err)
   }
 
-  // Si BD falla → usar localStorage
+  // Si la base de datos falla, usar localStorage
   loadEquippedItems()
 }
 
-// =============================
-//      COMPOSABLE PRINCIPAL
-// =============================
+// Composable principal
 export function useCustomization() {
   function getEquippedItem(slot) {
     return equippedItems.value[slot]
